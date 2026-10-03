@@ -23,7 +23,7 @@ class MentorProfileController extends Controller
     public function updateAvailability(Request $request)
     {
         $request->validate([
-            'availability_schedule' => 'required|array',
+            'availability_schedule' => 'present|array',
             'availability_schedule.*.day' => 'required|string',
             'availability_schedule.*.start' => 'required|date_format:H:i',
             'availability_schedule.*.end' => 'required|date_format:H:i|after:availability_schedule.*.start',

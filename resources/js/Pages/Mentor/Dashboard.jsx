@@ -1,12 +1,75 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
+
+const weekdays = [
+    { value: 'senin', label: 'Senin' },
+    { value: 'selasa', label: 'Selasa' },
+    { value: 'rabu', label: 'Rabu' },
+    { value: 'kamis', label: 'Kamis' },
+    { value: 'jumat', label: 'Jumat' },
+];
+
+const defaultTimeSlots = [
+    { start: '09:00', end: '11:00' },
+    { start: '13:00', end: '15:00' },
+    { start: '15:30', end: '17:30' },
+];
 
 export default function Dashboard({ mentorProfile }) {
-    const { auth } = usePage().props;
+    const { auth, flash } = usePage().props;
     const availabilitySchedule = Array.isArray(
         mentorProfile?.availability_schedule,
     )
         ? mentorProfile.availability_schedule
         : [];
+    const initialAvailabilitySchedule = availabilitySchedule.flatMap(
+        (schedule) => {
+            const day = weekdays.find(
+                (weekday) =>
+                    weekday.value === String(schedule?.day ?? '').toLowerCase(),
+            );
+
+            if (!day || !schedule?.start || !schedule?.end) {
+                return [];
+            }
+
+            return [
+                {
+                    day: day.value,
+                    start: schedule.start,
+                    end: schedule.end,
+                },
+            ];
+        },
+    );
+    const customTimeSlots = availabilitySchedule
+        .filter((schedule) =>
+            weekdays.some(
+                (weekday) =>
+                    weekday.value === String(schedule?.day ?? '').toLowerCase(),
+            ),
+        )
+        .map(({ start, end }) => ({ start, end }))
+        .filter(
+            (slot, index, slots) =>
+                slot.start &&
+                slot.end &&
+                !defaultTimeSlots.some(
+                    (defaultSlot) =>
+                        defaultSlot.start === slot.start &&
+                        defaultSlot.end === slot.end,
+                ) &&
+                slots.findIndex(
+                    (candidate) =>
+                        candidate.start === slot.start &&
+                        candidate.end === slot.end,
+                ) === index,
+        );
+    const timeSlots = [...defaultTimeSlots, ...customTimeSlots].sort((first, second) =>
+        first.start.localeCompare(second.start),
+    );
+    const form = useForm({
+        availability_schedule: initialAvailabilitySchedule,
+    });
     const mentorName =
         auth?.user?.name ??
         mentorProfile?.user?.name ??
@@ -32,6 +95,44 @@ export default function Dashboard({ mentorProfile }) {
             ? 'Tersedia untuk mentoring'
             : 'Sedang tidak tersedia'
         : 'Profil mentor belum tersedia';
+    const validationErrors = Object.values(form.errors).filter(Boolean);
+
+    function isSlotAvailable(day, slot) {
+        return form.data.availability_schedule.some(
+            (schedule) =>
+                schedule.day === day &&
+                schedule.start === slot.start &&
+                schedule.end === slot.end,
+        );
+    }
+
+    function toggleSlot(day, slot) {
+        const isAvailable = isSlotAvailable(day, slot);
+
+        form.setData(
+            'availability_schedule',
+            isAvailable
+                ? form.data.availability_schedule.filter(
+                      (schedule) =>
+                          !(
+                              schedule.day === day &&
+                              schedule.start === slot.start &&
+                              schedule.end === slot.end
+                          ),
+                  )
+                : [
+                      ...form.data.availability_schedule,
+                      { day, start: slot.start, end: slot.end },
+                  ],
+        );
+    }
+
+    function saveAvailability(event) {
+        event.preventDefault();
+        form.patch(route('mentor.availability.update'), {
+            preserveScroll: true,
+        });
+    }
 
     return (
         <div className="min-h-screen bg-[#F7F5F0] text-[#34443D]">
@@ -186,34 +287,105 @@ export default function Dashboard({ mentorProfile }) {
                         </p>
                     </div>
 
-                    {availabilitySchedule.length > 0 ? (
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            {availabilitySchedule.map((schedule, index) => (
-                                <article
-                                    key={`${schedule.day ?? 'jadwal'}-${index}`}
-                                    className="rounded-xl border border-[#E5E8DF] bg-white p-4 shadow-[0_2px_8px_rgba(52,68,61,0.03)]"
-                                >
-                                    <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#8A938D]">
-                                        Hari
+                    <form
+                        onSubmit={saveAvailability}
+                        className="overflow-hidden rounded-xl border border-[#E8E5DD] bg-white shadow-[0_3px_14px_rgba(52,68,61,0.04)]"
+                    >
+                        <div className="overflow-x-auto p-4 sm:p-5">
+                            <table className="w-full min-w-[760px] border-separate border-spacing-2 text-left">
+                                <thead>
+                                    <tr>
+                                        <th className="w-36 px-3 py-2 text-xs font-bold uppercase tracking-wide text-[#78827B]">
+                                            Waktu
+                                        </th>
+                                        {weekdays.map((day) => (
+                                            <th
+                                                key={day.value}
+                                                scope="col"
+                                                className="px-3 py-2 text-center text-sm font-bold text-[#34443D]"
+                                            >
+                                                {day.label}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {timeSlots.map((slot) => (
+                                        <tr key={`${slot.start}-${slot.end}`}>
+                                            <th
+                                                scope="row"
+                                                className="rounded-lg bg-[#F7F5F0] px-3 py-3 text-xs font-semibold text-[#69766F]"
+                                            >
+                                                {slot.start} - {slot.end}
+                                            </th>
+                                            {weekdays.map((day) => {
+                                                const isAvailable = isSlotAvailable(
+                                                    day.value,
+                                                    slot,
+                                                );
+
+                                                return (
+                                                    <td
+                                                        key={`${day.value}-${slot.start}`}
+                                                    >
+                                                        <button
+                                                            type="button"
+                                                            aria-pressed={isAvailable}
+                                                            aria-label={`${day.label}, ${slot.start} sampai ${slot.end}: ${isAvailable ? 'Tersedia' : 'Tidak tersedia'}`}
+                                                            disabled={form.processing}
+                                                            onClick={() =>
+                                                                toggleSlot(
+                                                                    day.value,
+                                                                    slot,
+                                                                )
+                                                            }
+                                                            className={`min-h-14 w-full rounded-lg border px-2 py-2 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#6594B1] focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 ${
+                                                                isAvailable
+                                                                    ? 'border-[#65B175] bg-[#E8F2E8] text-[#477E50] hover:bg-[#DDEBDD]'
+                                                                    : 'border-[#E1E3DF] bg-[#F2F2EF] text-[#747B76] hover:bg-[#E9EAE6]'
+                                                            }`}
+                                                        >
+                                                            {isAvailable
+                                                                ? 'Tersedia'
+                                                                : 'Tidak tersedia'}
+                                                        </button>
+                                                    </td>
+                                                );
+                                            })}
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="flex flex-col gap-4 border-t border-[#EEECE6] px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                            <div className="space-y-2" aria-live="polite">
+                                {(flash?.success || form.recentlySuccessful) && (
+                                    <p className="text-sm font-medium text-[#477E50]">
+                                        {flash?.success ||
+                                            'Jadwal ketersediaan berhasil disimpan.'}
                                     </p>
-                                    <h3 className="mt-1 text-base font-bold text-[#34443D]">
-                                        {schedule.day ?? 'Hari belum diisi'}
-                                    </h3>
-                                    <div className="mt-4 flex items-center gap-2 rounded-lg bg-[#F2F5F0] px-3 py-2.5 text-sm font-semibold text-[#527D61]">
-                                        <span aria-hidden="true">Jam:</span>
-                                        <span>
-                                            {schedule.start ?? '--:--'} -{' '}
-                                            {schedule.end ?? '--:--'}
-                                        </span>
-                                    </div>
-                                </article>
-                            ))}
+                                )}
+                                {validationErrors.map((error, index) => (
+                                    <p
+                                        key={`${error}-${index}`}
+                                        className="text-sm font-medium text-[#A34F45]"
+                                    >
+                                        {error}
+                                    </p>
+                                ))}
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={form.processing}
+                                className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[#6594B1] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#527D98] focus:outline-none focus:ring-2 focus:ring-[#6594B1] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                {form.processing
+                                    ? 'Menyimpan...'
+                                    : 'Simpan Jadwal Ketersediaan'}
+                            </button>
                         </div>
-                    ) : (
-                        <div className="rounded-xl border border-dashed border-[#D9DCD4] bg-white/70 px-5 py-8 text-center text-sm text-[#78827B]">
-                            Belum ada jadwal ketersediaan.
-                        </div>
-                    )}
+                    </form>
                 </section>
             </main>
         </div>
