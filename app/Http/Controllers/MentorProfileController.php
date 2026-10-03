@@ -5,24 +5,21 @@ namespace App\Http\Controllers;
 use App\Models\MentorProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class MentorProfileController extends Controller
 {
-    // GET - ambil profil mentor yang sedang login
-    public function show()
+    // Buka halaman Dashboard Mentor
+    public function dashboard()
     {
         $mentorProfile = MentorProfile::where('user_id', Auth::id())->first();
 
-        if (!$mentorProfile) {
-            return response()->json([
-                'message' => 'Profil mentor belum ditemukan'
-            ], 404);
-        }
-
-        return response()->json($mentorProfile);
+        return Inertia::render('Mentor/Dashboard', [
+            'mentorProfile' => $mentorProfile,
+        ]);
     }
 
-    // PATCH - update jadwal ketersediaan mentor
+    // Aksi: update jadwal ketersediaan (dipanggil saat mentor klik "Simpan")
     public function updateAvailability(Request $request)
     {
         $request->validate([
@@ -35,18 +32,13 @@ class MentorProfileController extends Controller
         $mentorProfile = MentorProfile::where('user_id', Auth::id())->first();
 
         if (!$mentorProfile) {
-            return response()->json([
-                'message' => 'Profil mentor belum ditemukan'
-            ], 404);
+            return redirect()->back()->withErrors(['message' => 'Profil mentor belum ditemukan']);
         }
 
         $mentorProfile->update([
             'availability_schedule' => $request->availability_schedule,
         ]);
 
-        return response()->json([
-            'message' => 'Jadwal ketersediaan berhasil diperbarui',
-            'data' => $mentorProfile,
-        ]);
+        return redirect()->back()->with('success', 'Jadwal ketersediaan berhasil diperbarui');
     }
 }
