@@ -14,8 +14,41 @@ const defaultTimeSlots = [
     { start: '15:30', end: '17:30' },
 ];
 
-export default function Dashboard({ mentorProfile }) {
+const sessionDateTimeFormatter = new Intl.DateTimeFormat('id-ID', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'Asia/Jakarta',
+});
+
+const rupiahFormatter = new Intl.NumberFormat('id-ID', {
+    maximumFractionDigits: 0,
+});
+
+function formatSessionDateTime(value) {
+    const date = new Date(value);
+
+    return Number.isNaN(date.getTime())
+        ? 'Waktu tidak tersedia'
+        : `${sessionDateTimeFormatter.format(date)} WIB`;
+}
+
+function truncateNotes(notes) {
+    if (!notes) {
+        return 'Tidak ada catatan dari student.';
+    }
+
+    return notes.length > 100 ? `${notes.slice(0, 97)}...` : notes;
+}
+
+export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
     const { auth, flash } = usePage().props;
+    const safeBookingRequests = Array.isArray(bookingRequests)
+        ? bookingRequests
+        : [];
     const availabilitySchedule = Array.isArray(
         mentorProfile?.availability_schedule,
     )
@@ -267,6 +300,106 @@ export default function Dashboard({ mentorProfile }) {
                             {mentorProfile?.bio || 'Belum ada bio.'}
                         </p>
                     </div>
+                </section>
+
+                <section aria-labelledby="booking-requests-heading">
+                    <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+                        <div>
+                            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A938D]">
+                                Pengajuan sesi mentoring
+                            </p>
+                            <h2
+                                id="booking-requests-heading"
+                                className="mt-1 text-xl font-bold text-[#34443D]"
+                            >
+                                Permintaan Bimbingan Baru
+                            </h2>
+                        </div>
+                        <p className="text-sm text-[#78827B]">
+                            {safeBookingRequests.length} permintaan baru
+                        </p>
+                    </div>
+
+                    {safeBookingRequests.length > 0 ? (
+                        <div className="space-y-3">
+                            {safeBookingRequests.map((bookingRequest) => (
+                                <article
+                                    key={bookingRequest.id}
+                                    className="rounded-xl border border-[#E8E5DD] bg-white p-5 shadow-[0_3px_14px_rgba(52,68,61,0.04)] sm:p-6"
+                                >
+                                    <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-center gap-3">
+                                                <h3 className="text-base font-bold text-[#34443D]">
+                                                    {bookingRequest.student
+                                                        ?.name ?? 'Student'}
+                                                </h3>
+                                                <span
+                                                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-bold ${
+                                                        bookingRequest.is_free_session
+                                                            ? 'bg-[#E8F2E8] text-[#65B175]'
+                                                            : 'bg-[#E7EEF1] text-[#6594B1]'
+                                                    }`}
+                                                >
+                                                    {bookingRequest.is_free_session
+                                                        ? 'Gratis'
+                                                        : `Rp ${rupiahFormatter.format(Number(bookingRequest.price_snapshot ?? 0))}`}
+                                                </span>
+                                            </div>
+
+                                            <div className="mt-4 grid gap-3 text-sm text-[#69766F] sm:grid-cols-2">
+                                                <p>
+                                                    <span className="font-semibold text-[#34443D]">
+                                                        Mulai:{' '}
+                                                    </span>
+                                                    {formatSessionDateTime(
+                                                        bookingRequest.schedule_time,
+                                                    )}
+                                                </p>
+                                                <p>
+                                                    <span className="font-semibold text-[#34443D]">
+                                                        Selesai:{' '}
+                                                    </span>
+                                                    {formatSessionDateTime(
+                                                        bookingRequest.end_time,
+                                                    )}
+                                                </p>
+                                                <p>
+                                                    <span className="font-semibold text-[#34443D]">
+                                                        Durasi:{' '}
+                                                    </span>
+                                                    {bookingRequest.duration_hours}{' '}
+                                                    Jam
+                                                </p>
+                                            </div>
+
+                                            <p className="mt-3 text-sm leading-6 text-[#69766F]">
+                                                {truncateNotes(
+                                                    bookingRequest.notes_from_student,
+                                                )}
+                                            </p>
+                                        </div>
+
+                                        <Link
+                                            href={route(
+                                                'mentor.booking.show',
+                                                bookingRequest.id,
+                                            )}
+                                            className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg bg-[#6594B1] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#527D98] focus:outline-none focus:ring-2 focus:ring-[#6594B1] focus:ring-offset-2"
+                                        >
+                                            Lihat Detail
+                                        </Link>
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="rounded-xl border border-[#E8E5DD] bg-white px-5 py-8 text-center shadow-[0_3px_14px_rgba(52,68,61,0.04)]">
+                            <p className="text-sm text-[#78827B]">
+                                Belum ada permintaan bimbingan baru
+                            </p>
+                        </div>
+                    )}
                 </section>
 
                 <section aria-labelledby="availability-heading">
