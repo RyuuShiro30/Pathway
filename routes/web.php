@@ -28,6 +28,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/mentor/availability', [MentorProfileController::class, 'updateAvailability'])->name('mentor.availability.update');
 
     Route::post('/booking', [MentoringSessionController::class, 'store'])->name('booking.store');
+    Route::get('/mentor/requests', [MentoringSessionController::class, 'requests'])->name('mentor.requests');
+    Route::get('/mentor/booking/{id}', [MentoringSessionController::class, 'show'])->name('mentor.booking.show');
+    Route::patch('/mentor/booking/{id}/respond', [MentoringSessionController::class, 'respond'])->name('mentor.booking.respond');
 });
 
 require __DIR__.'/auth.php';
