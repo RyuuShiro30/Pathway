@@ -1,5 +1,5 @@
 <?php
-
+use App\Http\Controllers\MentoringSessionController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\MentorProfileController;
 use Illuminate\Foundation\Application;
@@ -26,6 +26,8 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/mentor/dashboard', [MentorProfileController::class, 'dashboard'])->name('mentor.dashboard');
     Route::patch('/mentor/availability', [MentorProfileController::class, 'updateAvailability'])->name('mentor.availability.update');
+
+    Route::post('/booking', [MentoringSessionController::class, 'store'])->name('booking.store');
 });
 
 require __DIR__.'/auth.php';
