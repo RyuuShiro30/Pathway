@@ -14,8 +14,15 @@ class MentorProfileController extends Controller
     {
         $mentorProfile = MentorProfile::where('user_id', Auth::id())->first();
 
+        $requests = \App\Models\MentoringSession::with('student')
+            ->where('mentor_id', Auth::id())
+            ->where('status', 'diajukan')
+            ->orderBy('schedule_time', 'asc')
+            ->get();
+
         return Inertia::render('Mentor/Dashboard', [
             'mentorProfile' => $mentorProfile,
+            'bookingRequests' => $requests,
         ]);
     }
 
