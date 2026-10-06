@@ -1,8 +1,6 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
@@ -11,6 +9,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
         DB::statement('ALTER TABLE mentoring_sessions DROP CONSTRAINT IF EXISTS mentoring_sessions_status_check');
 
         DB::statement("ALTER TABLE mentoring_sessions ADD CONSTRAINT mentoring_sessions_status_check 
@@ -19,6 +21,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (DB::getDriverName() !== 'pgsql') {
+            return;
+        }
+
         DB::statement('ALTER TABLE mentoring_sessions DROP CONSTRAINT IF EXISTS mentoring_sessions_status_check');
 
         DB::statement("ALTER TABLE mentoring_sessions ADD CONSTRAINT mentoring_sessions_status_check 
