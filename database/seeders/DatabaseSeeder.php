@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             MentorProfileSeeder::class,
+            MentoringSessionSeeder::class,
         ]);
     }
 }
