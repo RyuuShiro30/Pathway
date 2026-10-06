@@ -214,4 +214,26 @@ class MentoringSessionController extends Controller
 
         return redirect()->route('mentor.dashboard')->with('success', 'Sesi berhasil dibatalkan.');
     }
+        // PATCH - mentor upload bukti transfer refund ke mentee
+    public function completeRefund(Request $request, $id)
+    {
+        $request->validate([
+            'refund_proof' => 'required|file|mimes:jpg,jpeg,png,pdf|max:5120',
+        ]);
+
+        $session = MentoringSession::where('mentor_id', Auth::id())
+            ->where('id', $id)
+            ->where('refund_status', 'menunggu')
+            ->firstOrFail();
+
+        $proofPath = $request->file('refund_proof')->store('refund-proofs', 'public');
+
+        $session->update([
+            'refund_proof' => $proofPath,
+            'refund_status' => 'menunggu_konfirmasi',
+            'refund_proof_uploaded_at' => now(),
+        ]);
+
+        return redirect()->route('mentor.dashboard')->with('success', 'Bukti refund berhasil diupload, menunggu konfirmasi mentee');
+    }
 }
