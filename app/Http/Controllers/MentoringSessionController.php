@@ -129,4 +129,53 @@ class MentoringSessionController extends Controller
 
         return redirect()->route('mentor.dashboard')->with('success', 'Booking berhasil dikonfirmasi');
     }
+        // GET - halaman session tracking untuk 1 sesi yang sudah dikonfirmasi
+    public function tracking($id)
+    {
+        $session = MentoringSession::with('student')
+            ->where('mentor_id', Auth::id())
+            ->whereIn('status', ['dikonfirmasi', 'berlangsung', 'selesai'])
+            ->findOrFail($id);
+
+        return \Inertia\Inertia::render('Mentor/SessionTracking', [
+            'session' => $session,
+        ]);
+    }
+
+    // PATCH - mentor klik "Mulai Sesi"
+    public function startSession($id)
+    {
+        $session = MentoringSession::where('mentor_id', Auth::id())
+            ->where('id', $id)
+            ->where('status', 'dikonfirmasi')
+            ->firstOrFail();
+
+        $session->update(['status' => 'berlangsung']);
+
+        return redirect()->back()->with('success', 'Sesi dimulai');
+    }
+
+    // PATCH - mentor submit bukti mentoring dan selesaikan sesi
+    public function completeSession(Request $request, $id)
+    {
+        $request->validate([
+            'proof_file' => 'required|image|max:5120',
+            'notes_from_mentor' => 'nullable|string',
+        ]);
+
+        $session = MentoringSession::where('mentor_id', Auth::id())
+            ->where('id', $id)
+            ->where('status', 'berlangsung')
+            ->firstOrFail();
+
+        $proofPath = $request->file('proof_file')->store('session-proofs', 'public');
+
+        $session->update([
+            'status' => 'selesai',
+            'proof_file' => $proofPath,
+            'notes_from_mentor' => $request->notes_from_mentor,
+        ]);
+
+        return redirect()->route('mentor.dashboard')->with('success', 'Sesi berhasil diselesaikan');
+    }
 }

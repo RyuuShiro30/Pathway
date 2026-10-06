@@ -31,6 +31,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/mentor/requests', [MentoringSessionController::class, 'requests'])->name('mentor.requests');
     Route::get('/mentor/booking/{id}', [MentoringSessionController::class, 'show'])->name('mentor.booking.show');
     Route::patch('/mentor/booking/{id}/respond', [MentoringSessionController::class, 'respond'])->name('mentor.booking.respond');
+    Route::get('/mentor/session/{id}', [MentoringSessionController::class, 'tracking'])->name('mentor.session.tracking');
+    Route::patch('/mentor/session/{id}/start', [MentoringSessionController::class, 'startSession'])->name('mentor.session.start');
+    Route::patch('/mentor/session/{id}/complete', [MentoringSessionController::class, 'completeSession'])->name('mentor.session.complete');
 });
 
 require __DIR__.'/auth.php';
