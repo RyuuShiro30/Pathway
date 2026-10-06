@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\MentoringSession;
 use App\Models\MentorProfile;
+use Carbon\Carbon;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 
 class MentoringSessionController extends Controller
 {
@@ -24,7 +26,7 @@ class MentoringSessionController extends Controller
             'payment_dp_proof' => 'required_if:is_free_session,false|image|max:5120',
         ]);
 
-        $endTime = \Carbon\Carbon::parse($request->schedule_time)
+        $endTime = Carbon::parse($request->schedule_time)
             ->addHours($request->duration_hours);
 
         return DB::transaction(function () use ($request, $endTime) {
@@ -70,7 +72,8 @@ class MentoringSessionController extends Controller
             return redirect()->back()->with('success', 'Booking berhasil diajukan, menunggu konfirmasi mentor.');
         });
     }
-        // GET - list permintaan bimbingan baru (status: diajukan) untuk Dashboard
+
+    // GET - list permintaan bimbingan baru (status: diajukan) untuk Dashboard
     public function requests()
     {
         $requests = MentoringSession::with('student')
@@ -89,7 +92,7 @@ class MentoringSessionController extends Controller
             ->where('mentor_id', Auth::id())
             ->findOrFail($id);
 
-        return \Inertia\Inertia::render('Mentor/BookingRequestDetail', [
+        return Inertia::render('Mentor/BookingRequestDetail', [
             'session' => $session,
         ]);
     }
@@ -113,6 +116,7 @@ class MentoringSessionController extends Controller
 
         if ($request->action === 'tolak') {
             $session->update(['status' => 'dibatalkan', 'cancelled_by' => 'mentor']);
+
             return redirect()->route('mentor.dashboard')->with('success', 'Permintaan berhasil ditolak');
         }
 
@@ -129,7 +133,8 @@ class MentoringSessionController extends Controller
 
         return redirect()->route('mentor.dashboard')->with('success', 'Booking berhasil dikonfirmasi');
     }
-        // GET - halaman session tracking untuk 1 sesi yang sudah dikonfirmasi
+
+    // GET - halaman session tracking untuk 1 sesi yang sudah dikonfirmasi
     public function tracking($id)
     {
         $session = MentoringSession::with('student')
@@ -137,7 +142,7 @@ class MentoringSessionController extends Controller
             ->whereIn('status', ['dikonfirmasi', 'berlangsung', 'selesai'])
             ->findOrFail($id);
 
-        return \Inertia\Inertia::render('Mentor/SessionTracking', [
+        return Inertia::render('Mentor/SessionTracking', [
             'session' => $session,
         ]);
     }
@@ -177,5 +182,36 @@ class MentoringSessionController extends Controller
         ]);
 
         return redirect()->route('mentor.dashboard')->with('success', 'Sesi berhasil diselesaikan');
+    }
+
+    public function cancelSession(Request $request, int $id): RedirectResponse
+    {
+        $validated = $request->validate([
+            'cancellation_reason' => ['required', 'string'],
+        ]);
+
+        DB::transaction(function () use ($id, $validated): void {
+            $session = MentoringSession::query()
+                ->where('mentor_id', Auth::id())
+                ->whereKey($id)
+                ->where('status', 'dikonfirmasi')
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $cancellation = [
+                'status' => 'dibatalkan',
+                'cancelled_by' => 'mentor',
+                'cancellation_reason' => $validated['cancellation_reason'],
+            ];
+
+            if (! $session->is_free_session) {
+                $cancellation['refund_status'] = 'menunggu';
+                $cancellation['refund_deadline'] = Carbon::now()->addHours(48);
+            }
+
+            $session->update($cancellation);
+        });
+
+        return redirect()->route('mentor.dashboard')->with('success', 'Sesi berhasil dibatalkan.');
     }
 }

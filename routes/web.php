@@ -1,7 +1,8 @@
 <?php
+
 use App\Http\Controllers\MentoringSessionController;
-use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\MentorProfileController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -34,6 +35,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/mentor/session/{id}', [MentoringSessionController::class, 'tracking'])->name('mentor.session.tracking');
     Route::patch('/mentor/session/{id}/start', [MentoringSessionController::class, 'startSession'])->name('mentor.session.start');
     Route::patch('/mentor/session/{id}/complete', [MentoringSessionController::class, 'completeSession'])->name('mentor.session.complete');
+    Route::patch('/mentor/session/{id}/cancel', [MentoringSessionController::class, 'cancelSession'])->name('mentor.session.cancel');
 });
 
 require __DIR__.'/auth.php';
