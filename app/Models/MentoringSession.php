@@ -27,6 +27,7 @@ class MentoringSession extends Model
         'refund_proof',
         'refund_status',
         'refund_deadline',
+        'refund_proof_uploaded_at',
     ];
 
     protected $casts = [
@@ -35,6 +36,7 @@ class MentoringSession extends Model
         'is_free_session' => 'boolean',
         'price_snapshot' => 'decimal:2',
         'refund_deadline' => 'datetime',
+        'refund_proof_uploaded_at' => 'datetime',
     ];
     public function mentor()
     {
