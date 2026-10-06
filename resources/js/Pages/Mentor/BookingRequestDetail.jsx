@@ -71,29 +71,21 @@ export default function BookingRequestDetail({ session }) {
         Object.values(form.errors).find(Boolean);
     const isPending = session.status === 'diajukan';
 
-    function handleSubmit(event) {
-        event.preventDefault();
-
-        const action = event.nativeEvent.submitter?.value;
-
-        if (action !== 'terima' && action !== 'tolak') {
-            return;
-        }
-
-        if (
-            action === 'tolak' &&
-            !window.confirm(
-                'Apakah Anda yakin ingin menolak permintaan booking ini?',
-            )
-        ) {
-            return;
-        }
-
-        form.transform(() => ({ action })).patch(
-            route('mentor.booking.respond', session.id),
-            { preserveScroll: true },
-        );
+    function respondToBooking(action) {
+    if (
+        action === 'tolak' &&
+        !window.confirm(
+            'Apakah Anda yakin ingin menolak permintaan booking ini?',
+        )
+    ) {
+        return;
     }
+
+    form.transform(() => ({ action }));
+    form.patch(route('mentor.booking.respond', session.id), {
+        preserveScroll: true,
+    });
+}
 
     return (
         <div className="min-h-screen bg-[#F7F5F0] text-[#34443D]">
@@ -410,11 +402,11 @@ export default function BookingRequestDetail({ session }) {
                     aria-label="Tindakan permintaan booking"
                     className="rounded-xl border border-[#E8E5DD] bg-white p-5 shadow-[0_3px_14px_rgba(52,68,61,0.04)] sm:p-6"
                 >
-                    <form onSubmit={handleSubmit}>
+                    <div>
                         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
                             <button
-                                type="submit"
-                                value="terima"
+                                type="button"
+                                onClick={() => respondToBooking('terima')}
                                 disabled={form.processing || !isPending}
                                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#65B175] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#559C65] focus:outline-none focus:ring-2 focus:ring-[#65B175] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                             >
@@ -434,8 +426,8 @@ export default function BookingRequestDetail({ session }) {
                                     : 'Verifikasi & Terima'}
                             </button>
                             <button
-                                type="submit"
-                                value="tolak"
+                                type="button"
+                                onClick={() => respondToBooking('tolak')}
                                 disabled={form.processing || !isPending}
                                 className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#FBECEE] px-5 py-3 text-sm font-bold text-[#C23B46] transition-colors hover:bg-[#F6DDE1] focus:outline-none focus:ring-2 focus:ring-[#C23B46] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                             >
@@ -459,7 +451,7 @@ export default function BookingRequestDetail({ session }) {
                             sesuai jadwal di atas. Jika status booking sudah
                             berubah, tindakan tidak dapat dilakukan.
                         </p>
-                    </form>
+                    </div>
                 </section>
             </main>
         </div>
