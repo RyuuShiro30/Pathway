@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\MentorProfile;
-use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class MentorDirectoryController extends Controller
 {
@@ -13,6 +13,8 @@ class MentorDirectoryController extends Controller
             ->where('verification_status', 'verified')
             ->get();
 
-        return response()->json($mentors);
+        return Inertia::render('Mentors/Index', [
+            'mentors' => $mentors,
+        ]);
     }
 }
