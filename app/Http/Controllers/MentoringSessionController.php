@@ -146,6 +146,18 @@ class MentoringSessionController extends Controller
             'session' => $session,
         ]);
     }
+        // GET - halaman proses refund untuk mentor
+    public function refundForm($id)
+    {
+        $session = MentoringSession::with('student')
+            ->where('mentor_id', Auth::id())
+            ->where('refund_status', 'menunggu')
+            ->findOrFail($id);
+
+        return Inertia::render('Mentor/RefundProcess', [
+            'session' => $session,
+        ]);
+    }
 
     // PATCH - mentor klik "Mulai Sesi"
     public function startSession($id)

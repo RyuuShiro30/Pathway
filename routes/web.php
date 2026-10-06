@@ -37,6 +37,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/mentor/session/{id}/complete', [MentoringSessionController::class, 'completeSession'])->name('mentor.session.complete');
     Route::patch('/mentor/session/{id}/cancel', [MentoringSessionController::class, 'cancelSession'])->name('mentor.session.cancel');
     Route::patch('/mentor/session/{id}/refund', [MentoringSessionController::class, 'completeRefund'])->name('mentor.refund.complete');
+    Route::get('/mentor/session/{id}/refund', [MentoringSessionController::class, 'refundForm'])->name('mentor.refund.form');
 });
 
 require __DIR__.'/auth.php';
