@@ -16,7 +16,7 @@ class MentorDirectoryController extends Controller
             ->where('verification_status', 'verified')
             ->when($search, function ($query) use ($search) {
                 $query->whereHas('user', function ($userQuery) use ($search) {
-                    $userQuery->where('name', 'like', '%' . $search . '%');
+                    $userQuery->whereRaw('LOWER(name) LIKE ?', ['%' . strtolower($search) . '%']);
                 });
             })
             ->get();
