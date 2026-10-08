@@ -78,13 +78,13 @@ export default function Index({
                         <option value="0">Tidak tersedia</option>
                     </select>
 
-                    {/* Filter Harga */}
+                    {/* Jenis Mentoring */}
                     <select
                         value={data.mentor_type}
                         onChange={(e) => setData("mentor_type", e.target.value)}
                         className="rounded-lg border border-gray-300 bg-white px-4 py-2 focus:border-gray-500 focus:outline-none"
                     >
-                        <option value="">Semua Harga</option>
+                        <option value="">Semua Jenis</option>
                         <option value="free">Gratis</option>
                         <option value="paid">Berbayar</option>
                     </select>
