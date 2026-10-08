@@ -24,6 +24,19 @@ export default function Index({
         });
     };
 
+    const handleReset = () => {
+        setData({
+            search: "",
+            expertise: "",
+            availability: "",
+            mentor_type: "",
+        });
+
+        get("/mentors", {
+            preserveState: true,
+        });
+    };
+
     return (
         <div className="min-h-screen bg-gray-100 py-10">
             <div className="mx-auto max-w-7xl px-6">
@@ -95,6 +108,15 @@ export default function Index({
                         className="rounded-lg bg-gray-800 px-6 py-2 text-white hover:bg-gray-700"
                     >
                         Cari
+                    </button>
+
+                    {/* Tombol Reset */}
+                    <button
+                        type="button"
+                        onClick={handleReset}
+                        className="rounded-lg border border-gray-300 bg-white px-6 py-2 text-gray-700 hover:bg-gray-100"
+                    >
+                        Reset
                     </button>
                 </form>
 
