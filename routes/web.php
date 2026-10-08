@@ -22,6 +22,13 @@ Route::get('/dashboard', function () {
 Route::get('/mentors', [MentorDirectoryController::class, 'index'])
     ->name('mentors.index');
 
+// Direktori Mentor
+Route::get('/mentors', [MentorDirectoryController::class, 'index'])
+    ->name('mentors.index');
+
+Route::get('/mentors/{id}', [MentorDirectoryController::class, 'show'])
+    ->name('mentors.show');
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
