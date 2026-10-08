@@ -1,9 +1,10 @@
 import React from "react";
 import { useForm } from "@inertiajs/react";
 
-export default function Index({ mentors, search }) {
+export default function Index({ mentors, search, expertise, expertises }) {
     const { data, setData, get } = useForm({
         search: search || "",
+        expertise: expertise || "",
     });
 
     const handleSearch = (e) => {
@@ -25,7 +26,6 @@ export default function Index({ mentors, search }) {
                     Temukan mentor yang sesuai dengan kebutuhan belajar kamu.
                 </p>
 
-                {/* Search */}
                 <form onSubmit={handleSearch} className="mt-6 flex gap-3">
                     <input
                         type="text"
@@ -35,6 +35,20 @@ export default function Index({ mentors, search }) {
                         className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2 focus:border-gray-500 focus:outline-none"
                     />
 
+                    <select
+                        value={data.expertise}
+                        onChange={(e) => setData("expertise", e.target.value)}
+                        className="rounded-lg border border-gray-300 bg-white px-4 py-2 focus:border-gray-500 focus:outline-none"
+                    >
+                        <option value="">Semua Expertise</option>
+
+                        {expertises.map((item) => (
+                            <option key={item} value={item}>
+                                {item}
+                            </option>
+                        ))}
+                    </select>
+
                     <button
                         type="submit"
                         className="rounded-lg bg-gray-800 px-6 py-2 text-white hover:bg-gray-700"
@@ -43,7 +57,6 @@ export default function Index({ mentors, search }) {
                     </button>
                 </form>
 
-                {/* Daftar Mentor */}
                 <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {mentors.length > 0 ? (
                         mentors.map((mentor) => (
