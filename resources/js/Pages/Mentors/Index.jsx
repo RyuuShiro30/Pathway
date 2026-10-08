@@ -1,10 +1,17 @@
 import React from "react";
 import { useForm } from "@inertiajs/react";
 
-export default function Index({ mentors, search, expertise, expertises }) {
+export default function Index({
+    mentors,
+    search,
+    expertise,
+    expertises,
+    availability,
+}) {
     const { data, setData, get } = useForm({
         search: search || "",
         expertise: expertise || "",
+        availability: availability || "",
     });
 
     const handleSearch = (e) => {
@@ -47,6 +54,18 @@ export default function Index({ mentors, search, expertise, expertises }) {
                                 {item}
                             </option>
                         ))}
+                    </select>
+
+                    <select
+                        value={data.availability}
+                        onChange={(e) =>
+                            setData("availability", e.target.value)
+                        }
+                        className="rounded-lg border border-gray-300 bg-white px-4 py-2 focus:border-gray-500 focus:outline-none"
+                    >
+                        <option value="">Semua Status</option>
+                        <option value="1">Tersedia</option>
+                        <option value="0">Tidak tersedia</option>
                     </select>
 
                     <button

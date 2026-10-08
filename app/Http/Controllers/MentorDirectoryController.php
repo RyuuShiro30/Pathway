@@ -12,6 +12,7 @@ class MentorDirectoryController extends Controller
     {
         $search = $request->input('search');
         $expertise = $request->input('expertise');
+        $availability = $request->input('availability');
 
         $mentors = MentorProfile::with('user')
             ->where('verification_status', 'verified')
@@ -26,6 +27,9 @@ class MentorDirectoryController extends Controller
             ->when($expertise, function ($query) use ($expertise) {
                 $query->where('expertise', $expertise);
             })
+            ->when($availability !== null && $availability !== '', function ($query) use ($availability) {
+                $query->where('is_available', $availability);
+            })
             ->get();
 
         $expertises = MentorProfile::where('verification_status', 'verified')
@@ -39,6 +43,7 @@ class MentorDirectoryController extends Controller
             'search' => $search,
             'expertise' => $expertise,
             'expertises' => $expertises,
+            'availability' => $availability,
         ]);
     }
 }
