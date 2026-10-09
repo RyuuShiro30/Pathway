@@ -4,22 +4,20 @@ namespace Database\Seeders;
 
 use App\Models\User;
 use App\Models\MentorProfile;
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Hash;
 
 class MentorProfileSeeder extends Seeder
 {
-    /**
-     * Run the database seeds.
-     */
     public function run(): void
     {
-        $user = User::where('name', 'lili')->first();
-
-        if (!$user) {
-            $this->command->error('User "lili" tidak ditemukan. Register dulu lewat /register.');
-            return;
-        }
+        $user = User::firstOrCreate(
+            ['email' => 'lili@example.com'],
+            [
+                'name' => 'lili',
+                'password' => Hash::make('password'),
+            ]
+        );
 
         MentorProfile::create([
             'user_id' => $user->id,
@@ -31,11 +29,11 @@ class MentorProfileSeeder extends Seeder
             'avg_rating' => 4.8,
             'is_available' => true,
             'availability_schedule' => [
+                ['day' => 'senin', 'start' => '09:00', 'end' => '11:00'],
                 ['day' => 'senin', 'start' => '10:00', 'end' => '12:00'],
-                ['day' => 'rabu', 'start' => '14:00', 'end' => '16:00'],
             ],
         ]);
 
-        $this->command->info('Data dummy MentorProfile berhasil dibuat.');
+        $this->command->info('Data dummy: user mentor "lili" dan MentorProfile berhasil dibuat.');
     }
 }
