@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+
 use App\Http\Requests\MentorRegistrationRequest;
 use App\Models\MentorCertificate;
+use Illuminate\Support\Facades\Storage;
 use App\Models\MentorProfile;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -18,7 +20,7 @@ class MentorRegistrationController extends Controller
     {
         return Inertia::render('Mentor/Register', [
             'user' => auth()->user(),
-            'mentorProfile' => auth()->user()->mentorProfile,
+            'mentorProfile' => auth()->user()->mentorProfile?->load('certificates'),
         ]);
     }
 
@@ -113,5 +115,31 @@ class MentorRegistrationController extends Controller
         return redirect()
             ->route('mentor.register')
             ->with('success', $message);
+    }
+
+    /**
+     * Menghapus sertifikat mentor.
+    */
+    public function destroyCertificate(
+        MentorCertificate $certificate
+    ): RedirectResponse {
+        $user = auth()->user();
+
+        $mentorProfile = $user->mentorProfile;
+
+        if (
+            !$mentorProfile ||
+            $certificate->mentor_profile_id !== $mentorProfile->id
+        ) {
+            abort(403);
+        }
+
+        Storage::disk('public')->delete($certificate->file_path);
+
+        $certificate->delete();
+
+        return redirect()
+            ->route('mentor.register')
+            ->with('success', 'Sertifikat berhasil dihapus.');
     }
 }

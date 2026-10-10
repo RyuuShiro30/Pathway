@@ -1,5 +1,5 @@
-import { Head, Link, useForm } from "@inertiajs/react";
-import { useRef, useState } from "react";
+import { Head, Link, router, useForm } from "@inertiajs/react";
+import { useEffect, useRef, useState } from "react";
 
 const expertiseOptions = [
     "Web Development",
@@ -16,6 +16,24 @@ export default function Register({ user, mentorProfile }) {
         mentorProfile?.expertise ?? "",
     );
 
+    /*
+     * Sertifikat yang sudah pernah disimpan di database.
+     */
+    const [existingCertificates, setExistingCertificates] = useState(
+        mentorProfile?.certificates ?? [],
+    );
+
+    /*
+     * Sinkronkan sertifikat lama dengan data terbaru
+     * yang dikirim oleh Laravel melalui Inertia.
+     */
+    useEffect(() => {
+        setExistingCertificates(mentorProfile?.certificates ?? []);
+    }, [mentorProfile?.certificates]);
+
+    /*
+     * Sertifikat baru yang sedang dipilih dan belum disimpan.
+     */
     const [certificates, setCertificates] = useState([]);
 
     const initialData = {
@@ -46,13 +64,8 @@ export default function Register({ user, mentorProfile }) {
     /*
      * Mengecek apakah ada perubahan pada data.
      *
-     * Jika tidak ada perubahan:
-     * - tombol disabled
-     * - tombol berwarna abu-abu
-     *
-     * Jika ada perubahan:
-     * - tombol aktif
-     * - tombol berwarna hijau
+     * Sertifikat lama dari database tidak dihitung sebagai perubahan.
+     * Hanya sertifikat baru yang sedang dipilih yang dianggap perubahan.
      */
     const hasChanges =
         data.name !== savedData.name ||
@@ -112,6 +125,9 @@ export default function Register({ user, mentorProfile }) {
             "image/webp",
         ];
 
+        /*
+         * Cek format file.
+         */
         const invalidType = newFiles.find(
             (file) => !allowedTypes.includes(file.type),
         );
@@ -120,22 +136,49 @@ export default function Register({ user, mentorProfile }) {
             alert(
                 `File "${invalidType.name}" tidak didukung. Gunakan PDF, JPG, JPEG, PNG, atau WEBP.`,
             );
+
             e.target.value = "";
             return;
         }
 
+        /*
+         * Cek ukuran maksimal 5 MB.
+         */
         const maxSize = 5 * 1024 * 1024;
 
         const invalidSize = newFiles.find((file) => file.size > maxSize);
 
         if (invalidSize) {
             alert(`File "${invalidSize.name}" melebihi ukuran maksimal 5 MB.`);
+
             e.target.value = "";
             return;
         }
 
-        // Cek apakah ada file yang sudah pernah dipilih
-        const duplicateFile = newFiles.find((newFile) =>
+        /*
+         * Cek apakah file sudah pernah disimpan di database.
+         *
+         * Database menyimpan file_name, sehingga pengecekan
+         * dilakukan berdasarkan nama file.
+         */
+        const duplicateExisting = newFiles.find((newFile) =>
+            existingCertificates.some(
+                (existingFile) => existingFile.file_name === newFile.name,
+            ),
+        );
+
+        if (duplicateExisting) {
+            alert(`File "${duplicateExisting.name}" sudah pernah diupload.`);
+
+            e.target.value = "";
+            return;
+        }
+
+        /*
+         * Cek apakah file sudah dipilih sebelumnya
+         * pada sesi edit saat ini.
+         */
+        const duplicateNew = newFiles.find((newFile) =>
             certificates.some(
                 (existingFile) =>
                     existingFile.name === newFile.name &&
@@ -143,18 +186,25 @@ export default function Register({ user, mentorProfile }) {
             ),
         );
 
-        if (duplicateFile) {
-            alert(`File "${duplicateFile.name}" sudah ditambahkan.`);
+        if (duplicateNew) {
+            alert(`File "${duplicateNew.name}" sudah ditambahkan.`);
+
             e.target.value = "";
             return;
         }
 
-        // Gabungkan file lama dan file baru
+        /*
+         * Gabungkan file lama yang baru dipilih
+         * dengan file baru yang ditambahkan.
+         */
         const combinedFiles = [...certificates, ...newFiles];
 
-        // Maksimal 10 file
+        /*
+         * Maksimal 10 file baru dalam satu pengiriman.
+         */
         if (combinedFiles.length > 10) {
             alert("Maksimal 10 file sertifikat atau bukti pengalaman.");
+
             e.target.value = "";
             return;
         }
@@ -162,12 +212,17 @@ export default function Register({ user, mentorProfile }) {
         setCertificates(combinedFiles);
         setData("certificates", combinedFiles);
 
-        // Reset input agar file yang sama bisa dipilih lagi
-        // setelah file tersebut dihapus.
+        /*
+         * Reset input agar file yang sama bisa dipilih lagi
+         * setelah file tersebut dihapus dari daftar file baru.
+         */
         e.target.value = "";
     };
+
     /*
-     * Menghapus satu file dari daftar sertifikat.
+     * Menghapus satu file baru dari daftar.
+     *
+     * Ini hanya menghapus file yang belum disimpan.
      */
     const removeCertificate = (indexToRemove) => {
         const updatedFiles = certificates.filter(
@@ -176,6 +231,27 @@ export default function Register({ user, mentorProfile }) {
 
         setCertificates(updatedFiles);
         setData("certificates", updatedFiles);
+    };
+
+    /*
+     * Menghapus sertifikat yang sudah tersimpan di database.
+     */
+    const removeExistingCertificate = (certificateId) => {
+        if (!confirm("Yakin ingin menghapus sertifikat ini?")) {
+            return;
+        }
+
+        router.delete(route("mentor.certificate.destroy", certificateId), {
+            preserveScroll: true,
+
+            onSuccess: () => {
+                setExistingCertificates((current) =>
+                    current.filter(
+                        (certificate) => certificate.id !== certificateId,
+                    ),
+                );
+            },
+        });
     };
 
     const submit = (e) => {
@@ -188,9 +264,6 @@ export default function Register({ user, mentorProfile }) {
                 /*
                  * Setelah berhasil disimpan, data yang sekarang
                  * dianggap sebagai data terbaru.
-                 *
-                 * Photo dikembalikan ke null karena File tidak
-                 * perlu disimpan lagi di state sebagai perubahan.
                  */
                 setSavedData({
                     name: data.name,
@@ -210,8 +283,7 @@ export default function Register({ user, mentorProfile }) {
                 setData("photo", null);
 
                 /*
-                 * File sertifikat yang sudah berhasil dikirim
-                 * tidak perlu tetap dianggap sebagai perubahan.
+                 * File baru sudah tersimpan di database.
                  */
                 setCertificates([]);
                 setData("certificates", []);
@@ -481,47 +553,113 @@ export default function Register({ user, mentorProfile }) {
                                         />
                                     </label>
 
+                                    {/* Sertifikat yang sudah tersimpan */}
+                                    {existingCertificates.length > 0 && (
+                                        <div className="mt-4">
+                                            <p className="mb-2 text-xs font-medium text-gray-500">
+                                                Sertifikat yang sudah diupload
+                                            </p>
+
+                                            <div className="space-y-2">
+                                                {existingCertificates.map(
+                                                    (certificate) => (
+                                                        <div
+                                                            key={certificate.id}
+                                                            className="flex items-center justify-between gap-3 rounded-lg bg-gray-50 px-4 py-3"
+                                                        >
+                                                            <div className="flex min-w-0 items-center gap-3">
+                                                                <span className="shrink-0 text-gray-400">
+                                                                    📄
+                                                                </span>
+
+                                                                <a
+                                                                    href={`/storage/${certificate.file_path}`}
+                                                                    target="_blank"
+                                                                    rel="noopener noreferrer"
+                                                                    className="min-w-0 truncate text-sm font-medium text-[#5d7431] underline-offset-2 hover:underline"
+                                                                >
+                                                                    {
+                                                                        certificate.file_name
+                                                                    }
+                                                                </a>
+                                                            </div>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    removeExistingCertificate(
+                                                                        certificate.id,
+                                                                    )
+                                                                }
+                                                                className="shrink-0 text-xs font-medium text-red-500 transition hover:text-red-700"
+                                                            >
+                                                                Hapus
+                                                            </button>
+                                                        </div>
+                                                    ),
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Sertifikat baru yang belum disimpan */}
                                     {certificates.length > 0 && (
-                                        <div className="mt-4 space-y-2">
-                                            {certificates.map((file, index) => (
-                                                <div
-                                                    key={`${file.name}-${index}`}
-                                                    className="flex items-center justify-between gap-3 rounded-lg bg-gray-50 px-4 py-3"
-                                                >
-                                                    <div className="min-w-0">
-                                                        <p className="truncate text-sm font-medium text-gray-700">
-                                                            {file.name}
-                                                        </p>
+                                        <div className="mt-4">
+                                            <p className="mb-2 text-xs font-medium text-gray-500">
+                                                File baru
+                                            </p>
 
-                                                        <p className="mt-0.5 text-xs text-gray-400">
-                                                            {(
-                                                                file.size /
-                                                                1024 /
-                                                                1024
-                                                            ).toFixed(2)}{" "}
-                                                            MB
-                                                        </p>
-                                                    </div>
+                                            <div className="space-y-2">
+                                                {certificates.map(
+                                                    (file, index) => (
+                                                        <div
+                                                            key={`${file.name}-${file.size}-${index}`}
+                                                            className="flex items-center justify-between gap-3 rounded-lg bg-gray-50 px-4 py-3"
+                                                        >
+                                                            <div className="min-w-0">
+                                                                <p className="truncate text-sm font-medium text-gray-700">
+                                                                    {file.name}
+                                                                </p>
 
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            removeCertificate(
-                                                                index,
-                                                            )
-                                                        }
-                                                        className="shrink-0 text-xs font-medium text-red-500 transition hover:text-red-700"
-                                                    >
-                                                        Hapus
-                                                    </button>
-                                                </div>
-                                            ))}
+                                                                <p className="mt-0.5 text-xs text-gray-400">
+                                                                    {(
+                                                                        file.size /
+                                                                        1024 /
+                                                                        1024
+                                                                    ).toFixed(
+                                                                        2,
+                                                                    )}{" "}
+                                                                    MB
+                                                                </p>
+                                                            </div>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    removeCertificate(
+                                                                        index,
+                                                                    )
+                                                                }
+                                                                className="shrink-0 text-xs font-medium text-red-500 transition hover:text-red-700"
+                                                            >
+                                                                Hapus
+                                                            </button>
+                                                        </div>
+                                                    ),
+                                                )}
+                                            </div>
                                         </div>
                                     )}
 
                                     {errors.certificates && (
                                         <p className="mt-1.5 text-xs text-red-500">
                                             {errors.certificates}
+                                        </p>
+                                    )}
+
+                                    {errors["certificates.0"] && (
+                                        <p className="mt-1.5 text-xs text-red-500">
+                                            {errors["certificates.0"]}
                                         </p>
                                     )}
                                 </div>
