@@ -7,53 +7,31 @@ const expertiseOptions = [
     "UI/UX",
     "Data",
     "Cybersecurity",
-    "Game Dev",
+    "Game Development",
     "Bidang IT Lainnya",
 ];
 
 export default function Register({ user, mentorProfile }) {
+    const existingCertificates = mentorProfile?.certificates ?? [];
+
     const [selectedExpertise, setSelectedExpertise] = useState(
         mentorProfile?.expertise ?? "",
     );
 
-    /*
-     * Sertifikat yang sudah pernah disimpan di database.
-     */
-    const [existingCertificates, setExistingCertificates] = useState(
-        mentorProfile?.certificates ?? [],
-    );
-
-    /*
-     * Sinkronkan sertifikat lama dengan data terbaru
-     * yang dikirim oleh Laravel melalui Inertia.
-     */
-    useEffect(() => {
-        setExistingCertificates(mentorProfile?.certificates ?? []);
-    }, [mentorProfile?.certificates]);
-
-    /*
-     * Sertifikat baru yang sedang dipilih dan belum disimpan.
-     */
     const [certificates, setCertificates] = useState([]);
 
-    const initialData = {
+    const [savedData, setSavedData] = useState({
         name: user?.name ?? "",
-        photo: null,
         expertise: mentorProfile?.expertise ?? "",
         bio: mentorProfile?.bio ?? "",
         portfolio_url: mentorProfile?.portfolio_url ?? "",
         mentor_type: mentorProfile?.mentor_type ?? "free",
-        price_per_session:
-            mentorProfile?.mentor_type === "free"
-                ? ""
-                : (mentorProfile?.price_per_session ?? ""),
+        price_per_session: mentorProfile?.price_per_session ?? "",
         is_available: mentorProfile?.is_available ?? true,
-        certificates: [],
-    };
+    });
 
-    const { data, setData, post, processing, errors } = useForm(initialData);
-
-    const [savedData, setSavedData] = useState(initialData);
+    const [existingCertificateState, setExistingCertificateState] =
+        useState(existingCertificates);
 
     const [photoPreview, setPhotoPreview] = useState(
         user?.photo_path ? `/storage/${user.photo_path}` : null,
@@ -61,12 +39,25 @@ export default function Register({ user, mentorProfile }) {
 
     const fileInputRef = useRef(null);
 
-    /*
-     * Mengecek apakah ada perubahan pada data.
-     *
-     * Sertifikat lama dari database tidak dihitung sebagai perubahan.
-     * Hanya sertifikat baru yang sedang dipilih yang dianggap perubahan.
-     */
+    useEffect(() => {
+        setExistingCertificateState(existingCertificates);
+    }, [mentorProfile]);
+
+    const { data, setData, post, processing, errors, reset } = useForm({
+        name: user?.name ?? "",
+        photo: null,
+        expertise: mentorProfile?.expertise ?? "",
+        bio: mentorProfile?.bio ?? "",
+        portfolio_url: mentorProfile?.portfolio_url ?? "",
+        mentor_type: mentorProfile?.mentor_type ?? "free",
+        price_per_session: mentorProfile?.price_per_session ?? "",
+        is_available: mentorProfile?.is_available ?? true,
+        certificates: [],
+    });
+
+    const hasMentorProfile = !!mentorProfile;
+    const isRejected = mentorProfile?.verification_status === "rejected";
+
     const hasChanges =
         data.name !== savedData.name ||
         data.expertise !== savedData.expertise ||
@@ -78,12 +69,8 @@ export default function Register({ user, mentorProfile }) {
         data.photo !== null ||
         certificates.length > 0;
 
-    const hasMentorProfile = Boolean(mentorProfile);
-
-    const isRejected = mentorProfile?.verification_status === "rejected";
-
-    const handlePhotoChange = (e) => {
-        const file = e.target.files?.[0];
+    const handlePhotoChange = (event) => {
+        const file = event.target.files?.[0];
 
         if (!file) {
             return;
@@ -95,26 +82,15 @@ export default function Register({ user, mentorProfile }) {
         setPhotoPreview(previewUrl);
     };
 
-    const openPhotoPicker = () => {
-        fileInputRef.current?.click();
-    };
-
-    /*
-     * Memilih satu bidang keahlian.
-     * Pilihan baru akan menggantikan pilihan sebelumnya.
-     */
-    const selectExpertise = (expertise) => {
+    const handleExpertiseChange = (expertise) => {
         setSelectedExpertise(expertise);
         setData("expertise", expertise);
     };
 
-    /*
-     * Memilih banyak sertifikat / bukti pengalaman.
-     */
-    const handleCertificateChange = (e) => {
-        const newFiles = Array.from(e.target.files || []);
+    const handleCertificateChange = (event) => {
+        const files = Array.from(event.target.files ?? []);
 
-        if (newFiles.length === 0) {
+        if (!files.length) {
             return;
         }
 
@@ -125,127 +101,77 @@ export default function Register({ user, mentorProfile }) {
             "image/webp",
         ];
 
-        /*
-         * Cek format file.
-         */
-        const invalidType = newFiles.find(
-            (file) => !allowedTypes.includes(file.type),
-        );
-
-        if (invalidType) {
-            alert(
-                `File "${invalidType.name}" tidak didukung. Gunakan PDF, JPG, JPEG, PNG, atau WEBP.`,
-            );
-
-            e.target.value = "";
-            return;
-        }
-
-        /*
-         * Cek ukuran maksimal 5 MB.
-         */
         const maxSize = 5 * 1024 * 1024;
 
-        const invalidSize = newFiles.find((file) => file.size > maxSize);
+        const validFiles = [];
 
-        if (invalidSize) {
-            alert(`File "${invalidSize.name}" melebihi ukuran maksimal 5 MB.`);
+        for (const file of files) {
+            if (!allowedTypes.includes(file.type)) {
+                alert(
+                    `${file.name} tidak dapat ditambahkan. Format yang diperbolehkan: PDF, JPG, JPEG, PNG, WEBP.`,
+                );
+                continue;
+            }
 
-            e.target.value = "";
+            if (file.size > maxSize) {
+                alert(
+                    `${file.name} terlalu besar. Ukuran maksimal adalah 5MB.`,
+                );
+                continue;
+            }
+
+            const duplicateExisting = existingCertificateState.some(
+                (certificate) => certificate.file_name === file.name,
+            );
+
+            const duplicateNew = certificates.some(
+                (certificate) =>
+                    certificate.name === file.name &&
+                    certificate.size === file.size,
+            );
+
+            if (duplicateExisting || duplicateNew) {
+                alert(`${file.name} sudah ditambahkan.`);
+                continue;
+            }
+
+            validFiles.push(file);
+        }
+
+        const totalCertificates =
+            existingCertificateState.length +
+            certificates.length +
+            validFiles.length;
+
+        if (totalCertificates > 10) {
+            alert("Maksimal 10 sertifikat.");
             return;
         }
 
-        /*
-         * Cek apakah file sudah pernah disimpan di database.
-         *
-         * Database menyimpan file_name, sehingga pengecekan
-         * dilakukan berdasarkan nama file.
-         */
-        const duplicateExisting = newFiles.find((newFile) =>
-            existingCertificates.some(
-                (existingFile) => existingFile.file_name === newFile.name,
-            ),
-        );
+        const updatedCertificates = [...certificates, ...validFiles];
 
-        if (duplicateExisting) {
-            alert(`File "${duplicateExisting.name}" sudah pernah diupload.`);
+        setCertificates(updatedCertificates);
+        setData("certificates", updatedCertificates);
 
-            e.target.value = "";
-            return;
+        if (fileInputRef.current) {
+            fileInputRef.current.value = "";
         }
-
-        /*
-         * Cek apakah file sudah dipilih sebelumnya
-         * pada sesi edit saat ini.
-         */
-        const duplicateNew = newFiles.find((newFile) =>
-            certificates.some(
-                (existingFile) =>
-                    existingFile.name === newFile.name &&
-                    existingFile.size === newFile.size,
-            ),
-        );
-
-        if (duplicateNew) {
-            alert(`File "${duplicateNew.name}" sudah ditambahkan.`);
-
-            e.target.value = "";
-            return;
-        }
-
-        /*
-         * Gabungkan file lama yang baru dipilih
-         * dengan file baru yang ditambahkan.
-         */
-        const combinedFiles = [...certificates, ...newFiles];
-
-        /*
-         * Maksimal 10 file baru dalam satu pengiriman.
-         */
-        if (combinedFiles.length > 10) {
-            alert("Maksimal 10 file sertifikat atau bukti pengalaman.");
-
-            e.target.value = "";
-            return;
-        }
-
-        setCertificates(combinedFiles);
-        setData("certificates", combinedFiles);
-
-        /*
-         * Reset input agar file yang sama bisa dipilih lagi
-         * setelah file tersebut dihapus dari daftar file baru.
-         */
-        e.target.value = "";
     };
 
-    /*
-     * Menghapus satu file baru dari daftar.
-     *
-     * Ini hanya menghapus file yang belum disimpan.
-     */
-    const removeCertificate = (indexToRemove) => {
-        const updatedFiles = certificates.filter(
-            (_, index) => index !== indexToRemove,
+    const removeNewCertificate = (index) => {
+        const updatedCertificates = certificates.filter(
+            (_, certificateIndex) => certificateIndex !== index,
         );
 
-        setCertificates(updatedFiles);
-        setData("certificates", updatedFiles);
+        setCertificates(updatedCertificates);
+        setData("certificates", updatedCertificates);
     };
 
-    /*
-     * Menghapus sertifikat yang sudah tersimpan di database.
-     */
     const removeExistingCertificate = (certificateId) => {
-        if (!confirm("Yakin ingin menghapus sertifikat ini?")) {
-            return;
-        }
-
         router.delete(route("mentor.certificate.destroy", certificateId), {
             preserveScroll: true,
-
             onSuccess: () => {
-                setExistingCertificates((current) =>
+                setExistingCertificateState((current) =>
                     current.filter(
                         (certificate) => certificate.id !== certificateId,
                     ),
@@ -254,294 +180,519 @@ export default function Register({ user, mentorProfile }) {
         });
     };
 
-    const submit = (e) => {
-        e.preventDefault();
+    const handleSubmit = (event) => {
+        event.preventDefault();
 
         post(route("mentor.register.store"), {
             forceFormData: true,
 
             onSuccess: () => {
-                /*
-                 * Setelah berhasil disimpan, data yang sekarang
-                 * dianggap sebagai data terbaru.
-                 */
                 setSavedData({
                     name: data.name,
-                    photo: null,
                     expertise: data.expertise,
                     bio: data.bio,
                     portfolio_url: data.portfolio_url,
                     mentor_type: data.mentor_type,
-                    price_per_session:
-                        data.mentor_type === "free"
-                            ? ""
-                            : data.price_per_session,
+                    price_per_session: data.price_per_session,
                     is_available: data.is_available,
-                    certificates: [],
                 });
 
-                setData("photo", null);
-
-                /*
-                 * File baru sudah tersimpan di database.
-                 */
                 setCertificates([]);
                 setData("certificates", []);
+                setData("photo", null);
+
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = "";
+                }
             },
         });
     };
 
+    const getStatusStyle = () => {
+        if (!mentorProfile) {
+            return {
+                label: "Belum Terdaftar",
+                className: "bg-slate-100 text-slate-600 border-slate-200",
+            };
+        }
+
+        if (mentorProfile.verification_status === "verified") {
+            return {
+                label: "Terverifikasi",
+                className: "bg-emerald-50 text-emerald-700 border-emerald-200",
+            };
+        }
+
+        if (mentorProfile.verification_status === "rejected") {
+            return {
+                label: "Ditolak",
+                className: "bg-red-50 text-red-700 border-red-200",
+            };
+        }
+
+        return {
+            label: "Menunggu Verifikasi",
+            className: "bg-amber-50 text-amber-700 border-amber-200",
+        };
+    };
+
+    const statusStyle = getStatusStyle();
+
     return (
         <>
-            <Head title="Jadi Mentor di Pathway" />
+            <Head title="Pendaftaran Mentor" />
 
-            <div className="min-h-screen bg-[#f4f7f5] px-6 py-8 lg:px-10">
-                <div className="mx-auto max-w-7xl">
-                    {/* Kembali */}
-                    <Link
-                        href={route("dashboard")}
-                        className="mb-4 inline-flex items-center text-sm font-medium text-gray-600 transition hover:text-gray-800"
-                    >
-                        ← Kembali
-                    </Link>
+            <div className="min-h-screen bg-[#F1F6F8]">
+                {/* Header */}
+                <header className="border-b border-[#D7E4E9] bg-white">
+                    <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6">
+                        <Link href="/" className="flex items-center gap-2">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#6594B1] text-lg font-bold text-white shadow-sm">
+                                P
+                            </div>
 
-                    {/* Header */}
-                    <div className="mb-6 overflow-hidden rounded-2xl bg-gradient-to-r from-[#5b7131] to-[#6498b1] px-7 py-6 text-white shadow-sm">
-                        <h1 className="text-2xl font-bold">
-                            Jadi Mentor di Pathway
-                        </h1>
+                            <span className="text-xl font-bold tracking-tight text-[#36586B]">
+                                Pathway
+                            </span>
+                        </Link>
 
-                        <p className="mt-2 text-sm leading-relaxed text-white/90">
-                            Bagikan pengalaman dan bantu pengguna lain
-                            berkembang di bidang Teknologi Informasi.
-                        </p>
+                        <Link
+                            href={route("profile.edit")}
+                            className="flex items-center gap-3 rounded-xl px-3 py-2 transition hover:bg-[#F1F6F8]"
+                        >
+                            {user?.photo_path ? (
+                                <img
+                                    src={`/storage/${user.photo_path}`}
+                                    alt={user.name}
+                                    className="h-9 w-9 rounded-full object-cover ring-2 ring-[#D7E8EF]"
+                                />
+                            ) : (
+                                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#DCEBF1] font-semibold text-[#527F99]">
+                                    {user?.name?.charAt(0)?.toUpperCase() ??
+                                        "U"}
+                                </div>
+                            )}
+
+                            <span className="hidden text-sm font-medium text-slate-700 sm:block">
+                                {user?.name}
+                            </span>
+                        </Link>
+                    </div>
+                </header>
+
+                <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:py-10">
+                    {/* Back */}
+                    <div className="mb-5">
+                        <Link
+                            href="/"
+                            className="inline-flex items-center gap-2 text-sm font-medium text-[#527F99] transition hover:text-[#36586B]"
+                        >
+                            <span className="text-lg">←</span>
+                            Kembali
+                        </Link>
                     </div>
 
-                    <form onSubmit={submit}>
-                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[240px_1fr]">
-                            {/* ==================== */}
-                            {/* Kartu Profil */}
-                            {/* ==================== */}
-                            <div className="h-fit rounded-2xl bg-white p-6 shadow-sm">
-                                <div className="text-center">
-                                    <p className="text-sm font-semibold text-gray-800">
+                    {/* Hero */}
+                    <div className="relative mb-7 overflow-hidden rounded-3xl bg-[#6594B1] px-6 py-8 shadow-sm sm:px-8 sm:py-10">
+                        <div className="absolute -right-12 -top-16 h-48 w-48 rounded-full bg-white/10" />
+                        <div className="absolute -bottom-20 right-32 h-44 w-44 rounded-full bg-white/10" />
+
+                        <div className="relative">
+                            <div className="mb-3 inline-flex rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+                                Pendaftaran Mentor
+                            </div>
+
+                            <h1 className="text-3xl font-bold text-white sm:text-4xl">
+                                Jadi Mentor di Pathway
+                            </h1>
+
+                            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/85 sm:text-base">
+                                Bagikan pengalaman dan keahlianmu untuk membantu
+                                mahasiswa menemukan jalur belajar yang sesuai.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Status */}
+                    {hasMentorProfile && (
+                        <div className="mb-6 rounded-2xl border border-[#D7E4E9] bg-white p-4 shadow-sm">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <p className="text-sm font-semibold text-slate-800">
+                                        Status Pendaftaran Mentor
+                                    </p>
+
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        Status akan diperbarui setelah proses
+                                        verifikasi oleh admin.
+                                    </p>
+                                </div>
+
+                                <span
+                                    className={`inline-flex w-fit items-center rounded-full border px-4 py-2 text-xs font-semibold ${statusStyle.className}`}
+                                >
+                                    {statusStyle.label}
+                                </span>
+                            </div>
+
+                            {isRejected && (
+                                <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                    Pendaftaran sebelumnya ditolak. Silakan
+                                    periksa kembali data dan ajukan ulang.
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* Main form */}
+                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+                            {/* Profile Photo */}
+                            <section className="h-fit rounded-2xl border border-[#D7E4E9] bg-white p-6 shadow-sm">
+                                <div className="mb-5">
+                                    <p className="text-base font-bold text-slate-800">
                                         Foto Profil
                                     </p>
 
-                                    {/* Input Foto */}
-                                    <input
-                                        ref={fileInputRef}
-                                        type="file"
-                                        accept="image/jpeg,image/png,image/webp"
-                                        onChange={handlePhotoChange}
-                                        className="hidden"
-                                    />
+                                    <p className="mt-1 text-sm leading-5 text-slate-500">
+                                        Gunakan foto yang jelas agar calon
+                                        mentee lebih mudah mengenalmu.
+                                    </p>
+                                </div>
 
-                                    {/* Preview Foto */}
-                                    <div className="mx-auto mt-4 flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-dashed border-[#6594ad] bg-[#eaf2f6]">
+                                <div className="flex flex-col items-center">
+                                    <div className="relative mb-5">
                                         {photoPreview ? (
                                             <img
                                                 src={photoPreview}
-                                                alt="Preview foto profil"
-                                                className="h-full w-full object-cover"
+                                                alt="Preview"
+                                                className="h-40 w-40 rounded-3xl object-cover ring-4 ring-[#E4F0F4]"
                                             />
                                         ) : (
-                                            <span className="text-xs text-gray-400">
-                                                Foto
-                                            </span>
+                                            <div className="flex h-40 w-40 items-center justify-center rounded-3xl bg-[#E4F0F4] text-5xl font-bold text-[#6594B1]">
+                                                {data.name
+                                                    ?.charAt(0)
+                                                    ?.toUpperCase() ?? "U"}
+                                            </div>
                                         )}
                                     </div>
 
-                                    <button
-                                        type="button"
-                                        onClick={openPhotoPicker}
-                                        className="mt-4 w-full rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 transition hover:bg-gray-50"
-                                    >
-                                        {photoPreview
-                                            ? "Ganti Foto"
-                                            : "Unggah Foto"}
-                                    </button>
+                                    <input
+                                        ref={fileInputRef}
+                                        type="file"
+                                        accept=".jpg,.jpeg,.png,.webp"
+                                        onChange={handlePhotoChange}
+                                        className="hidden"
+                                        id="photo"
+                                    />
 
-                                    <p className="mt-2 text-xs leading-relaxed text-gray-400">
-                                        JPG, PNG, atau WEBP, maksimal 2 MB.
+                                    <label
+                                        htmlFor="photo"
+                                        className="w-full cursor-pointer rounded-xl bg-[#6594B1] px-4 py-3 text-center text-sm font-semibold text-white transition hover:bg-[#527F99]"
+                                    >
+                                        Unggah Foto
+                                    </label>
+
+                                    <p className="mt-3 text-center text-xs leading-5 text-slate-400">
+                                        JPG, JPEG, PNG, WEBP
+                                        <br />
+                                        Maksimal 2MB
                                     </p>
 
                                     {errors.photo && (
-                                        <p className="mt-1.5 text-xs text-red-500">
+                                        <p className="mt-3 text-center text-xs text-red-600">
                                             {errors.photo}
                                         </p>
                                     )}
                                 </div>
+                            </section>
 
-                                {/* Nama */}
-                                <div className="mt-6">
-                                    <label
-                                        htmlFor="name"
-                                        className="text-sm font-semibold text-gray-800"
-                                    >
-                                        Nama
-                                    </label>
+                            {/* Mentor Detail */}
+                            <section className="rounded-2xl border border-[#D7E4E9] bg-white p-6 shadow-sm sm:p-7">
+                                <div className="mb-6 border-b border-[#E7EEF1] pb-5">
+                                    <h2 className="text-lg font-bold text-slate-800">
+                                        Informasi Mentor
+                                    </h2>
 
-                                    <input
-                                        id="name"
-                                        type="text"
-                                        value={data.name}
-                                        onChange={(e) =>
-                                            setData("name", e.target.value)
-                                        }
-                                        placeholder="Nama lengkap kamu"
-                                        className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-3 text-sm outline-none transition focus:border-[#6d833f] focus:ring-1 focus:ring-[#6d833f]"
-                                    />
-
-                                    {errors.name && (
-                                        <p className="mt-1.5 text-xs text-red-500">
-                                            {errors.name}
-                                        </p>
-                                    )}
+                                    <p className="mt-1 text-sm text-slate-500">
+                                        Lengkapi informasi yang akan ditampilkan
+                                        pada profil mentor.
+                                    </p>
                                 </div>
-                            </div>
 
-                            {/* ==================== */}
-                            {/* Form Utama */}
-                            {/* ==================== */}
-                            <div className="rounded-2xl bg-white p-7 shadow-sm lg:p-8">
-                                {/* Keahlian */}
-                                <div>
-                                    <label className="text-sm font-semibold text-gray-800">
-                                        Keahlian
-                                    </label>
+                                <div className="space-y-6">
+                                    {/* Name */}
+                                    <div>
+                                        <label
+                                            htmlFor="name"
+                                            className="mb-2 block text-sm font-semibold text-slate-700"
+                                        >
+                                            Nama
+                                        </label>
 
-                                    <div className="mt-3 flex flex-wrap gap-2">
-                                        {expertiseOptions.map((expertise) => {
-                                            const selected =
-                                                selectedExpertise === expertise;
+                                        <input
+                                            id="name"
+                                            type="text"
+                                            value={data.name}
+                                            onChange={(e) =>
+                                                setData("name", e.target.value)
+                                            }
+                                            className="w-full rounded-xl border border-[#C9DCE4] bg-[#F8FBFC] px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#6594B1] focus:bg-white focus:ring-2 focus:ring-[#6594B1]/20"
+                                            placeholder="Masukkan nama lengkap"
+                                        />
 
-                                            return (
-                                                <button
-                                                    key={expertise}
-                                                    type="button"
-                                                    onClick={() =>
-                                                        selectExpertise(
-                                                            expertise,
-                                                        )
-                                                    }
-                                                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
-                                                        selected
-                                                            ? "border-[#718b43] bg-[#edf5e5] text-[#50682d]"
-                                                            : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50"
-                                                    }`}
-                                                >
-                                                    {expertise}
-                                                </button>
-                                            );
-                                        })}
+                                        {errors.name && (
+                                            <p className="mt-2 text-xs text-red-600">
+                                                {errors.name}
+                                            </p>
+                                        )}
                                     </div>
 
-                                    <p className="mt-2 text-xs text-gray-400">
-                                        Pilih satu bidang yang paling kamu
-                                        kuasai.
-                                    </p>
+                                    {/* Expertise */}
+                                    <div>
+                                        <label className="mb-2 block text-sm font-semibold text-slate-700">
+                                            Keahlian
+                                        </label>
 
-                                    {errors.expertise && (
-                                        <p className="mt-1.5 text-xs text-red-500">
-                                            {errors.expertise}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Tentang Kamu */}
-                                <div className="mt-6">
-                                    <label
-                                        htmlFor="bio"
-                                        className="text-sm font-semibold text-gray-800"
-                                    >
-                                        Tentang Kamu
-                                    </label>
-
-                                    <textarea
-                                        id="bio"
-                                        rows="5"
-                                        maxLength={300}
-                                        value={data.bio}
-                                        onChange={(e) =>
-                                            setData("bio", e.target.value)
-                                        }
-                                        placeholder="Ceritakan pengalaman dan hal yang bisa kamu ajarkan kepada murid."
-                                        className="mt-2 w-full resize-none rounded-lg border border-gray-200 px-3 py-3 text-sm leading-relaxed outline-none transition focus:border-[#6d833f] focus:ring-1 focus:ring-[#6d833f]"
-                                    />
-
-                                    <div className="mt-1 flex justify-end text-xs text-gray-400">
-                                        {data.bio.length}/300
-                                    </div>
-
-                                    {errors.bio && (
-                                        <p className="mt-1.5 text-xs text-red-500">
-                                            {errors.bio}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Portfolio */}
-                                <div className="mt-6">
-                                    <label
-                                        htmlFor="portfolio_url"
-                                        className="text-sm font-semibold text-gray-800"
-                                    >
-                                        Portfolio
-                                    </label>
-
-                                    <input
-                                        id="portfolio_url"
-                                        type="url"
-                                        value={data.portfolio_url}
-                                        onChange={(e) =>
-                                            setData(
-                                                "portfolio_url",
-                                                e.target.value,
-                                            )
-                                        }
-                                        placeholder="https://behance.net/namakamu"
-                                        className="mt-2 w-full rounded-lg border border-gray-200 px-3 py-3 text-sm outline-none transition focus:border-[#6d833f] focus:ring-1 focus:ring-[#6d833f]"
-                                    />
-
-                                    <p className="mt-2 text-xs leading-relaxed text-gray-400">
-                                        Tautan GitHub, Behance, atau situs
-                                        pribadi. Admin memeriksanya untuk
-                                        verifikasi.
-                                    </p>
-
-                                    {errors.portfolio_url && (
-                                        <p className="mt-1.5 text-xs text-red-500">
-                                            {errors.portfolio_url}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Sertifikat / Bukti Pengalaman */}
-                                <div className="mt-6">
-                                    <label className="text-sm font-semibold text-gray-800">
-                                        Sertifikat / Bukti Pengalaman
-                                    </label>
-
-                                    <p className="mt-2 text-xs leading-relaxed text-gray-400">
-                                        Upload sertifikat atau bukti pengalaman
-                                        yang mendukung keahlian kamu. Maksimal
-                                        10 file, 5 MB per file.
-                                    </p>
-
-                                    <label
-                                        htmlFor="certificates"
-                                        className="mt-3 flex w-full cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-gray-300 px-4 py-6 transition hover:border-[#6d833f] hover:bg-[#fafcf8]"
-                                    >
-                                        <div className="text-center">
-                                            <p className="text-sm font-medium text-gray-700">
-                                                Klik untuk memilih file
-                                            </p>
-
-                                            <p className="mt-1 text-xs text-gray-400">
-                                                PDF, JPG, JPEG, PNG, atau WEBP
-                                            </p>
+                                        <div className="flex flex-wrap gap-2">
+                                            {expertiseOptions.map(
+                                                (expertise) => (
+                                                    <button
+                                                        key={expertise}
+                                                        type="button"
+                                                        onClick={() =>
+                                                            handleExpertiseChange(
+                                                                expertise,
+                                                            )
+                                                        }
+                                                        className={`rounded-full border px-4 py-2 text-sm font-medium transition ${
+                                                            selectedExpertise ===
+                                                            expertise
+                                                                ? "border-[#6594B1] bg-[#6594B1] text-white shadow-sm"
+                                                                : "border-[#C9DCE4] bg-[#F8FBFC] text-slate-600 hover:border-[#6594B1] hover:bg-[#EAF3F6] hover:text-[#527F99]"
+                                                        }`}
+                                                    >
+                                                        {expertise}
+                                                    </button>
+                                                ),
+                                            )}
                                         </div>
+
+                                        {errors.expertise && (
+                                            <p className="mt-2 text-xs text-red-600">
+                                                {errors.expertise}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Bio */}
+                                    <div>
+                                        <div className="mb-2 flex items-center justify-between">
+                                            <label
+                                                htmlFor="bio"
+                                                className="block text-sm font-semibold text-slate-700"
+                                            >
+                                                Bio
+                                            </label>
+
+                                            <span className="text-xs text-slate-400">
+                                                {data.bio?.length ?? 0}/300
+                                            </span>
+                                        </div>
+
+                                        <textarea
+                                            id="bio"
+                                            rows="5"
+                                            maxLength="300"
+                                            value={data.bio}
+                                            onChange={(e) =>
+                                                setData("bio", e.target.value)
+                                            }
+                                            className="w-full resize-none rounded-xl border border-[#C9DCE4] bg-[#F8FBFC] px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#6594B1] focus:bg-white focus:ring-2 focus:ring-[#6594B1]/20"
+                                            placeholder="Ceritakan pengalaman, keahlian, atau bidang yang kamu kuasai..."
+                                        />
+
+                                        {errors.bio && (
+                                            <p className="mt-2 text-xs text-red-600">
+                                                {errors.bio}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Portfolio */}
+                                    <div>
+                                        <label
+                                            htmlFor="portfolio_url"
+                                            className="mb-2 block text-sm font-semibold text-slate-700"
+                                        >
+                                            Portfolio
+                                        </label>
+
+                                        <input
+                                            id="portfolio_url"
+                                            type="url"
+                                            value={data.portfolio_url}
+                                            onChange={(e) =>
+                                                setData(
+                                                    "portfolio_url",
+                                                    e.target.value,
+                                                )
+                                            }
+                                            className="w-full rounded-xl border border-[#C9DCE4] bg-[#F8FBFC] px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#6594B1] focus:bg-white focus:ring-2 focus:ring-[#6594B1]/20"
+                                            placeholder="https://portfolio-kamu.com"
+                                        />
+
+                                        {errors.portfolio_url && (
+                                            <p className="mt-2 text-xs text-red-600">
+                                                {errors.portfolio_url}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Certificates */}
+                                    <div className="border-t border-[#E7EEF1] pt-6">
+                                        <div className="mb-4 flex items-start justify-between gap-3">
+                                            <div>
+                                                <label className="block text-sm font-semibold text-slate-700">
+                                                    Sertifikat & Bukti
+                                                    Pengalaman
+                                                </label>
+
+                                                <p className="mt-1 text-xs leading-5 text-slate-500">
+                                                    Tambahkan sertifikat atau
+                                                    dokumen yang mendukung
+                                                    keahlianmu sebagai mentor.
+                                                </p>
+                                            </div>
+
+                                            <span className="shrink-0 rounded-full bg-[#EAF3F6] px-3 py-1 text-xs font-semibold text-[#527F99]">
+                                                {existingCertificateState.length +
+                                                    certificates.length}
+                                                /10
+                                            </span>
+                                        </div>
+
+                                        {/* Sertifikat yang sudah tersimpan */}
+                                        {existingCertificateState.length >
+                                            0 && (
+                                            <div className="mb-3 space-y-2">
+                                                {existingCertificateState.map(
+                                                    (certificate) => (
+                                                        <div
+                                                            key={certificate.id}
+                                                            className="flex items-center justify-between gap-3 rounded-xl border border-[#D7E4E9] bg-[#F8FBFC] px-3 py-3"
+                                                        >
+                                                            <a
+                                                                href={`/storage/${certificate.file_path}`}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className="flex min-w-0 items-center gap-3"
+                                                            >
+                                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#DCEBF1] text-[10px] font-bold text-[#527F99]">
+                                                                    FILE
+                                                                </div>
+
+                                                                <span className="truncate text-sm font-medium text-[#527F99] hover:underline">
+                                                                    {
+                                                                        certificate.file_name
+                                                                    }
+                                                                </span>
+                                                            </a>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    removeExistingCertificate(
+                                                                        certificate.id,
+                                                                    )
+                                                                }
+                                                                className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                                                            >
+                                                                Hapus
+                                                            </button>
+                                                        </div>
+                                                    ),
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* File baru */}
+                                        {certificates.length > 0 && (
+                                            <div className="mb-3 space-y-2">
+                                                {certificates.map(
+                                                    (certificate, index) => (
+                                                        <div
+                                                            key={`${certificate.name}-${certificate.size}-${index}`}
+                                                            className="flex items-center justify-between gap-3 rounded-xl border border-[#BFD8E2] bg-[#EAF3F6] px-3 py-3"
+                                                        >
+                                                            <div className="flex min-w-0 items-center gap-3">
+                                                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-[10px] font-bold text-[#527F99]">
+                                                                    FILE
+                                                                </div>
+
+                                                                <div className="min-w-0">
+                                                                    <p className="truncate text-sm font-medium text-slate-700">
+                                                                        {
+                                                                            certificate.name
+                                                                        }
+                                                                    </p>
+
+                                                                    <p className="text-[11px] text-slate-400">
+                                                                        {(
+                                                                            certificate.size /
+                                                                            1024 /
+                                                                            1024
+                                                                        ).toFixed(
+                                                                            2,
+                                                                        )}{" "}
+                                                                        MB
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    removeNewCertificate(
+                                                                        index,
+                                                                    )
+                                                                }
+                                                                className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-50"
+                                                            >
+                                                                Hapus
+                                                            </button>
+                                                        </div>
+                                                    ),
+                                                )}
+                                            </div>
+                                        )}
+
+                                        {/* Upload */}
+                                        <label
+                                            htmlFor="certificates"
+                                            className="flex cursor-pointer items-center justify-between rounded-xl border border-dashed border-[#BFD8E2] bg-[#F5FAFC] px-4 py-3 transition hover:border-[#6594B1] hover:bg-[#EAF3F6]"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#DCEBF1] text-lg font-medium text-[#527F99]">
+                                                    +
+                                                </div>
+
+                                                <div>
+                                                    <p className="text-sm font-semibold text-[#527F99]">
+                                                        Tambahkan sertifikat
+                                                    </p>
+
+                                                    <p className="mt-0.5 text-[11px] text-slate-400">
+                                                        PDF, JPG, JPEG, PNG,
+                                                        WEBP · Maks. 5MB/file
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <span className="text-xs font-semibold text-[#527F99]">
+                                                Pilih File
+                                            </span>
+                                        </label>
 
                                         <input
                                             id="certificates"
@@ -551,354 +702,213 @@ export default function Register({ user, mentorProfile }) {
                                             onChange={handleCertificateChange}
                                             className="hidden"
                                         />
-                                    </label>
 
-                                    {/* Sertifikat yang sudah tersimpan */}
-                                    {existingCertificates.length > 0 && (
-                                        <div className="mt-4">
-                                            <p className="mb-2 text-xs font-medium text-gray-500">
-                                                Sertifikat yang sudah diupload
+                                        {errors.certificates && (
+                                            <p className="mt-2 text-xs text-red-600">
+                                                {errors.certificates}
                                             </p>
+                                        )}
 
-                                            <div className="space-y-2">
-                                                {existingCertificates.map(
-                                                    (certificate) => (
-                                                        <div
-                                                            key={certificate.id}
-                                                            className="flex items-center justify-between gap-3 rounded-lg bg-gray-50 px-4 py-3"
-                                                        >
-                                                            <div className="flex min-w-0 items-center gap-3">
-                                                                <span className="shrink-0 text-gray-400">
-                                                                    📄
-                                                                </span>
-
-                                                                <a
-                                                                    href={`/storage/${certificate.file_path}`}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="min-w-0 truncate text-sm font-medium text-[#5d7431] underline-offset-2 hover:underline"
-                                                                >
-                                                                    {
-                                                                        certificate.file_name
-                                                                    }
-                                                                </a>
-                                                            </div>
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    removeExistingCertificate(
-                                                                        certificate.id,
-                                                                    )
-                                                                }
-                                                                className="shrink-0 text-xs font-medium text-red-500 transition hover:text-red-700"
-                                                            >
-                                                                Hapus
-                                                            </button>
-                                                        </div>
-                                                    ),
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Sertifikat baru yang belum disimpan */}
-                                    {certificates.length > 0 && (
-                                        <div className="mt-4">
-                                            <p className="mb-2 text-xs font-medium text-gray-500">
-                                                File baru
+                                        {errors["certificates.0"] && (
+                                            <p className="mt-2 text-xs text-red-600">
+                                                {errors["certificates.0"]}
                                             </p>
-
-                                            <div className="space-y-2">
-                                                {certificates.map(
-                                                    (file, index) => (
-                                                        <div
-                                                            key={`${file.name}-${file.size}-${index}`}
-                                                            className="flex items-center justify-between gap-3 rounded-lg bg-gray-50 px-4 py-3"
-                                                        >
-                                                            <div className="min-w-0">
-                                                                <p className="truncate text-sm font-medium text-gray-700">
-                                                                    {file.name}
-                                                                </p>
-
-                                                                <p className="mt-0.5 text-xs text-gray-400">
-                                                                    {(
-                                                                        file.size /
-                                                                        1024 /
-                                                                        1024
-                                                                    ).toFixed(
-                                                                        2,
-                                                                    )}{" "}
-                                                                    MB
-                                                                </p>
-                                                            </div>
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    removeCertificate(
-                                                                        index,
-                                                                    )
-                                                                }
-                                                                className="shrink-0 text-xs font-medium text-red-500 transition hover:text-red-700"
-                                                            >
-                                                                Hapus
-                                                            </button>
-                                                        </div>
-                                                    ),
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {errors.certificates && (
-                                        <p className="mt-1.5 text-xs text-red-500">
-                                            {errors.certificates}
-                                        </p>
-                                    )}
-
-                                    {errors["certificates.0"] && (
-                                        <p className="mt-1.5 text-xs text-red-500">
-                                            {errors["certificates.0"]}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Tipe Mentor */}
-                                <div className="mt-6">
-                                    <label className="text-sm font-semibold text-gray-800">
-                                        Tipe Mentor
-                                    </label>
-
-                                    <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                        {/* Gratis */}
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setData("mentor_type", "free")
-                                            }
-                                            className={`rounded-xl border p-4 text-left transition ${
-                                                data.mentor_type === "free"
-                                                    ? "border-[#78954a] bg-[#edf5e5]"
-                                                    : "border-gray-200 bg-white hover:border-gray-300"
-                                            }`}
-                                        >
-                                            <div className="flex items-start gap-3">
-                                                <span
-                                                    className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-                                                        data.mentor_type ===
-                                                        "free"
-                                                            ? "border-[#6f893f] bg-[#6f893f]"
-                                                            : "border-gray-300"
-                                                    }`}
-                                                >
-                                                    {data.mentor_type ===
-                                                        "free" && (
-                                                        <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                                                    )}
-                                                </span>
-
-                                                <div>
-                                                    <p className="text-sm font-semibold text-gray-800">
-                                                        Gratis
-                                                    </p>
-
-                                                    <p className="mt-1 text-xs leading-relaxed text-gray-500">
-                                                        Membantu tanpa biaya.
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </button>
-
-                                        {/* Berbayar */}
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setData("mentor_type", "paid")
-                                            }
-                                            className={`rounded-xl border p-4 text-left transition ${
-                                                data.mentor_type === "paid"
-                                                    ? "border-[#78954a] bg-[#edf5e5]"
-                                                    : "border-gray-200 bg-white hover:border-gray-300"
-                                            }`}
-                                        >
-                                            <div className="flex items-start gap-3">
-                                                <span
-                                                    className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-                                                        data.mentor_type ===
-                                                        "paid"
-                                                            ? "border-[#6f893f] bg-[#6f893f]"
-                                                            : "border-gray-300"
-                                                    }`}
-                                                >
-                                                    {data.mentor_type ===
-                                                        "paid" && (
-                                                        <span className="h-1.5 w-1.5 rounded-full bg-white" />
-                                                    )}
-                                                </span>
-
-                                                <div>
-                                                    <p className="text-sm font-semibold text-gray-800">
-                                                        Berbayar
-                                                    </p>
-
-                                                    <p className="mt-1 text-xs leading-relaxed text-gray-500">
-                                                        Harga dapat kamu
-                                                        sepakati langsung dengan
-                                                        murid.
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </button>
+                                        )}
                                     </div>
 
-                                    {errors.mentor_type && (
-                                        <p className="mt-1.5 text-xs text-red-500">
-                                            {errors.mentor_type}
-                                        </p>
-                                    )}
-                                </div>
+                                    {/* Mentor Type */}
+                                    <div>
+                                        <label className="mb-3 block text-sm font-semibold text-slate-700">
+                                            Tipe Mentor
+                                        </label>
 
-                                {/* Harga per Sesi */}
-                                <div className="mt-6">
-                                    <label
-                                        htmlFor="price_per_session"
-                                        className="text-sm font-semibold text-gray-800"
-                                    >
-                                        Harga per Sesi
-                                    </label>
-
-                                    <div className="relative mt-2">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
-                                            Rp
-                                        </span>
-
-                                        <input
-                                            id="price_per_session"
-                                            type="number"
-                                            min="0"
-                                            value={data.price_per_session}
-                                            disabled={
-                                                data.mentor_type === "free"
-                                            }
-                                            onChange={(e) =>
-                                                setData(
-                                                    "price_per_session",
-                                                    e.target.value,
-                                                )
-                                            }
-                                            placeholder="50.000"
-                                            className="w-full rounded-lg border border-gray-200 py-3 pl-9 pr-3 text-sm outline-none transition focus:border-[#6d833f] focus:ring-1 focus:ring-[#6d833f] disabled:bg-gray-50 disabled:text-gray-400"
-                                        />
-                                    </div>
-
-                                    <p className="mt-2 text-xs text-gray-400">
-                                        Tidak perlu diisi untuk mentor gratis.
-                                    </p>
-
-                                    {errors.price_per_session && (
-                                        <p className="mt-1.5 text-xs text-red-500">
-                                            {errors.price_per_session}
-                                        </p>
-                                    )}
-                                </div>
-
-                                {/* Availability */}
-                                <div className="mt-6 rounded-xl border border-[#e6c8e0] bg-[#fff4fb] px-4 py-3.5">
-                                    <div className="flex items-center justify-between gap-4">
-                                        <div className="text-xs leading-relaxed text-gray-700">
-                                            <span className="font-semibold">
-                                                Siap menerima sesi mentoring?
-                                            </span>{" "}
-                                            Kamu bisa mengubahnya kapan saja.
-                                        </div>
-
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setData(
-                                                    "is_available",
-                                                    !data.is_available,
-                                                )
-                                            }
-                                            aria-label="Ubah ketersediaan mentoring"
-                                            className={`relative h-5 w-10 shrink-0 rounded-full transition ${
-                                                data.is_available
-                                                    ? "bg-[#6d873d]"
-                                                    : "bg-gray-300"
-                                            }`}
-                                        >
-                                            <span
-                                                className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition ${
-                                                    data.is_available
-                                                        ? "left-5"
-                                                        : "left-0.5"
+                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setData(
+                                                        "mentor_type",
+                                                        "free",
+                                                    )
+                                                }
+                                                className={`rounded-2xl border p-4 text-left transition ${
+                                                    data.mentor_type === "free"
+                                                        ? "border-[#6594B1] bg-[#EAF3F6] ring-2 ring-[#6594B1]/20"
+                                                        : "border-[#D7E4E9] bg-white hover:border-[#AFC8D4]"
                                                 }`}
+                                            >
+                                                <div className="mb-2 flex items-center justify-between">
+                                                    <span className="text-sm font-bold text-slate-800">
+                                                        Gratis
+                                                    </span>
+
+                                                    <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                                                        FREE
+                                                    </span>
+                                                </div>
+
+                                                <p className="text-xs leading-5 text-slate-500">
+                                                    Sesi mentoring tanpa biaya.
+                                                </p>
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setData(
+                                                        "mentor_type",
+                                                        "paid",
+                                                    )
+                                                }
+                                                className={`rounded-2xl border p-4 text-left transition ${
+                                                    data.mentor_type === "paid"
+                                                        ? "border-[#6594B1] bg-[#EAF3F6] ring-2 ring-[#6594B1]/20"
+                                                        : "border-[#D7E4E9] bg-white hover:border-[#AFC8D4]"
+                                                }`}
+                                            >
+                                                <div className="mb-2 flex items-center justify-between">
+                                                    <span className="text-sm font-bold text-slate-800">
+                                                        Berbayar
+                                                    </span>
+
+                                                    <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                                                        PAID
+                                                    </span>
+                                                </div>
+
+                                                <p className="text-xs leading-5 text-slate-500">
+                                                    Sesi mentoring dengan tarif
+                                                    per sesi.
+                                                </p>
+                                            </button>
+                                        </div>
+
+                                        {errors.mentor_type && (
+                                            <p className="mt-2 text-xs text-red-600">
+                                                {errors.mentor_type}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Price */}
+                                    {data.mentor_type === "paid" && (
+                                        <div>
+                                            <label
+                                                htmlFor="price_per_session"
+                                                className="mb-2 block text-sm font-semibold text-slate-700"
+                                            >
+                                                Harga per Sesi
+                                            </label>
+
+                                            <div className="flex">
+                                                <span className="flex items-center rounded-l-xl border border-r-0 border-[#C9DCE4] bg-[#EAF3F6] px-4 text-sm font-semibold text-[#527F99]">
+                                                    Rp
+                                                </span>
+
+                                                <input
+                                                    id="price_per_session"
+                                                    type="number"
+                                                    min="0"
+                                                    value={
+                                                        data.price_per_session
+                                                    }
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            "price_per_session",
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    className="w-full rounded-r-xl border border-[#C9DCE4] bg-[#F8FBFC] px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#6594B1] focus:bg-white focus:ring-2 focus:ring-[#6594B1]/20"
+                                                    placeholder="50000"
+                                                />
+                                            </div>
+
+                                            {errors.price_per_session && (
+                                                <p className="mt-2 text-xs text-red-600">
+                                                    {errors.price_per_session}
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Availability */}
+                                    <div>
+                                        <label className="mb-3 block text-sm font-semibold text-slate-700">
+                                            Ketersediaan Mentor
+                                        </label>
+
+                                        <label className="flex cursor-pointer items-center justify-between rounded-2xl border border-[#D7E4E9] bg-[#F8FBFC] p-4 transition hover:border-[#AFC8D4]">
+                                            <div>
+                                                <p className="text-sm font-semibold text-slate-800">
+                                                    {data.is_available
+                                                        ? "Tersedia untuk mentoring"
+                                                        : "Tidak tersedia"}
+                                                </p>
+
+                                                <p className="mt-1 text-xs text-slate-500">
+                                                    Kamu dapat mengubah status
+                                                    ini kapan saja.
+                                                </p>
+                                            </div>
+
+                                            <input
+                                                type="checkbox"
+                                                checked={data.is_available}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        "is_available",
+                                                        e.target.checked,
+                                                    )
+                                                }
+                                                className="h-5 w-5 rounded border-slate-300 text-[#6594B1] focus:ring-[#6594B1]"
                                             />
+                                        </label>
+
+                                        {errors.is_available && (
+                                            <p className="mt-2 text-xs text-red-600">
+                                                {errors.is_available}
+                                            </p>
+                                        )}
+                                    </div>
+
+                                    {/* Action Button */}
+                                    <div className="flex flex-col gap-3 border-t border-[#E7EEF1] pt-6 sm:flex-row sm:items-center sm:justify-between">
+                                        <div>
+                                            <p className="text-sm font-semibold text-slate-800">
+                                                {hasMentorProfile
+                                                    ? "Perbarui informasi mentor"
+                                                    : "Siap menjadi mentor?"}
+                                            </p>
+
+                                            <p className="mt-1 text-xs text-slate-500">
+                                                Pastikan informasi yang kamu
+                                                masukkan sudah benar.
+                                            </p>
+                                        </div>
+
+                                        <button
+                                            type="submit"
+                                            disabled={processing || !hasChanges}
+                                            className={`rounded-xl px-7 py-3 text-sm font-semibold text-white shadow-sm transition ${
+                                                processing || !hasChanges
+                                                    ? "cursor-not-allowed bg-slate-300"
+                                                    : "bg-[#6594B1] hover:bg-[#527F99] hover:shadow-md"
+                                            }`}
+                                        >
+                                            {processing
+                                                ? "Menyimpan..."
+                                                : isRejected
+                                                  ? "Ajukan Ulang"
+                                                  : hasMentorProfile
+                                                    ? "Simpan Perubahan"
+                                                    : "Daftar Sebagai Mentor"}
                                         </button>
                                     </div>
                                 </div>
-
-                                {errors.is_available && (
-                                    <p className="mt-1.5 text-xs text-red-500">
-                                        {errors.is_available}
-                                    </p>
-                                )}
-
-                                {/* Footer */}
-                                <div className="mt-7 flex flex-col gap-4 border-t border-gray-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
-                                    <p className="max-w-[65%] text-xs leading-relaxed text-gray-400">
-                                        Setelah dikirim, admin akan memeriksa
-                                        data, portofolio, dan bukti pengalaman
-                                        kamu sebelum profil tampil di daftar
-                                        mentor.
-                                    </p>
-
-                                    <button
-                                        type="submit"
-                                        disabled={
-                                            processing ||
-                                            (hasMentorProfile && !hasChanges)
-                                        }
-                                        className={`rounded-lg px-5 py-3 text-sm font-semibold transition ${
-                                            processing ||
-                                            (hasMentorProfile && !hasChanges)
-                                                ? "cursor-not-allowed bg-gray-200 text-gray-400"
-                                                : "bg-[#5d7431] text-white hover:bg-[#4e6428]"
-                                        }`}
-                                    >
-                                        {processing
-                                            ? "Mengirim..."
-                                            : !hasMentorProfile
-                                              ? "Ajukan Pendaftaran"
-                                              : isRejected
-                                                ? "Ajukan Ulang"
-                                                : "Simpan Perubahan"}
-                                    </button>
-                                </div>
-
-                                {/* Status Verifikasi */}
-                                {mentorProfile && (
-                                    <div className="mt-5 rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
-                                        <p className="text-sm font-semibold text-gray-700">
-                                            Status Pendaftaran
-                                        </p>
-
-                                        <p className="mt-1.5 text-xs leading-relaxed text-gray-500">
-                                            {mentorProfile.verification_status ===
-                                            "pending"
-                                                ? "Menunggu pemeriksaan admin."
-                                                : mentorProfile.verification_status ===
-                                                    "verified"
-                                                  ? "Pendaftaran kamu telah diverifikasi."
-                                                  : "Pendaftaran kamu ditolak. Silakan periksa kembali data yang dikirim dan ajukan ulang."}
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
+                            </section>
                         </div>
                     </form>
-                </div>
+                </main>
             </div>
         </>
     );
