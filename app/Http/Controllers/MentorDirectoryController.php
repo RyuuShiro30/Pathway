@@ -15,6 +15,8 @@ class MentorDirectoryController extends Controller
         $expertise = $request->input('expertise');
         $availability = $request->input('availability');
         $mentorType = $request->input('mentor_type');
+        $minPrice = $request->input('min_price');
+        $maxPrice = $request->input('max_price');
 
         $mentors = MentorProfile::with('user')
             ->where('verification_status', 'verified')
@@ -46,6 +48,17 @@ class MentorDirectoryController extends Controller
             ->when($mentorType, function ($query) use ($mentorType) {
                 $query->where('mentor_type', $mentorType);
             })
+
+            // Filter berdasarkan harga minimum
+            ->when($minPrice !== null && $minPrice !== '', function ($query) use ($minPrice) {
+                $query->where('price_per_session', '>=', $minPrice);
+            })
+
+            // Filter berdasarkan harga maksimum
+            ->when($maxPrice !== null && $maxPrice !== '', function ($query) use ($maxPrice) {
+                $query->where('price_per_session', '<=', $maxPrice);
+            })
+
             ->get();
 
         // Mengambil daftar expertise yang tersedia
@@ -61,7 +74,9 @@ class MentorDirectoryController extends Controller
             'expertise' => $expertise,
             'expertises' => $expertises,
             'availability' => $availability,
-            'mentorType' => $mentorType,
+            'mentorType' => $mentorType,    
+            'minPrice' => $minPrice,
+            'maxPrice' => $maxPrice,
         ]);
     }
 

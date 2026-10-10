@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useForm } from "@inertiajs/react";
 
 export default function Index({
@@ -8,17 +8,32 @@ export default function Index({
     expertises,
     availability,
     mentorType,
+    minPrice,
+    maxPrice,
 }) {
     const { data, setData, get } = useForm({
         search: search || "",
         expertise: expertise || "",
         availability: availability || "",
         mentor_type: mentorType || "",
+        min_price: minPrice || "",
+        max_price: maxPrice || "",
     });
+
+    const [showPriceFilter, setShowPriceFilter] = useState(false);
 
     // Menjalankan pencarian dan filter
     const handleSearch = (e) => {
         e.preventDefault();
+
+        get("/mentors", {
+            preserveState: true,
+        });
+    };
+
+    // Menerapkan filter harga
+    const handleApplyPrice = () => {
+        setShowPriceFilter(false);
 
         get("/mentors", {
             preserveState: true,
@@ -32,7 +47,11 @@ export default function Index({
             expertise: "",
             availability: "",
             mentor_type: "",
+            min_price: "",
+            max_price: "",
         });
+
+        setShowPriceFilter(false);
 
         get("/mentors", {
             preserveState: true,
@@ -103,6 +122,57 @@ export default function Index({
                         <option value="free">Gratis</option>
                         <option value="paid">Berbayar</option>
                     </select>
+
+                    {/* Filter harga */}
+                    <div className="relative">
+                        <button
+                            type="button"
+                            onClick={() => setShowPriceFilter(!showPriceFilter)}
+                            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 hover:bg-gray-100"
+                        >
+                            Harga {showPriceFilter ? "▲" : "▼"}
+                        </button>
+
+                        {showPriceFilter && (
+                            <div className="absolute left-0 top-full z-10 mt-2 w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-lg">
+                                <p className="mb-3 font-medium text-gray-800">
+                                    Rentang Harga
+                                </p>
+
+                                <div className="flex gap-2">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={data.min_price}
+                                        onChange={(e) =>
+                                            setData("min_price", e.target.value)
+                                        }
+                                        placeholder="Minimum"
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-gray-500 focus:outline-none"
+                                    />
+
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={data.max_price}
+                                        onChange={(e) =>
+                                            setData("max_price", e.target.value)
+                                        }
+                                        placeholder="Maksimum"
+                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-gray-500 focus:outline-none"
+                                    />
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={handleApplyPrice}
+                                    className="mt-3 w-full rounded-lg bg-gray-800 px-4 py-2 text-white hover:bg-gray-700"
+                                >
+                                    Terapkan
+                                </button>
+                            </div>
+                        )}
+                    </div>
 
                     {/* Tombol cari */}
                     <button
