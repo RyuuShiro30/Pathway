@@ -98,6 +98,29 @@ export default function Show({ mentor }) {
                             </p>
                         )}
                     </div>
+
+                    {/* Review Mentor */}
+                    <div className="mt-8 border-t pt-6">
+                        <h2 className="text-lg font-semibold text-gray-800">
+                            Review Mentor
+                        </h2>
+
+                        <div className="mt-4 rounded-lg bg-gray-50 p-4">
+                            <p className="text-gray-600">
+                                Belum ada review yang ditampilkan.
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* Pilih Mentor */}
+                    <div className="mt-8 border-t pt-6">
+                        <button
+                            type="button"
+                            className="w-full rounded-lg bg-green-600 px-4 py-3 font-semibold text-white hover:bg-green-700"
+                        >
+                            Pilih Mentor
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

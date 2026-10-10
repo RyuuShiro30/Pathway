@@ -23,18 +23,12 @@ export default function Index({
     });
 
     const [showPriceFilter, setShowPriceFilter] = useState(false);
+    const [openFilter, setOpenFilter] = useState(null);
 
-    // Menjalankan pencarian dan filter
     const handleSearch = (e) => {
         e.preventDefault();
 
-        get("/mentors", {
-            preserveState: true,
-        });
-    };
-
-    // Menerapkan filter harga
-    const handleApplyPrice = () => {
+        setOpenFilter(null);
         setShowPriceFilter(false);
 
         get("/mentors", {
@@ -42,7 +36,15 @@ export default function Index({
         });
     };
 
-    // Menghapus semua pencarian dan filter
+    const handleApplyPrice = () => {
+        setShowPriceFilter(false);
+        setOpenFilter(null);
+
+        get("/mentors", {
+            preserveState: true,
+        });
+    };
+
     const handleReset = () => {
         setData({
             search: "",
@@ -55,233 +57,718 @@ export default function Index({
         });
 
         setShowPriceFilter(false);
+        setOpenFilter(null);
 
         get("/mentors", {
             preserveState: true,
         });
     };
 
+    const toggleFilter = (filterName) => {
+        setShowPriceFilter(false);
+
+        setOpenFilter(openFilter === filterName ? null : filterName);
+    };
+
+    const togglePriceFilter = () => {
+        setOpenFilter(null);
+
+        setShowPriceFilter(!showPriceFilter);
+    };
+
     return (
-        <div className="min-h-screen bg-gray-100 py-10">
-            <div className="mx-auto max-w-7xl px-6">
-                {/* Judul halaman */}
-                <h1 className="text-3xl font-bold text-gray-800">
-                    Direktori Mentor
-                </h1>
+        <div className="min-h-screen bg-[#F6F4EF] text-[#26302B]">
+            {/* Navbar */}
+            <nav className="bg-[#6594B1]">
+                <div className="mx-auto flex h-16 max-w-7xl items-center gap-5 px-6">
+                    <div className="flex items-center gap-2.5">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-white/20 font-bold text-white">
+                            P
+                        </div>
 
-                <p className="mt-2 text-gray-600">
-                    Temukan mentor yang sesuai dengan kebutuhan belajar kamu.
-                </p>
+                        <span className="text-lg font-bold text-white">
+                            Pathway
+                        </span>
 
-                {/* Form pencarian dan filter */}
-                <form
-                    onSubmit={handleSearch}
-                    className="mt-6 flex flex-wrap gap-3"
-                >
-                    {/* Pencarian nama */}
-                    <input
-                        type="text"
-                        value={data.search}
-                        onChange={(e) => setData("search", e.target.value)}
-                        placeholder="Cari nama mentor..."
-                        className="min-w-[220px] flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 focus:border-gray-500 focus:outline-none"
-                    />
+                        <span className="rounded-full border border-white/70 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-white">
+                            MURID
+                        </span>
+                    </div>
 
-                    {/* Filter expertise */}
-                    <select
-                        value={data.expertise}
-                        onChange={(e) => setData("expertise", e.target.value)}
-                        className="rounded-lg border border-gray-300 bg-white px-4 py-2 focus:border-gray-500 focus:outline-none"
+                    <div className="ml-2 hidden items-center gap-1 md:flex">
+                        <span className="rounded-full px-4 py-2 text-sm font-medium text-white/90">
+                            Overview
+                        </span>
+
+                        <span className="rounded-full bg-white/25 px-4 py-2 text-sm font-semibold text-white">
+                            Mentors Directory
+                        </span>
+
+                        <span className="rounded-full px-4 py-2 text-sm font-medium text-white/90">
+                            Mentees & Students
+                        </span>
+                    </div>
+
+                    <div className="ml-auto hidden h-10 w-72 items-center rounded-lg border border-white/30 bg-white/20 px-4 text-sm text-white/85 lg:flex">
+                        Cari mentor, topik...
+                    </div>
+
+                    <div className="flex items-center gap-2.5">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EEF0DF] font-semibold text-[#6594B1]">
+                            T
+                        </div>
+
+                        <div className="hidden leading-tight sm:flex sm:flex-col">
+                            <span className="text-[13px] font-semibold text-white">
+                                Triska
+                            </span>
+
+                            <span className="text-xs text-white/85">Murid</span>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            {/* Main */}
+            <main className="mx-auto flex max-w-7xl flex-col gap-7 px-6 py-10 md:py-11">
+                {/* Header */}
+                <header className="flex flex-col gap-1.5">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6594B1]">
+                        Etalase Mentor / Direktori
+                    </span>
+
+                    <h1 className="text-3xl font-semibold tracking-tight text-[#26302B]">
+                        Temukan Mentor
+                    </h1>
+
+                    <p className="text-sm text-[#6F7A73]">
+                        Temukan mentor yang sesuai dengan bidang yang ingin kamu
+                        pelajari.
+                    </p>
+                </header>
+
+                {/* Search & Filter */}
+                <section className="rounded-[14px] border border-[#E8E5DD] bg-white p-5 md:p-6">
+                    <form
+                        onSubmit={handleSearch}
+                        className="flex flex-col gap-4"
                     >
-                        <option value="">Semua Expertise</option>
+                        {/* Search */}
+                        <div className="relative">
+                            <input
+                                type="text"
+                                value={data.search}
+                                onChange={(e) =>
+                                    setData("search", e.target.value)
+                                }
+                                placeholder="Cari mentor atau keahlian..."
+                                className="h-12 w-full rounded-[10px] border border-[#E8E5DD] bg-[#F4F3EE] px-4 text-sm text-[#26302B] outline-none transition placeholder:text-[#6F7A73] focus:border-[#6594B1]"
+                            />
+                        </div>
 
-                        {expertises.map((item) => (
-                            <option key={item} value={item}>
-                                {item}
-                            </option>
-                        ))}
-                    </select>
+                        {/* Filter */}
+                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                            {/* Expertise */}
+                            <div className="flex flex-col gap-1.5">
+                                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6F7A73]">
+                                    Keahlian
+                                </span>
 
-                    {/* Filter ketersediaan */}
-                    <select
-                        value={data.availability}
-                        onChange={(e) =>
-                            setData("availability", e.target.value)
-                        }
-                        className="rounded-lg border border-gray-300 bg-white px-4 py-2 focus:border-gray-500 focus:outline-none"
-                    >
-                        <option value="">Semua Status</option>
-                        <option value="1">Tersedia</option>
-                        <option value="0">Tidak tersedia</option>
-                    </select>
-
-                    {/* Filter jenis mentoring */}
-                    <select
-                        value={data.mentor_type}
-                        onChange={(e) => setData("mentor_type", e.target.value)}
-                        className="rounded-lg border border-gray-300 bg-white px-4 py-2 focus:border-gray-500 focus:outline-none"
-                    >
-                        <option value="">Semua Jenis</option>
-                        <option value="free">Gratis</option>
-                        <option value="paid">Berbayar</option>
-                    </select>
-
-                    {/* Filter harga */}
-                    <div className="relative">
-                        <button
-                            type="button"
-                            onClick={() => setShowPriceFilter(!showPriceFilter)}
-                            className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-gray-700 hover:bg-gray-100"
-                        >
-                            Harga {showPriceFilter ? "▲" : "▼"}
-                        </button>
-
-                        {showPriceFilter && (
-                            <div className="absolute left-0 top-full z-10 mt-2 w-72 rounded-lg border border-gray-200 bg-white p-4 shadow-lg">
-                                <p className="mb-3 font-medium text-gray-800">
-                                    Rentang Harga
-                                </p>
-
-                                <div className="flex gap-2">
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={data.min_price}
-                                        onChange={(e) =>
-                                            setData("min_price", e.target.value)
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            toggleFilter("expertise")
                                         }
-                                        placeholder="Minimum"
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-gray-500 focus:outline-none"
-                                    />
+                                        className="flex h-11 w-full items-center justify-between rounded-[10px] border border-[#E8E5DD] bg-[#F4F3EE] px-3.5 text-left text-sm font-medium text-[#26302B] outline-none hover:bg-white"
+                                    >
+                                        <span>{data.expertise || "Semua"}</span>
 
-                                    <input
-                                        type="number"
-                                        min="0"
-                                        value={data.max_price}
-                                        onChange={(e) =>
-                                            setData("max_price", e.target.value)
-                                        }
-                                        placeholder="Maksimum"
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-gray-500 focus:outline-none"
-                                    />
+                                        <span className="text-xs text-[#6F7A73]">
+                                            {openFilter === "expertise"
+                                                ? "⌃"
+                                                : "⌄"}
+                                        </span>
+                                    </button>
+
+                                    {openFilter === "expertise" && (
+                                        <div className="absolute left-0 top-full z-30 mt-2 w-full overflow-hidden rounded-[10px] border border-[#E8E5DD] bg-white shadow-lg">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData("expertise", "");
+                                                    setOpenFilter(null);
+                                                }}
+                                                className={`block w-full px-4 py-3 text-left text-sm transition ${
+                                                    data.expertise === ""
+                                                        ? "bg-[#F4F3EE] font-semibold text-[#26302B]"
+                                                        : "text-[#26302B] hover:bg-[#6594B1] hover:text-white"
+                                                }`}
+                                            >
+                                                Semua
+                                            </button>
+
+                                            {expertises.map((item) => (
+                                                <button
+                                                    key={item}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setData(
+                                                            "expertise",
+                                                            item,
+                                                        );
+                                                        setOpenFilter(null);
+                                                    }}
+                                                    className={`block w-full px-4 py-3 text-left text-sm transition ${
+                                                        data.expertise === item
+                                                            ? "bg-[#F4F3EE] font-semibold text-[#26302B]"
+                                                            : "text-[#26302B] hover:bg-[#6594B1] hover:text-white"
+                                                    }`}
+                                                >
+                                                    {item}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
+                            </div>
+
+                            {/* Price */}
+                            <div className="relative flex flex-col gap-1.5">
+                                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6F7A73]">
+                                    Harga
+                                </span>
 
                                 <button
                                     type="button"
-                                    onClick={handleApplyPrice}
-                                    className="mt-3 w-full rounded-lg bg-gray-800 px-4 py-2 text-white hover:bg-gray-700"
+                                    onClick={togglePriceFilter}
+                                    className="flex h-11 items-center justify-between rounded-[10px] border border-[#E8E5DD] bg-[#F4F3EE] px-3.5 text-left text-sm font-medium text-[#26302B]"
                                 >
-                                    Terapkan
+                                    <span>
+                                        {data.min_price || data.max_price
+                                            ? "Rentang harga"
+                                            : "Semua"}
+                                    </span>
+
+                                    <span className="text-[#6F7A73]">
+                                        {showPriceFilter ? "⌃" : "⌄"}
+                                    </span>
                                 </button>
+
+                                {showPriceFilter && (
+                                    <div className="absolute left-0 top-full z-30 mt-2 w-full min-w-[280px] rounded-[12px] border border-[#E8E5DD] bg-white p-4 shadow-lg">
+                                        <p className="text-sm font-semibold text-[#26302B]">
+                                            Rentang Harga
+                                        </p>
+
+                                        <div className="mt-3 flex gap-2">
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={data.min_price}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        "min_price",
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                placeholder="Minimum"
+                                                className="h-10 w-full rounded-[10px] border border-[#E8E5DD] bg-[#F4F3EE] px-3 text-sm outline-none focus:border-[#6594B1]"
+                                            />
+
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                value={data.max_price}
+                                                onChange={(e) =>
+                                                    setData(
+                                                        "max_price",
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                placeholder="Maksimum"
+                                                className="h-10 w-full rounded-[10px] border border-[#E8E5DD] bg-[#F4F3EE] px-3 text-sm outline-none focus:border-[#6594B1]"
+                                            />
+                                        </div>
+
+                                        <button
+                                            type="button"
+                                            onClick={handleApplyPrice}
+                                            className="mt-3 h-10 w-full rounded-lg bg-[#6594B1] px-4 text-sm font-semibold text-white hover:bg-[#56839F]"
+                                        >
+                                            Terapkan
+                                        </button>
+                                    </div>
+                                )}
                             </div>
-                        )}
+
+                            {/* Rating */}
+                            <div className="flex flex-col gap-1.5">
+                                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6F7A73]">
+                                    Rating
+                                </span>
+
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleFilter("rating")}
+                                        className="flex h-11 w-full items-center justify-between rounded-[10px] border border-[#E8E5DD] bg-[#F4F3EE] px-3.5 text-left text-sm font-medium text-[#26302B] outline-none hover:bg-white"
+                                    >
+                                        <span>
+                                            {data.min_rating === "4.5"
+                                                ? "⭐ ≥ 4.5"
+                                                : data.min_rating === "4"
+                                                  ? "⭐ ≥ 4.0"
+                                                  : data.min_rating === "3.5"
+                                                    ? "⭐ ≥ 3.5"
+                                                    : data.min_rating === "3"
+                                                      ? "⭐ ≥ 3.0"
+                                                      : data.min_rating ===
+                                                          "2.5"
+                                                        ? "⭐ ≥ 2.5"
+                                                        : "Semua"}
+                                        </span>
+
+                                        <span className="text-xs text-[#6F7A73]">
+                                            {openFilter === "rating"
+                                                ? "⌃"
+                                                : "⌄"}
+                                        </span>
+                                    </button>
+
+                                    {openFilter === "rating" && (
+                                        <div className="absolute left-0 top-full z-30 mt-2 w-full overflow-hidden rounded-[10px] border border-[#E8E5DD] bg-white shadow-lg">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData("min_rating", "");
+                                                    setOpenFilter(null);
+                                                }}
+                                                className={`block w-full px-4 py-3 text-left text-sm transition ${
+                                                    data.min_rating === ""
+                                                        ? "bg-[#F4F3EE] font-semibold text-[#26302B]"
+                                                        : "text-[#26302B] hover:bg-[#6594B1] hover:text-white"
+                                                }`}
+                                            >
+                                                Semua
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData(
+                                                        "min_rating",
+                                                        "4.5",
+                                                    );
+                                                    setOpenFilter(null);
+                                                }}
+                                                className={`block w-full px-4 py-3 text-left text-sm transition ${
+                                                    data.min_rating === "4.5"
+                                                        ? "bg-[#F4F3EE] font-semibold text-[#26302B]"
+                                                        : "text-[#26302B] hover:bg-[#6594B1] hover:text-white"
+                                                }`}
+                                            >
+                                                ⭐ ≥ 4.5
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData("min_rating", "4");
+                                                    setOpenFilter(null);
+                                                }}
+                                                className={`block w-full px-4 py-3 text-left text-sm transition ${
+                                                    data.min_rating === "4"
+                                                        ? "bg-[#F4F3EE] font-semibold text-[#26302B]"
+                                                        : "text-[#26302B] hover:bg-[#6594B1] hover:text-white"
+                                                }`}
+                                            >
+                                                ⭐ ≥ 4.0
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData(
+                                                        "min_rating",
+                                                        "3.5",
+                                                    );
+                                                    setOpenFilter(null);
+                                                }}
+                                                className={`block w-full px-4 py-3 text-left text-sm transition ${
+                                                    data.min_rating === "3.5"
+                                                        ? "bg-[#F4F3EE] font-semibold text-[#26302B]"
+                                                        : "text-[#26302B] hover:bg-[#6594B1] hover:text-white"
+                                                }`}
+                                            >
+                                                ⭐ ≥ 3.5
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData("min_rating", "3");
+                                                    setOpenFilter(null);
+                                                }}
+                                                className={`block w-full px-4 py-3 text-left text-sm transition ${
+                                                    data.min_rating === "3"
+                                                        ? "bg-[#F4F3EE] font-semibold text-[#26302B]"
+                                                        : "text-[#26302B] hover:bg-[#6594B1] hover:text-white"
+                                                }`}
+                                            >
+                                                ⭐ ≥ 3.0
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData(
+                                                        "min_rating",
+                                                        "2.5",
+                                                    );
+                                                    setOpenFilter(null);
+                                                }}
+                                                className={`block w-full px-4 py-3 text-left text-sm transition ${
+                                                    data.min_rating === "2.5"
+                                                        ? "bg-[#F4F3EE] font-semibold text-[#26302B]"
+                                                        : "text-[#26302B] hover:bg-[#6594B1] hover:text-white"
+                                                }`}
+                                            >
+                                                ⭐ ≥ 2.5
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Availability */}
+                            <div className="flex flex-col gap-1.5">
+                                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6F7A73]">
+                                    Ketersediaan
+                                </span>
+
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            toggleFilter("availability")
+                                        }
+                                        className="flex h-11 w-full items-center justify-between rounded-[10px] border border-[#E8E5DD] bg-[#F4F3EE] px-3.5 text-left text-sm font-medium text-[#26302B] outline-none hover:bg-white"
+                                    >
+                                        <span>
+                                            {data.availability === "1"
+                                                ? "Tersedia"
+                                                : data.availability === "0"
+                                                  ? "Tidak tersedia"
+                                                  : "Semua"}
+                                        </span>
+
+                                        <span className="text-xs text-[#6F7A73]">
+                                            {openFilter === "availability"
+                                                ? "⌃"
+                                                : "⌄"}
+                                        </span>
+                                    </button>
+
+                                    {openFilter === "availability" && (
+                                        <div className="absolute left-0 top-full z-30 mt-2 w-full overflow-hidden rounded-[10px] border border-[#E8E5DD] bg-white shadow-lg">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData("availability", "");
+                                                    setOpenFilter(null);
+                                                }}
+                                                className={`block w-full px-4 py-3 text-left text-sm transition ${
+                                                    data.availability === ""
+                                                        ? "bg-[#F4F3EE] font-semibold text-[#26302B]"
+                                                        : "text-[#26302B] hover:bg-[#6594B1] hover:text-white"
+                                                }`}
+                                            >
+                                                Semua
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData(
+                                                        "availability",
+                                                        "1",
+                                                    );
+                                                    setOpenFilter(null);
+                                                }}
+                                                className={`block w-full px-4 py-3 text-left text-sm transition ${
+                                                    data.availability === "1"
+                                                        ? "bg-[#F4F3EE] font-semibold text-[#26302B]"
+                                                        : "text-[#26302B] hover:bg-[#6594B1] hover:text-white"
+                                                }`}
+                                            >
+                                                Tersedia
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData(
+                                                        "availability",
+                                                        "0",
+                                                    );
+                                                    setOpenFilter(null);
+                                                }}
+                                                className={`block w-full px-4 py-3 text-left text-sm transition ${
+                                                    data.availability === "0"
+                                                        ? "bg-[#F4F3EE] font-semibold text-[#26302B]"
+                                                        : "text-[#26302B] hover:bg-[#6594B1] hover:text-white"
+                                                }`}
+                                            >
+                                                Tidak tersedia
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Mentor Type */}
+                            <div className="flex flex-col gap-1.5">
+                                <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#6F7A73]">
+                                    Jenis Mentoring
+                                </span>
+
+                                <div className="relative">
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            toggleFilter("mentor_type")
+                                        }
+                                        className="flex h-11 w-full items-center justify-between rounded-[10px] border border-[#E8E5DD] bg-[#F4F3EE] px-3.5 text-left text-sm font-medium text-[#26302B] outline-none hover:bg-white"
+                                    >
+                                        <span>
+                                            {data.mentor_type === "free"
+                                                ? "Gratis"
+                                                : data.mentor_type === "paid"
+                                                  ? "Berbayar"
+                                                  : "Semua"}
+                                        </span>
+
+                                        <span className="text-xs text-[#6F7A73]">
+                                            {openFilter === "mentor_type"
+                                                ? "⌃"
+                                                : "⌄"}
+                                        </span>
+                                    </button>
+
+                                    {openFilter === "mentor_type" && (
+                                        <div className="absolute left-0 top-full z-30 mt-2 w-full overflow-hidden rounded-[10px] border border-[#E8E5DD] bg-white shadow-lg">
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData("mentor_type", "");
+                                                    setOpenFilter(null);
+                                                }}
+                                                className={`block w-full px-4 py-3 text-left text-sm transition ${
+                                                    data.mentor_type === ""
+                                                        ? "bg-[#F4F3EE] font-semibold text-[#26302B]"
+                                                        : "text-[#26302B] hover:bg-[#6594B1] hover:text-white"
+                                                }`}
+                                            >
+                                                Semua
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData(
+                                                        "mentor_type",
+                                                        "free",
+                                                    );
+                                                    setOpenFilter(null);
+                                                }}
+                                                className={`block w-full px-4 py-3 text-left text-sm transition ${
+                                                    data.mentor_type === "free"
+                                                        ? "bg-[#F4F3EE] font-semibold text-[#26302B]"
+                                                        : "text-[#26302B] hover:bg-[#6594B1] hover:text-white"
+                                                }`}
+                                            >
+                                                Gratis
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setData(
+                                                        "mentor_type",
+                                                        "paid",
+                                                    );
+                                                    setOpenFilter(null);
+                                                }}
+                                                className={`block w-full px-4 py-3 text-left text-sm transition ${
+                                                    data.mentor_type === "paid"
+                                                        ? "bg-[#F4F3EE] font-semibold text-[#26302B]"
+                                                        : "text-[#26302B] hover:bg-[#6594B1] hover:text-white"
+                                                }`}
+                                            >
+                                                Berbayar
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Action */}
+                        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[#E8E5DD] pt-4">
+                            <button
+                                type="button"
+                                onClick={handleReset}
+                                className="h-10 rounded-lg border border-[#E8E5DD] bg-white px-5 text-sm font-semibold text-[#26302B] hover:bg-[#F4F3EE]"
+                            >
+                                Hapus filter
+                            </button>
+
+                            <button
+                                type="submit"
+                                className="h-10 rounded-lg bg-[#6594B1] px-6 text-sm font-semibold text-white hover:bg-[#56839F]"
+                            >
+                                Cari Mentor
+                            </button>
+                        </div>
+                    </form>
+                </section>
+
+                {/* Mentor List */}
+                <section>
+                    <div className="flex items-end justify-between gap-4">
+                        <div>
+                            <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6F7A73]">
+                                Mentor Terverifikasi
+                            </span>
+
+                            <h2 className="mt-1 text-xl font-semibold text-[#26302B]">
+                                Mentor Tersedia
+                            </h2>
+                        </div>
+
+                        <span className="text-sm text-[#6F7A73]">
+                            {mentors.length} mentor
+                        </span>
                     </div>
 
-                    {/* Filter Rating */}
-                    <select
-                        value={data.min_rating}
-                        onClick={() => setShowPriceFilter(false)}
-                        onChange={(e) => setData("min_rating", e.target.value)}
-                        className="rounded-lg border border-gray-300 bg-white px-4 py-2 focus:border-gray-500 focus:outline-none"
-                    >
-                        <option value="">Semua Rating</option>
-                        <option value="1">⭐ ≥ 1.00</option>
-                        <option value="2">⭐ ≥ 2.00</option>
-                        <option value="3">⭐ ≥ 3.00</option>
-                        <option value="4">⭐ ≥ 4.00</option>
-                        <option value="5">⭐ 5.00</option>
-                    </select>
-
-                    {/* Tombol cari */}
-                    <button
-                        type="submit"
-                        className="rounded-lg bg-gray-800 px-6 py-2 text-white hover:bg-gray-700"
-                    >
-                        Cari
-                    </button>
-
-                    {/* Tombol reset */}
-                    <button
-                        type="button"
-                        onClick={handleReset}
-                        className="rounded-lg border border-gray-300 bg-white px-6 py-2 text-gray-700 hover:bg-gray-100"
-                    >
-                        Reset
-                    </button>
-                </form>
-
-                {/* Daftar mentor */}
-                <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {mentors.length > 0 ? (
-                        mentors.map((mentor) => (
-                            <div
-                                key={mentor.id}
-                                className="rounded-lg bg-white p-6 shadow"
-                            >
-                                {/* Nama mentor */}
-                                <h2 className="text-xl font-semibold text-gray-800">
-                                    {mentor.user.name}
-                                </h2>
+                        <div className="mt-4 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                            {mentors.map((mentor) => (
+                                <article
+                                    key={mentor.id}
+                                    className="flex flex-col gap-4 rounded-[14px] border border-[#E8E5DD] bg-white p-6 transition hover:-translate-y-0.5 hover:shadow-md"
+                                >
+                                    {/* Mentor Header */}
+                                    <div className="flex items-center gap-3.5">
+                                        <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl bg-[#E6EFF4] text-lg font-semibold text-[#6594B1]">
+                                            {mentor.user.name
+                                                .charAt(0)
+                                                .toUpperCase()}
+                                        </div>
 
-                                {/* Expertise */}
-                                <p className="mt-2 text-sm text-gray-600">
-                                    {mentor.expertise}
-                                </p>
+                                        <div className="min-w-0 flex-1">
+                                            <h3 className="truncate text-base font-semibold text-[#26302B]">
+                                                {mentor.user.name}
+                                            </h3>
 
-                                {/* Bio */}
-                                <p className="mt-4 text-gray-700">
-                                    {mentor.bio || "Belum ada bio mentor."}
-                                </p>
+                                            <p className="mt-0.5 text-[13px] text-[#6594B1]">
+                                                {mentor.expertise}
+                                            </p>
+                                        </div>
+                                    </div>
 
-                                {/* Informasi mentor */}
-                                <div className="mt-4 space-y-1">
-                                    <p>
-                                        <strong>Rating:</strong> ⭐{" "}
-                                        {mentor.avg_rating}
-                                        {Number(mentor.avg_rating) === 0 && (
-                                            <span className="ml-2 rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">
-                                                Mentor Baru
+                                    {/* Verification */}
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#EAF5E1] px-3 py-1 text-xs font-semibold text-[#5C6F2B]">
+                                            ✓ Terverifikasi
+                                        </span>
+
+                                        <span
+                                            className={`inline-flex items-center gap-1.5 text-[13px] font-semibold ${
+                                                mentor.is_available
+                                                    ? "text-[#5C6F2B]"
+                                                    : "text-[#6F7A73]"
+                                            }`}
+                                        >
+                                            <span className="h-2 w-2 rounded-full bg-current" />
+
+                                            {mentor.is_available
+                                                ? "Tersedia"
+                                                : "Tidak tersedia"}
+                                        </span>
+                                    </div>
+
+                                    <div className="h-px bg-[#E8E5DD]" />
+
+                                    {/* Rating & Price */}
+                                    <div className="flex items-center justify-between gap-4">
+                                        <div className="flex items-center gap-1.5">
+                                            <span className="text-[#5C6F2B]">
+                                                ⭐
+                                            </span>
+
+                                            <span className="font-medium text-[#26302B]">
+                                                {mentor.avg_rating > 0
+                                                    ? mentor.avg_rating
+                                                    : "Baru"}
+                                            </span>
+                                        </div>
+
+                                        {mentor.mentor_type === "free" ? (
+                                            <span className="rounded-full bg-[#F8EEF6] px-3 py-1 text-[13px] font-semibold text-[#8A4A80]">
+                                                Gratis
+                                            </span>
+                                        ) : (
+                                            <span className="font-semibold text-[#26302B]">
+                                                Rp
+                                                {Number(
+                                                    mentor.price_per_session,
+                                                ).toLocaleString("id-ID")}
+                                                <span className="font-normal text-[#6F7A73]">
+                                                    {" "}
+                                                    / sesi
+                                                </span>
                                             </span>
                                         )}
-                                    </p>
+                                    </div>
 
-                                    <p>
-                                        <strong>Mentoring:</strong>{" "}
-                                        {mentor.mentor_type === "free"
-                                            ? "Gratis"
-                                            : `Rp${Number(
-                                                  mentor.price_per_session,
-                                              ).toLocaleString(
-                                                  "id-ID",
-                                              )} / sesi`}
-                                    </p>
-
-                                    <p>
-                                        <strong>Status:</strong>{" "}
-                                        {mentor.is_available
-                                            ? "Tersedia"
-                                            : "Tidak tersedia"}
-                                    </p>
-                                </div>
-
-                                {/* Tombol menuju detail mentor */}
-                                <div className="mt-6">
+                                    {/* Button */}
                                     <a
                                         href={`/mentors/${mentor.id}`}
-                                        className="inline-block rounded-lg bg-gray-800 px-5 py-2 text-white hover:bg-gray-700"
+                                        className="mt-1 flex h-11 w-full items-center justify-center rounded-lg bg-[#E6EFF4] text-sm font-semibold text-[#6594B1] transition hover:bg-[#D9E8EF]"
                                     >
                                         Lihat Profil
                                     </a>
-                                </div>
-                            </div>
-                        ))
+                                </article>
+                            ))}
+                        </div>
                     ) : (
-                        <div className="col-span-full rounded-lg bg-white p-6 text-center text-gray-600">
-                            Mentor tidak ditemukan.
+                        <div className="mt-4 flex flex-col items-center rounded-[14px] border border-[#E8E5DD] bg-white px-6 py-14 text-center">
+                            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#DDAED3] text-xl text-white">
+                                ?
+                            </div>
+
+                            <h3 className="mt-3 text-lg font-semibold text-[#26302B]">
+                                Mentor tidak ditemukan
+                            </h3>
+
+                            <p className="mt-1 max-w-md text-sm text-[#6F7A73]">
+                                Coba ubah kata pencarian atau hapus beberapa
+                                filter untuk melihat mentor lainnya.
+                            </p>
+
+                            <button
+                                type="button"
+                                onClick={handleReset}
+                                className="mt-4 h-10 rounded-lg border border-[#E8E5DD] bg-white px-5 text-sm font-semibold text-[#26302B] hover:bg-[#F4F3EE]"
+                            >
+                                Hapus filter
+                            </button>
                         </div>
                     )}
-                </div>
-            </div>
+                </section>
+            </main>
         </div>
     );
 }
