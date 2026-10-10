@@ -185,11 +185,11 @@ export default function Index({
                         className="rounded-lg border border-gray-300 bg-white px-4 py-2 focus:border-gray-500 focus:outline-none"
                     >
                         <option value="">Semua Rating</option>
-                        <option value="1">⭐ ≥ 1.0</option>
-                        <option value="2">⭐ ≥ 2.0</option>
-                        <option value="3">⭐ ≥ 3.0</option>
-                        <option value="4">⭐ ≥ 4.0</option>
-                        <option value="5">⭐ 5.0</option>
+                        <option value="1">⭐ ≥ 1.00</option>
+                        <option value="2">⭐ ≥ 2.00</option>
+                        <option value="3">⭐ ≥ 3.00</option>
+                        <option value="4">⭐ ≥ 4.00</option>
+                        <option value="5">⭐ 5.00</option>
                     </select>
 
                     {/* Tombol cari */}
@@ -238,6 +238,11 @@ export default function Index({
                                     <p>
                                         <strong>Rating:</strong> ⭐{" "}
                                         {mentor.avg_rating}
+                                        {Number(mentor.avg_rating) === 0 && (
+                                            <span className="ml-2 rounded-full bg-gray-100 px-2 py-1 text-xs text-gray-600">
+                                                Mentor Baru
+                                            </span>
+                                        )}
                                     </p>
 
                                     <p>
