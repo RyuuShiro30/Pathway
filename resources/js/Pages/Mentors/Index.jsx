@@ -10,6 +10,7 @@ export default function Index({
     mentorType,
     minPrice,
     maxPrice,
+    minRating,
 }) {
     const { data, setData, get } = useForm({
         search: search || "",
@@ -18,6 +19,7 @@ export default function Index({
         mentor_type: mentorType || "",
         min_price: minPrice || "",
         max_price: maxPrice || "",
+        min_rating: minRating || "",
     });
 
     const [showPriceFilter, setShowPriceFilter] = useState(false);
@@ -49,6 +51,7 @@ export default function Index({
             mentor_type: "",
             min_price: "",
             max_price: "",
+            min_rating: "",
         });
 
         setShowPriceFilter(false);
@@ -173,6 +176,21 @@ export default function Index({
                             </div>
                         )}
                     </div>
+
+                    {/* Filter Rating */}
+                    <select
+                        value={data.min_rating}
+                        onClick={() => setShowPriceFilter(false)}
+                        onChange={(e) => setData("min_rating", e.target.value)}
+                        className="rounded-lg border border-gray-300 bg-white px-4 py-2 focus:border-gray-500 focus:outline-none"
+                    >
+                        <option value="">Semua Rating</option>
+                        <option value="1">⭐ ≥ 1.0</option>
+                        <option value="2">⭐ ≥ 2.0</option>
+                        <option value="3">⭐ ≥ 3.0</option>
+                        <option value="4">⭐ ≥ 4.0</option>
+                        <option value="5">⭐ 5.0</option>
+                    </select>
 
                     {/* Tombol cari */}
                     <button
