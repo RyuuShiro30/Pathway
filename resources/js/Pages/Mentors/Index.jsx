@@ -130,7 +130,8 @@ export default function Index({
             </nav>
 
             {/* Main */}
-            <main className="mx-auto flex max-w-7xl flex-col gap-7 px-6 py-10 md:py-11">
+            <main className="mx-auto flex max-w-7xl flex-col gap-7 px-2 py-10 md:py-11">
+                {" "}
                 {/* Header */}
                 <header className="flex flex-col gap-1.5">
                     <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[#6594B1]">
@@ -146,7 +147,6 @@ export default function Index({
                         pelajari.
                     </p>
                 </header>
-
                 {/* Search & Filter */}
                 <section className="rounded-[14px] border border-[#E8E5DD] bg-white p-5 md:p-6">
                     <form
@@ -633,7 +633,6 @@ export default function Index({
                         </div>
                     </form>
                 </section>
-
                 {/* Mentor List */}
                 <section>
                     <div className="flex items-end justify-between gap-4">
