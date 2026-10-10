@@ -12,15 +12,9 @@ const expertiseOptions = [
 ];
 
 export default function Register({ user, mentorProfile }) {
-    const existingExpertise = mentorProfile?.expertise
-        ? mentorProfile.expertise
-              .split(",")
-              .map((item) => item.trim())
-              .filter(Boolean)
-        : [];
-
-    const [selectedExpertise, setSelectedExpertise] =
-        useState(existingExpertise);
+    const [selectedExpertise, setSelectedExpertise] = useState(
+        mentorProfile?.expertise ?? "",
+    );
 
     const initialData = {
         name: user?.name ?? "",
@@ -88,18 +82,13 @@ export default function Register({ user, mentorProfile }) {
         fileInputRef.current?.click();
     };
 
-    const toggleExpertise = (expertise) => {
-        setSelectedExpertise((current) => {
-            const alreadySelected = current.includes(expertise);
-
-            const updated = alreadySelected
-                ? current.filter((item) => item !== expertise)
-                : [...current, expertise];
-
-            setData("expertise", updated.join(", "));
-
-            return updated;
-        });
+    /*
+     * Memilih satu bidang keahlian.
+     * Pilihan baru akan menggantikan pilihan sebelumnya.
+     */
+    const selectExpertise = (expertise) => {
+        setSelectedExpertise(expertise);
+        setData("expertise", expertise);
     };
 
     const submit = (e) => {
@@ -258,16 +247,14 @@ export default function Register({ user, mentorProfile }) {
                                     <div className="mt-3 flex flex-wrap gap-2">
                                         {expertiseOptions.map((expertise) => {
                                             const selected =
-                                                selectedExpertise.includes(
-                                                    expertise,
-                                                );
+                                                selectedExpertise === expertise;
 
                                             return (
                                                 <button
                                                     key={expertise}
                                                     type="button"
                                                     onClick={() =>
-                                                        toggleExpertise(
+                                                        selectExpertise(
                                                             expertise,
                                                         )
                                                     }
@@ -284,7 +271,7 @@ export default function Register({ user, mentorProfile }) {
                                     </div>
 
                                     <p className="mt-2 text-xs text-gray-400">
-                                        Pilih satu atau lebih bidang yang kamu
+                                        Pilih satu bidang yang paling kamu
                                         kuasai.
                                     </p>
 
