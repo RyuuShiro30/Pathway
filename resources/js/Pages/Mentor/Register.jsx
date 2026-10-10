@@ -16,6 +16,8 @@ export default function Register({ user, mentorProfile }) {
         mentorProfile?.expertise ?? "",
     );
 
+    const [certificates, setCertificates] = useState([]);
+
     const initialData = {
         name: user?.name ?? "",
         photo: null,
@@ -28,6 +30,7 @@ export default function Register({ user, mentorProfile }) {
                 ? ""
                 : (mentorProfile?.price_per_session ?? ""),
         is_available: mentorProfile?.is_available ?? true,
+        certificates: [],
     };
 
     const { data, setData, post, processing, errors } = useForm(initialData);
@@ -59,7 +62,8 @@ export default function Register({ user, mentorProfile }) {
         data.mentor_type !== savedData.mentor_type ||
         data.price_per_session !== savedData.price_per_session ||
         data.is_available !== savedData.is_available ||
-        data.photo !== null;
+        data.photo !== null ||
+        certificates.length > 0;
 
     const hasMentorProfile = Boolean(mentorProfile);
 
@@ -91,6 +95,89 @@ export default function Register({ user, mentorProfile }) {
         setData("expertise", expertise);
     };
 
+    /*
+     * Memilih banyak sertifikat / bukti pengalaman.
+     */
+    const handleCertificateChange = (e) => {
+        const newFiles = Array.from(e.target.files || []);
+
+        if (newFiles.length === 0) {
+            return;
+        }
+
+        const allowedTypes = [
+            "application/pdf",
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+        ];
+
+        const invalidType = newFiles.find(
+            (file) => !allowedTypes.includes(file.type),
+        );
+
+        if (invalidType) {
+            alert(
+                `File "${invalidType.name}" tidak didukung. Gunakan PDF, JPG, JPEG, PNG, atau WEBP.`,
+            );
+            e.target.value = "";
+            return;
+        }
+
+        const maxSize = 5 * 1024 * 1024;
+
+        const invalidSize = newFiles.find((file) => file.size > maxSize);
+
+        if (invalidSize) {
+            alert(`File "${invalidSize.name}" melebihi ukuran maksimal 5 MB.`);
+            e.target.value = "";
+            return;
+        }
+
+        // Cek apakah ada file yang sudah pernah dipilih
+        const duplicateFile = newFiles.find((newFile) =>
+            certificates.some(
+                (existingFile) =>
+                    existingFile.name === newFile.name &&
+                    existingFile.size === newFile.size,
+            ),
+        );
+
+        if (duplicateFile) {
+            alert(`File "${duplicateFile.name}" sudah ditambahkan.`);
+            e.target.value = "";
+            return;
+        }
+
+        // Gabungkan file lama dan file baru
+        const combinedFiles = [...certificates, ...newFiles];
+
+        // Maksimal 10 file
+        if (combinedFiles.length > 10) {
+            alert("Maksimal 10 file sertifikat atau bukti pengalaman.");
+            e.target.value = "";
+            return;
+        }
+
+        setCertificates(combinedFiles);
+        setData("certificates", combinedFiles);
+
+        // Reset input agar file yang sama bisa dipilih lagi
+        // setelah file tersebut dihapus.
+        e.target.value = "";
+    };
+    /*
+     * Menghapus satu file dari daftar sertifikat.
+     */
+    const removeCertificate = (indexToRemove) => {
+        const updatedFiles = certificates.filter(
+            (_, index) => index !== indexToRemove,
+        );
+
+        setCertificates(updatedFiles);
+        setData("certificates", updatedFiles);
+    };
+
     const submit = (e) => {
         e.preventDefault();
 
@@ -102,7 +189,7 @@ export default function Register({ user, mentorProfile }) {
                  * Setelah berhasil disimpan, data yang sekarang
                  * dianggap sebagai data terbaru.
                  *
-                 * photo dikembalikan ke null karena File tidak
+                 * Photo dikembalikan ke null karena File tidak
                  * perlu disimpan lagi di state sebagai perubahan.
                  */
                 setSavedData({
@@ -117,9 +204,17 @@ export default function Register({ user, mentorProfile }) {
                             ? ""
                             : data.price_per_session,
                     is_available: data.is_available,
+                    certificates: [],
                 });
 
                 setData("photo", null);
+
+                /*
+                 * File sertifikat yang sudah berhasil dikirim
+                 * tidak perlu tetap dianggap sebagai perubahan.
+                 */
+                setCertificates([]);
+                setData("certificates", []);
             },
         });
     };
@@ -350,6 +445,87 @@ export default function Register({ user, mentorProfile }) {
                                     )}
                                 </div>
 
+                                {/* Sertifikat / Bukti Pengalaman */}
+                                <div className="mt-6">
+                                    <label className="text-sm font-semibold text-gray-800">
+                                        Sertifikat / Bukti Pengalaman
+                                    </label>
+
+                                    <p className="mt-2 text-xs leading-relaxed text-gray-400">
+                                        Upload sertifikat atau bukti pengalaman
+                                        yang mendukung keahlian kamu. Maksimal
+                                        10 file, 5 MB per file.
+                                    </p>
+
+                                    <label
+                                        htmlFor="certificates"
+                                        className="mt-3 flex w-full cursor-pointer items-center justify-center rounded-xl border-2 border-dashed border-gray-300 px-4 py-6 transition hover:border-[#6d833f] hover:bg-[#fafcf8]"
+                                    >
+                                        <div className="text-center">
+                                            <p className="text-sm font-medium text-gray-700">
+                                                Klik untuk memilih file
+                                            </p>
+
+                                            <p className="mt-1 text-xs text-gray-400">
+                                                PDF, JPG, JPEG, PNG, atau WEBP
+                                            </p>
+                                        </div>
+
+                                        <input
+                                            id="certificates"
+                                            type="file"
+                                            multiple
+                                            accept=".pdf,.jpg,.jpeg,.png,.webp"
+                                            onChange={handleCertificateChange}
+                                            className="hidden"
+                                        />
+                                    </label>
+
+                                    {certificates.length > 0 && (
+                                        <div className="mt-4 space-y-2">
+                                            {certificates.map((file, index) => (
+                                                <div
+                                                    key={`${file.name}-${index}`}
+                                                    className="flex items-center justify-between gap-3 rounded-lg bg-gray-50 px-4 py-3"
+                                                >
+                                                    <div className="min-w-0">
+                                                        <p className="truncate text-sm font-medium text-gray-700">
+                                                            {file.name}
+                                                        </p>
+
+                                                        <p className="mt-0.5 text-xs text-gray-400">
+                                                            {(
+                                                                file.size /
+                                                                1024 /
+                                                                1024
+                                                            ).toFixed(2)}{" "}
+                                                            MB
+                                                        </p>
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            removeCertificate(
+                                                                index,
+                                                            )
+                                                        }
+                                                        className="shrink-0 text-xs font-medium text-red-500 transition hover:text-red-700"
+                                                    >
+                                                        Hapus
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {errors.certificates && (
+                                        <p className="mt-1.5 text-xs text-red-500">
+                                            {errors.certificates}
+                                        </p>
+                                    )}
+                                </div>
+
                                 {/* Tipe Mentor */}
                                 <div className="mt-6">
                                     <label className="text-sm font-semibold text-gray-800">
@@ -535,8 +711,9 @@ export default function Register({ user, mentorProfile }) {
                                 <div className="mt-7 flex flex-col gap-4 border-t border-gray-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
                                     <p className="max-w-[65%] text-xs leading-relaxed text-gray-400">
                                         Setelah dikirim, admin akan memeriksa
-                                        data dan portofolio kamu sebelum profil
-                                        tampil di daftar mentor.
+                                        data, portofolio, dan bukti pengalaman
+                                        kamu sebelum profil tampil di daftar
+                                        mentor.
                                     </p>
 
                                     <button

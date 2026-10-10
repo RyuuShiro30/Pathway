@@ -41,6 +41,13 @@ class MentorRegistrationRequest extends FormRequest
                 'max:255',
             ],
 
+            'certificates' => ['nullable', 'array', 'max:10'],
+            'certificates.*' => [
+                'file',
+                'mimes:pdf,jpg,jpeg,png,webp',
+                'max:5120',
+            ],
+
             'mentor_type' => [
                 'required',
                 'in:free,paid',

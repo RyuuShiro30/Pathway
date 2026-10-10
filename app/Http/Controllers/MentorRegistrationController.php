@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\MentorRegistrationRequest;
+use App\Models\MentorCertificate;
 use App\Models\MentorProfile;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -31,6 +32,9 @@ class MentorRegistrationController extends Controller
         // Cek apakah user sudah memiliki profil mentor.
         $mentorProfile = $user->mentorProfile;
 
+        // Menandai apakah ini pendaftaran baru.
+        $isNewProfile = !$mentorProfile;
+
         // Cek apakah pengajuan sebelumnya ditolak.
         $isResubmission = $mentorProfile?->verification_status === 'rejected';
 
@@ -47,7 +51,7 @@ class MentorRegistrationController extends Controller
                     ->delete($user->photo_path);
             }
 
-            // Simpan foto baru ke storage/app/public/mentor-photos.
+            // Simpan foto baru.
             $user->photo_path = $request->file('photo')
                 ->store('mentor-photos', 'public');
 
@@ -73,19 +77,32 @@ class MentorRegistrationController extends Controller
                 $mentorData['verification_status'] = 'pending';
             }
 
-            // Jika pending atau verified, status tetap dipertahankan.
+            // Update profil mentor.
             $mentorProfile->update($mentorData);
         } else {
-            // Jika belum pernah mendaftar, buat profil baru
-            // dengan status pending.
+            // Jika belum pernah mendaftar,
+            // buat profil baru dengan status pending.
             $mentorData['user_id'] = $user->id;
             $mentorData['verification_status'] = 'pending';
 
-            MentorProfile::create($mentorData);
+            $mentorProfile = MentorProfile::create($mentorData);
+        }
+
+        // Upload banyak sertifikat atau bukti pengalaman.
+        if ($request->hasFile('certificates')) {
+            foreach ($request->file('certificates') as $certificate) {
+                $path = $certificate->store('mentor-certificates', 'public');
+
+                MentorCertificate::create([
+                    'mentor_profile_id' => $mentorProfile->id,
+                    'file_path' => $path,
+                    'file_name' => $certificate->getClientOriginalName(),
+                ]);
+            }
         }
 
         // Pesan disesuaikan dengan kondisi pendaftaran.
-        if (!$mentorProfile) {
+        if ($isNewProfile) {
             $message = 'Pendaftaran mentor berhasil dikirim dan sedang menunggu verifikasi.';
         } elseif ($isResubmission) {
             $message = 'Pendaftaran mentor berhasil diajukan ulang dan sedang menunggu verifikasi.';
