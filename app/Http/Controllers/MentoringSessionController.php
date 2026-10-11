@@ -10,13 +10,91 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
 
 class MentoringSessionController extends Controller
 {
+    public function studentIndex(): InertiaResponse
+    {
+        $studentId = Auth::id();
+        $stats = MentoringSession::query()
+            ->where('student_id', $studentId)
+            ->selectRaw(
+                'COUNT(*) as total,
+                COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as menunggu_konfirmasi,
+                COALESCE(SUM(CASE WHEN status = ? THEN 1 ELSE 0 END), 0) as siap_datang,
+                COALESCE(SUM(CASE WHEN status = ? THEN duration_hours ELSE 0 END), 0) as jam_mentoring',
+                ['diajukan', 'dikonfirmasi', 'selesai'],
+            )
+            ->first();
+
+        $bookings = MentoringSession::query()
+            ->where('student_id', $studentId)
+            ->with([
+                'mentor:id,name',
+                'mentor.mentorProfile:user_id,expertise',
+            ])
+            ->select([
+                'id',
+                'mentor_id',
+                'status',
+                'schedule_time',
+                'end_time',
+                'duration_hours',
+                'is_free_session',
+                'price_snapshot',
+                'payment_dp_status',
+                'refund_status',
+                'cancelled_by',
+                'discord_link',
+            ])
+            ->orderByDesc('schedule_time')
+            ->limit(100)
+            ->get()
+            ->map(static function (MentoringSession $session): array {
+                return [
+                    'id' => $session->id,
+                    'status' => $session->status,
+                    'schedule_time' => $session->schedule_time
+                        ->copy()
+                        ->setTimezone('UTC')
+                        ->toISOString(),
+                    'end_time' => $session->end_time?->copy()
+                        ->setTimezone('UTC')
+                        ->toISOString(),
+                    'duration_hours' => $session->duration_hours,
+                    'is_free_session' => $session->is_free_session,
+                    'price_snapshot' => $session->price_snapshot,
+                    'payment_dp_status' => $session->payment_dp_status,
+                    'refund_status' => $session->refund_status,
+                    'cancelled_by' => $session->cancelled_by,
+                    'mentor' => [
+                        'id' => $session->mentor->id,
+                        'name' => $session->mentor->name,
+                        'expertise' => $session->mentor->mentorProfile?->expertise,
+                    ],
+                    'discord_link' => in_array(
+                        $session->status,
+                        ['dikonfirmasi', 'berlangsung'],
+                        true,
+                    ) ? $session->discord_link : null,
+                ];
+            })
+            ->values();
+
+        return Inertia::render('Student/MyBookings', [
+            'bookings' => $bookings,
+            'stats' => [
+                'total' => (int) $stats->total,
+                'menunggu_konfirmasi' => (int) $stats->menunggu_konfirmasi,
+                'siap_datang' => (int) $stats->siap_datang,
+                'jam_mentoring' => (int) $stats->jam_mentoring,
+            ],
+        ]);
+    }
+
     public function schedule(User $mentor): InertiaResponse
     {
         $mentorProfile = $this->mentorProfileForBooking($mentor);
@@ -230,13 +308,9 @@ class MentoringSessionController extends Controller
                     : 'menunggu_verifikasi',
             ]);
 
-            $redirect = Route::has('student.bookings.index')
-                ? redirect()->route('student.bookings.index')
-                : redirect()->route('student.booking.schedule', [
-                    'mentor' => $validated['mentor_id'],
-                ]);
-
-            return $redirect->with('success', 'Booking berhasil diajukan, menunggu konfirmasi mentor.');
+            return redirect()
+                ->route('student.bookings.index')
+                ->with('success', 'Booking berhasil diajukan, menunggu konfirmasi mentor.');
         });
     }
 
