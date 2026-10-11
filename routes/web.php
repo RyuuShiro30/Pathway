@@ -28,6 +28,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/mentor/dashboard', [MentorProfileController::class, 'dashboard'])->name('mentor.dashboard');
     Route::patch('/mentor/availability', [MentorProfileController::class, 'updateAvailability'])->name('mentor.availability.update');
 
+    Route::get('/mentors/{mentor}/booking', [MentoringSessionController::class, 'schedule'])->name('student.booking.schedule');
+    Route::get('/mentors/{mentor}/booking/confirm', [MentoringSessionController::class, 'confirm'])->name('student.booking.confirm');
     Route::post('/booking', [MentoringSessionController::class, 'store'])->name('booking.store');
     Route::get('/mentor/requests', [MentoringSessionController::class, 'requests'])->name('mentor.requests');
     Route::get('/mentor/booking/{id}', [MentoringSessionController::class, 'show'])->name('mentor.booking.show');
