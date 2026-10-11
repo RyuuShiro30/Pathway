@@ -163,6 +163,19 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
         );
     }
 
+    const displayedSlotCount = timeSlots.reduce(
+        (total, slot) =>
+            total +
+            weekdays.filter((day) => getAvailability(day.value, slot)).length,
+        0,
+    );
+    const editorAvailability = editorSlot
+        ? getAvailability(editorSlot.day, editorSlot)
+        : null;
+    const selectedAvailabilityType = paidSelectionOpen
+        ? 'berbayar'
+        : (editorAvailability?.type ?? 'tutup');
+
     function setSlotAvailability(day, slot, type, price = null) {
         const matchingSlot = (schedule) =>
             schedule.day === day &&
@@ -554,7 +567,7 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
                             </h2>
                         </div>
                         <p className="text-sm text-[#78827B]">
-                            {availabilitySchedule.length} slot tersedia
+                            {displayedSlotCount} slot tersedia
                         </p>
                     </div>
 
@@ -608,7 +621,7 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
                                                     editorSlot?.end ===
                                                         slot.end;
                                                 const statusLabel = isPaid
-                                                    ? `Rp ${rupiahFormatter.format(availability.price)}`
+                                                    ? `Rp ${rupiahFormatter.format(availability.price)}/jam`
                                                     : isFree
                                                       ? 'Gratis'
                                                       : 'Tutup';
@@ -695,19 +708,29 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
                         <div className="flex flex-col gap-2">
                             <button
                                 type="button"
+                                aria-pressed={selectedAvailabilityType === 'tutup'}
                                 onClick={() =>
                                     applyAvailabilityChoice('tutup')
                                 }
-                                className="rounded-lg px-3 py-2 text-left text-sm font-semibold text-[#747B76] hover:bg-[#F2F2EF] focus:outline-none focus:ring-2 focus:ring-[#6594B1]"
+                                className={`rounded-lg border-2 px-3 py-2 text-left text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#6594B1] ${
+                                    selectedAvailabilityType === 'tutup'
+                                        ? 'border-[#747B76] bg-[#F2F2EF] text-[#34443D]'
+                                        : 'border-transparent bg-white text-[#747B76] hover:bg-[#F2F2EF]'
+                                }`}
                             >
                                 Tutup
                             </button>
                             <button
                                 type="button"
+                                aria-pressed={selectedAvailabilityType === 'gratis'}
                                 onClick={() =>
                                     applyAvailabilityChoice('gratis')
                                 }
-                                className="rounded-lg bg-[#65B175] px-3 py-2 text-left text-sm font-semibold text-white hover:bg-[#477E50] focus:outline-none focus:ring-2 focus:ring-[#6594B1]"
+                                className={`rounded-lg border-2 px-3 py-2 text-left text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#6594B1] ${
+                                    selectedAvailabilityType === 'gratis'
+                                        ? 'border-[#477E50] bg-[#65B175] text-white'
+                                        : 'border-transparent bg-white text-[#747B76] hover:bg-[#F2F2EF]'
+                                }`}
                             >
                                 Gratis
                             </button>
@@ -715,6 +738,7 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
                                 <button
                                     type="button"
                                     aria-expanded={paidSelectionOpen}
+                                    aria-pressed={selectedAvailabilityType === 'berbayar'}
                                     onClick={() => {
                                         const currentSlot = getAvailability(
                                             editorSlot.day,
@@ -730,7 +754,11 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
                                                 : defaultPrice,
                                         );
                                     }}
-                                    className="w-full rounded-md bg-[#6594B1] px-3 py-2 text-left text-sm font-semibold text-white hover:bg-[#527D98] focus:outline-none focus:ring-2 focus:ring-[#6594B1]"
+                                    className={`w-full rounded-md border-2 px-3 py-2 text-left text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#6594B1] ${
+                                        selectedAvailabilityType === 'berbayar'
+                                            ? 'border-[#527D98] bg-[#6594B1] text-white'
+                                            : 'border-transparent bg-white text-[#747B76] hover:bg-[#F2F2EF]'
+                                    }`}
                                 >
                                     Berbayar
                                 </button>
@@ -755,7 +783,7 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
                                             htmlFor="availability-slot-price"
                                             className="text-xs font-medium text-[#69766F]"
                                         >
-                                            Harga per sesi
+                                            Harga per jam
                                         </label>
                                         <input
                                             id="availability-slot-price"
