@@ -17,26 +17,101 @@ class MentoringSessionController extends Controller
     // POST - mentee bikin booking baru
     public function store(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'mentor_id' => 'required|exists:users,id',
             'schedule_time' => 'required|date|after:now',
             'duration_hours' => 'required|integer|min:1|max:4',
-            'is_free_session' => 'required|boolean',
             'notes_from_student' => 'nullable|string',
-            'payment_dp_proof' => 'required_if:is_free_session,false|image|max:5120',
         ]);
 
-        $endTime = Carbon::parse($request->schedule_time)
-            ->addHours($request->duration_hours);
+        $bookingStart = Carbon::parse($validated['schedule_time'])
+            ->setTimezone('Asia/Jakarta');
+        $bookingEnd = $bookingStart->copy()->addHours($validated['duration_hours']);
+        $bookingStartUtc = $bookingStart->copy()->setTimezone('UTC');
+        $bookingEndUtc = $bookingEnd->copy()->setTimezone('UTC');
+        $bookingStaysOnLocalDate = $bookingStart->isSameDay($bookingEnd);
+        $weekday = [
+            1 => 'senin',
+            2 => 'selasa',
+            3 => 'rabu',
+            4 => 'kamis',
+            5 => 'jumat',
+            6 => 'sabtu',
+            7 => 'minggu',
+        ][$bookingStart->dayOfWeekIso];
+        $bookingStartMinutes = ($bookingStart->hour * 60) + $bookingStart->minute;
+        $bookingEndMinutes = ($bookingEnd->hour * 60) + $bookingEnd->minute;
 
-        return DB::transaction(function () use ($request, $endTime) {
-            // Cek slot bentrok (race condition protection)
-            $conflict = MentoringSession::where('mentor_id', $request->mentor_id)
+        return DB::transaction(function () use (
+            $request,
+            $validated,
+            $bookingStartUtc,
+            $bookingEndUtc,
+            $bookingStaysOnLocalDate,
+            $weekday,
+            $bookingStartMinutes,
+            $bookingEndMinutes,
+        ) {
+            $mentorProfile = MentorProfile::query()
+                ->where('user_id', $validated['mentor_id'])
+                ->lockForUpdate()
+                ->first();
+
+            $matchingSlot = null;
+
+            foreach ($mentorProfile?->availability_schedule ?? [] as $slot) {
+                if (! is_array($slot) || ($slot['day'] ?? null) !== $weekday) {
+                    continue;
+                }
+
+                $slotStartMinutes = $this->timeToMinutes($slot['start'] ?? null);
+                $slotEndMinutes = $this->timeToMinutes($slot['end'] ?? null);
+                $slotType = $slot['type'] ?? 'gratis';
+
+                if (
+                    $slotStartMinutes === null
+                    || $slotEndMinutes === null
+                    || ! $bookingStaysOnLocalDate
+                    || ! in_array($slotType, ['gratis', 'berbayar'], true)
+                    || $bookingStartMinutes < $slotStartMinutes
+                    || $bookingEndMinutes > $slotEndMinutes
+                ) {
+                    continue;
+                }
+
+                if (
+                    $slotType === 'berbayar'
+                    && (! is_int($slot['price'] ?? null) || $slot['price'] < 1000)
+                ) {
+                    continue;
+                }
+
+                $matchingSlot = $slot;
+                break;
+            }
+
+            if ($matchingSlot === null) {
+                throw ValidationException::withMessages([
+                    'schedule_time' => 'Jadwal tidak tersedia.',
+                ]);
+            }
+
+            $isFreeSession = ($matchingSlot['type'] ?? 'gratis') === 'gratis';
+            $pricePerHour = $isFreeSession ? 0 : $matchingSlot['price'];
+            $totalPrice = $pricePerHour * $validated['duration_hours'];
+
+            $request->validate([
+                'payment_dp_proof' => $isFreeSession
+                    ? 'nullable|image|max:5120'
+                    : 'required|image|max:5120',
+            ]);
+
+            // Reject every intersection, including a previous booking that contains this entire interval.
+            $conflict = MentoringSession::query()
+                ->where('mentor_id', $validated['mentor_id'])
                 ->whereIn('status', ['diajukan', 'dikonfirmasi', 'berlangsung'])
-                ->where(function ($query) use ($request, $endTime) {
-                    $query->whereBetween('schedule_time', [$request->schedule_time, $endTime])
-                        ->orWhereBetween('end_time', [$request->schedule_time, $endTime]);
-                })
+                ->where('schedule_time', '<', $bookingEndUtc)
+                ->where('end_time', '>', $bookingStartUtc)
                 ->lockForUpdate()
                 ->exists();
 
@@ -46,10 +121,6 @@ class MentoringSessionController extends Controller
                 ]);
             }
 
-            $mentorProfile = MentorProfile::where('user_id', $request->mentor_id)->first();
-            $pricePerHour = $mentorProfile->price_per_session ?? 0;
-            $totalPrice = $request->is_free_session ? 0 : $pricePerHour * $request->duration_hours;
-
             $dpProofPath = null;
             if ($request->hasFile('payment_dp_proof')) {
                 $dpProofPath = $request->file('payment_dp_proof')->store('payment-proofs', 'public');
@@ -57,20 +128,31 @@ class MentoringSessionController extends Controller
 
             $session = MentoringSession::create([
                 'student_id' => Auth::id(),
-                'mentor_id' => $request->mentor_id,
+                'mentor_id' => $validated['mentor_id'],
                 'status' => 'diajukan',
-                'schedule_time' => $request->schedule_time,
-                'end_time' => $endTime,
-                'duration_hours' => $request->duration_hours,
-                'notes_from_student' => $request->notes_from_student,
-                'is_free_session' => $request->is_free_session,
+                'schedule_time' => $bookingStartUtc,
+                'end_time' => $bookingEndUtc,
+                'duration_hours' => $validated['duration_hours'],
+                'notes_from_student' => $validated['notes_from_student'] ?? null,
+                'is_free_session' => $isFreeSession,
                 'price_snapshot' => $totalPrice,
                 'payment_dp_proof' => $dpProofPath,
-                'payment_dp_status' => $request->is_free_session ? 'tidak_berlaku' : 'menunggu_verifikasi',
+                'payment_dp_status' => $isFreeSession ? 'tidak_berlaku' : 'menunggu_verifikasi',
             ]);
 
             return redirect()->back()->with('success', 'Booking berhasil diajukan, menunggu konfirmasi mentor.');
         });
+    }
+
+    private function timeToMinutes(mixed $time): ?int
+    {
+        if (! is_string($time) || ! preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d$/', $time)) {
+            return null;
+        }
+
+        [$hours, $minutes] = array_map('intval', explode(':', $time));
+
+        return ($hours * 60) + $minutes;
     }
 
     // GET - list permintaan bimbingan baru (status: diajukan) untuk Dashboard
@@ -146,7 +228,8 @@ class MentoringSessionController extends Controller
             'session' => $session,
         ]);
     }
-        // GET - halaman proses refund untuk mentor
+
+    // GET - halaman proses refund untuk mentor
     public function refundForm($id)
     {
         $session = MentoringSession::with('student')
@@ -226,7 +309,8 @@ class MentoringSessionController extends Controller
 
         return redirect()->route('mentor.dashboard')->with('success', 'Sesi berhasil dibatalkan.');
     }
-        // PATCH - mentor upload bukti transfer refund ke mentee
+
+    // PATCH - mentor upload bukti transfer refund ke mentee
     public function completeRefund(Request $request, $id)
     {
         $request->validate([
