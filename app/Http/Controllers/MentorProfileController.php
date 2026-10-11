@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\MentoringSession;
 use App\Models\MentorProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,7 +15,7 @@ class MentorProfileController extends Controller
     {
         $mentorProfile = MentorProfile::where('user_id', Auth::id())->first();
 
-        $requests = \App\Models\MentoringSession::with('student')
+        $requests = MentoringSession::with('student')
             ->where('mentor_id', Auth::id())
             ->where('status', 'diajukan')
             ->orderBy('schedule_time', 'asc')
@@ -31,7 +32,7 @@ class MentorProfileController extends Controller
     {
         $validated = $request->validate([
             'availability_schedule' => 'present|array',
-            'availability_schedule.*.day' => 'required|string',
+            'availability_schedule.*.day' => 'required|string|in:senin,selasa,rabu,kamis,jumat,sabtu,minggu',
             'availability_schedule.*.start' => 'required|date_format:H:i',
             'availability_schedule.*.end' => 'required|date_format:H:i|after:availability_schedule.*.start',
             'availability_schedule.*.type' => 'required|in:gratis,berbayar',
@@ -41,6 +42,7 @@ class MentorProfileController extends Controller
             'availability_schedule.array' => 'Format jadwal ketersediaan tidak valid.',
             'availability_schedule.*.day.required' => 'Hari wajib dipilih.',
             'availability_schedule.*.day.string' => 'Hari harus berupa teks.',
+            'availability_schedule.*.day.in' => 'Hari harus salah satu dari Senin, Selasa, Rabu, Kamis, Jumat, Sabtu, atau Minggu.',
             'availability_schedule.*.start.required' => 'Waktu mulai wajib diisi.',
             'availability_schedule.*.start.date_format' => 'Waktu mulai harus menggunakan format HH:MM.',
             'availability_schedule.*.end.required' => 'Waktu selesai wajib diisi.',
@@ -53,9 +55,49 @@ class MentorProfileController extends Controller
             'availability_schedule.*.price.min' => 'Harga slot berbayar minimal Rp 1.000.',
         ]);
 
+        $minutes = static function (string $time): int {
+            [$hours, $minutes] = array_map('intval', explode(':', $time));
+
+            return ($hours * 60) + $minutes;
+        };
+        $dayLabels = [
+            'senin' => 'Senin',
+            'selasa' => 'Selasa',
+            'rabu' => 'Rabu',
+            'kamis' => 'Kamis',
+            'jumat' => 'Jumat',
+            'sabtu' => 'Sabtu',
+            'minggu' => 'Minggu',
+        ];
+
+        $availabilitySchedule = array_values($validated['availability_schedule']);
+
+        foreach ($availabilitySchedule as $firstIndex => $firstSlot) {
+            foreach (array_slice($availabilitySchedule, $firstIndex + 1) as $secondSlot) {
+                if (
+                    $firstSlot['day'] !== $secondSlot['day']
+                    || $minutes($firstSlot['start']) >= $minutes($secondSlot['end'])
+                    || $minutes($firstSlot['end']) <= $minutes($secondSlot['start'])
+                ) {
+                    continue;
+                }
+
+                return redirect()->back()->withErrors([
+                    'availability_schedule' => sprintf(
+                        'Jadwal pada hari %s saling tumpang tindih: %s-%s dan %s-%s.',
+                        $dayLabels[$firstSlot['day']],
+                        $firstSlot['start'],
+                        $firstSlot['end'],
+                        $secondSlot['start'],
+                        $secondSlot['end'],
+                    ),
+                ]);
+            }
+        }
+
         $mentorProfile = MentorProfile::where('user_id', Auth::id())->first();
 
-        if (!$mentorProfile) {
+        if (! $mentorProfile) {
             return redirect()->back()->withErrors(['message' => 'Profil mentor belum ditemukan']);
         }
 

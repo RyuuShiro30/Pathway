@@ -181,6 +181,115 @@ class MentorAvailabilityTest extends TestCase
         $this->assertSame([], $mentorProfile->fresh()->availability_schedule);
     }
 
+    public function test_mentor_cannot_save_overlapping_slots_on_the_same_day(): void
+    {
+        [$user, $mentorProfile] = $this->createMentorProfile();
+        $existingSchedule = [
+            ['day' => 'senin', 'start' => '08:00', 'end' => '09:00', 'type' => 'gratis', 'price' => null],
+        ];
+        $mentorProfile->update(['availability_schedule' => $existingSchedule]);
+
+        $response = $this->actingAs($user)->patch(
+            route('mentor.availability.update'),
+            [
+                'availability_schedule' => [
+                    ['day' => 'senin', 'start' => '09:00', 'end' => '11:00', 'type' => 'gratis', 'price' => null],
+                    ['day' => 'senin', 'start' => '10:00', 'end' => '12:00', 'type' => 'gratis', 'price' => null],
+                ],
+            ],
+        );
+
+        $response->assertSessionHasErrors([
+            'availability_schedule' => 'Jadwal pada hari Senin saling tumpang tindih: 09:00-11:00 dan 10:00-12:00.',
+        ]);
+        $this->assertSame($existingSchedule, $mentorProfile->fresh()->availability_schedule);
+    }
+
+    public function test_mentor_can_save_slots_that_only_touch_at_the_boundary(): void
+    {
+        [$user, $mentorProfile] = $this->createMentorProfile();
+
+        $response = $this->actingAs($user)->patch(
+            route('mentor.availability.update'),
+            [
+                'availability_schedule' => [
+                    ['day' => 'senin', 'start' => '09:00', 'end' => '11:00', 'type' => 'gratis', 'price' => null],
+                    ['day' => 'senin', 'start' => '11:00', 'end' => '13:00', 'type' => 'gratis', 'price' => null],
+                ],
+            ],
+        );
+
+        $response->assertRedirect();
+        $response->assertSessionHasNoErrors();
+        $this->assertSame([
+            ['day' => 'senin', 'start' => '09:00', 'end' => '11:00', 'type' => 'gratis', 'price' => null],
+            ['day' => 'senin', 'start' => '11:00', 'end' => '13:00', 'type' => 'gratis', 'price' => null],
+        ], $mentorProfile->fresh()->availability_schedule);
+    }
+
+    public function test_mentor_can_save_same_hours_on_different_days(): void
+    {
+        [$user, $mentorProfile] = $this->createMentorProfile();
+
+        $response = $this->actingAs($user)->patch(
+            route('mentor.availability.update'),
+            [
+                'availability_schedule' => [
+                    ['day' => 'senin', 'start' => '09:00', 'end' => '11:00', 'type' => 'gratis', 'price' => null],
+                    ['day' => 'selasa', 'start' => '09:00', 'end' => '11:00', 'type' => 'gratis', 'price' => null],
+                ],
+            ],
+        );
+
+        $response->assertRedirect();
+        $response->assertSessionHasNoErrors();
+        $this->assertSame([
+            ['day' => 'senin', 'start' => '09:00', 'end' => '11:00', 'type' => 'gratis', 'price' => null],
+            ['day' => 'selasa', 'start' => '09:00', 'end' => '11:00', 'type' => 'gratis', 'price' => null],
+        ], $mentorProfile->fresh()->availability_schedule);
+    }
+
+    public function test_mentor_cannot_save_identical_slots(): void
+    {
+        [$user, $mentorProfile] = $this->createMentorProfile();
+        $duplicateSlot = [
+            'day' => 'senin',
+            'start' => '09:00',
+            'end' => '11:00',
+            'type' => 'gratis',
+            'price' => null,
+        ];
+
+        $response = $this->actingAs($user)->patch(
+            route('mentor.availability.update'),
+            ['availability_schedule' => [$duplicateSlot, $duplicateSlot]],
+        );
+
+        $response->assertSessionHasErrors([
+            'availability_schedule' => 'Jadwal pada hari Senin saling tumpang tindih: 09:00-11:00 dan 09:00-11:00.',
+        ]);
+        $this->assertSame([], $mentorProfile->fresh()->availability_schedule);
+    }
+
+    public function test_mentor_cannot_save_slot_with_invalid_day(): void
+    {
+        [$user, $mentorProfile] = $this->createMentorProfile();
+
+        $response = $this->actingAs($user)->patch(
+            route('mentor.availability.update'),
+            [
+                'availability_schedule' => [
+                    ['day' => 'monday', 'start' => '09:00', 'end' => '11:00', 'type' => 'gratis', 'price' => null],
+                ],
+            ],
+        );
+
+        $response->assertSessionHasErrors([
+            'availability_schedule.0.day' => 'Hari harus salah satu dari Senin, Selasa, Rabu, Kamis, Jumat, Sabtu, atau Minggu.',
+        ]);
+        $this->assertSame([], $mentorProfile->fresh()->availability_schedule);
+    }
+
     public function test_mentor_can_clear_all_availability_slots(): void
     {
         $user = User::factory()->create();
