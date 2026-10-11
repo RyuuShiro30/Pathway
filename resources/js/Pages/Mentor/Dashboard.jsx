@@ -1,4 +1,6 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { createPortal } from 'react-dom';
+import { useEffect, useRef, useState } from 'react';
 
 const weekdays = [
     { value: 'senin', label: 'Senin' },
@@ -44,6 +46,16 @@ function truncateNotes(notes) {
     return notes.length > 100 ? `${notes.slice(0, 97)}...` : notes;
 }
 
+function toIntegerPrice(value) {
+    if (value === null || value === undefined || value === '') {
+        return null;
+    }
+
+    const price = Number(value);
+
+    return Number.isSafeInteger(price) ? price : null;
+}
+
 export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
     const { auth, flash } = usePage().props;
     const safeBookingRequests = Array.isArray(bookingRequests)
@@ -54,6 +66,7 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
     )
         ? mentorProfile.availability_schedule
         : [];
+    const defaultPrice = toIntegerPrice(mentorProfile?.price_per_session);
     const initialAvailabilitySchedule = availabilitySchedule.flatMap(
         (schedule) => {
             const day = weekdays.find(
@@ -70,6 +83,11 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
                     day: day.value,
                     start: schedule.start,
                     end: schedule.end,
+                    type: schedule.type === 'berbayar' ? 'berbayar' : 'gratis',
+                    price:
+                        schedule.type === 'berbayar'
+                            ? (toIntegerPrice(schedule.price) ?? defaultPrice)
+                            : null,
                 },
             ];
         },
@@ -103,6 +121,12 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
     const form = useForm({
         availability_schedule: initialAvailabilitySchedule,
     });
+    const [editorSlot, setEditorSlot] = useState(null);
+    const [paidSelectionOpen, setPaidSelectionOpen] = useState(false);
+    const [paidPriceDraft, setPaidPriceDraft] = useState(null);
+    const [popoverPosition, setPopoverPosition] = useState({ left: 8, top: 8 });
+    const activeCellRef = useRef(null);
+    const popoverRef = useRef(null);
     const mentorName =
         auth?.user?.name ??
         mentorProfile?.user?.name ??
@@ -130,8 +154,8 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
         : 'Profil mentor belum tersedia';
     const validationErrors = Object.values(form.errors).filter(Boolean);
 
-    function isSlotAvailable(day, slot) {
-        return form.data.availability_schedule.some(
+    function getAvailability(day, slot) {
+        return form.data.availability_schedule.find(
             (schedule) =>
                 schedule.day === day &&
                 schedule.start === slot.start &&
@@ -139,33 +163,147 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
         );
     }
 
-    function toggleSlot(day, slot) {
-        const isAvailable = isSlotAvailable(day, slot);
+    function setSlotAvailability(day, slot, type, price = null) {
+        const matchingSlot = (schedule) =>
+            schedule.day === day &&
+            schedule.start === slot.start &&
+            schedule.end === slot.end;
 
-        form.setData(
-            'availability_schedule',
-            isAvailable
-                ? form.data.availability_schedule.filter(
-                      (schedule) =>
-                          !(
-                              schedule.day === day &&
-                              schedule.start === slot.start &&
-                              schedule.end === slot.end
-                          ),
-                  )
-                : [
-                      ...form.data.availability_schedule,
-                      { day, start: slot.start, end: slot.end },
-                  ],
+        form.setData('availability_schedule', [
+            ...form.data.availability_schedule.filter(
+                (schedule) => !matchingSlot(schedule),
+            ),
+            { day, start: slot.start, end: slot.end, type, price },
+        ]);
+    }
+
+    function openAvailabilityEditor(event, day, slot) {
+        const currentSlot = getAvailability(day, slot);
+
+        activeCellRef.current = event.currentTarget;
+        setEditorSlot({ day, ...slot });
+        setPaidSelectionOpen(currentSlot?.type === 'berbayar');
+        setPaidPriceDraft(
+            currentSlot?.type === 'berbayar'
+                ? (toIntegerPrice(currentSlot.price) ?? defaultPrice)
+                : defaultPrice,
         );
+    }
+
+    function closeAvailabilityEditor(restoreFocus = false) {
+        setEditorSlot(null);
+        setPaidSelectionOpen(false);
+
+        if (restoreFocus) {
+            activeCellRef.current?.focus();
+        }
+    }
+
+    function applyAvailabilityChoice(type, price = null) {
+        if (!editorSlot) {
+            return;
+        }
+
+        if (type !== 'tutup') {
+            setSlotAvailability(
+                editorSlot.day,
+                editorSlot,
+                type,
+                type === 'gratis' ? null : price,
+            );
+        } else {
+            form.setData(
+                'availability_schedule',
+                form.data.availability_schedule.filter(
+                    (schedule) =>
+                        !(
+                            schedule.day === editorSlot.day &&
+                            schedule.start === editorSlot.start &&
+                            schedule.end === editorSlot.end
+                        ),
+                ),
+            );
+        }
+
+        closeAvailabilityEditor(true);
     }
 
     function saveAvailability(event) {
         event.preventDefault();
+
+        form.transform((data) => ({
+            ...data,
+            availability_schedule: data.availability_schedule.map((schedule) => ({
+                ...schedule,
+                price: schedule.type === 'gratis' ? null : schedule.price,
+            })),
+        }));
         form.patch(route('mentor.availability.update'), {
             preserveScroll: true,
         });
     }
+
+    useEffect(() => {
+        if (!editorSlot) {
+            return undefined;
+        }
+
+        function updatePopoverPosition() {
+            const anchor = activeCellRef.current?.getBoundingClientRect();
+
+            if (!anchor) {
+                return;
+            }
+
+            const popover = popoverRef.current?.getBoundingClientRect();
+            const width = popover?.width ?? 256;
+            const height = popover?.height ?? 240;
+            const edgePadding = 8;
+            const left = Math.min(
+                Math.max(edgePadding, anchor.left),
+                window.innerWidth - width - edgePadding,
+            );
+            const top =
+                anchor.bottom + height + edgePadding <= window.innerHeight
+                    ? anchor.bottom + edgePadding
+                    : Math.max(edgePadding, anchor.top - height - edgePadding);
+
+            setPopoverPosition({ left, top });
+        }
+
+        function handleOutsidePointerDown(event) {
+            if (
+                popoverRef.current?.contains(event.target) ||
+                activeCellRef.current?.contains(event.target)
+            ) {
+                return;
+            }
+
+            closeAvailabilityEditor();
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === 'Escape') {
+                closeAvailabilityEditor(true);
+            }
+        }
+
+        updatePopoverPosition();
+        document.addEventListener('pointerdown', handleOutsidePointerDown);
+        document.addEventListener('keydown', handleKeyDown);
+        document.addEventListener('scroll', updatePopoverPosition, true);
+        window.addEventListener('resize', updatePopoverPosition);
+        popoverRef.current
+            ?.querySelector('button')
+            ?.focus({ preventScroll: true });
+
+        return () => {
+            document.removeEventListener('pointerdown', handleOutsidePointerDown);
+            document.removeEventListener('keydown', handleKeyDown);
+            document.removeEventListener('scroll', updatePopoverPosition, true);
+            window.removeEventListener('resize', updatePopoverPosition);
+        };
+    }, [editorSlot]);
 
     return (
         <div className="min-h-screen bg-[#F7F5F0] text-[#34443D]">
@@ -452,10 +590,28 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
                                                 {slot.start} - {slot.end}
                                             </th>
                                             {weekdays.map((day) => {
-                                                const isAvailable = isSlotAvailable(
+                                                const availability = getAvailability(
                                                     day.value,
                                                     slot,
                                                 );
+                                                const isPaid =
+                                                    availability?.type ===
+                                                    'berbayar';
+                                                const isFree =
+                                                    availability &&
+                                                    !isPaid;
+                                                const isEditorOpen =
+                                                    editorSlot?.day ===
+                                                        day.value &&
+                                                    editorSlot?.start ===
+                                                        slot.start &&
+                                                    editorSlot?.end ===
+                                                        slot.end;
+                                                const statusLabel = isPaid
+                                                    ? `Rp ${rupiahFormatter.format(availability.price)}`
+                                                    : isFree
+                                                      ? 'Gratis'
+                                                      : 'Tutup';
 
                                                 return (
                                                     <td
@@ -463,24 +619,26 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
                                                     >
                                                         <button
                                                             type="button"
-                                                            aria-pressed={isAvailable}
-                                                            aria-label={`${day.label}, ${slot.start} sampai ${slot.end}: ${isAvailable ? 'Tersedia' : 'Tidak tersedia'}`}
+                                                            aria-expanded={isEditorOpen}
+                                                            aria-haspopup="dialog"
+                                                            aria-label={`${day.label}, ${slot.start} sampai ${slot.end}: ${statusLabel}`}
                                                             disabled={form.processing}
-                                                            onClick={() =>
-                                                                toggleSlot(
+                                                            onClick={(event) =>
+                                                                openAvailabilityEditor(
+                                                                    event,
                                                                     day.value,
                                                                     slot,
                                                                 )
                                                             }
                                                             className={`min-h-14 w-full rounded-lg border px-2 py-2 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#6594B1] focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 ${
-                                                                isAvailable
-                                                                    ? 'border-[#65B175] bg-[#E8F2E8] text-[#477E50] hover:bg-[#DDEBDD]'
-                                                                    : 'border-[#E1E3DF] bg-[#F2F2EF] text-[#747B76] hover:bg-[#E9EAE6]'
+                                                                isPaid
+                                                                    ? 'border-[#6594B1] bg-[#6594B1] text-white hover:bg-[#527D98]'
+                                                                    : isFree
+                                                                      ? 'border-[#65B175] bg-[#65B175] text-white hover:bg-[#477E50]'
+                                                                      : 'border-[#E1E3DF] bg-[#F2F2EF] text-[#747B76] hover:bg-[#E9EAE6]'
                                                             }`}
                                                         >
-                                                            {isAvailable
-                                                                ? 'Tersedia'
-                                                                : 'Tidak tersedia'}
+                                                            {statusLabel}
                                                         </button>
                                                     </td>
                                                 );
@@ -521,6 +679,124 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
                     </form>
                 </section>
             </main>
+            {editorSlot &&
+                typeof document !== 'undefined' &&
+                createPortal(
+                    <div
+                        ref={popoverRef}
+                        role="dialog"
+                        aria-label="Atur ketersediaan slot"
+                        className="fixed z-50 max-h-[calc(100vh-1rem)] w-64 max-w-[calc(100vw-1rem)] overflow-y-auto rounded-xl border border-[#E8E5DD] bg-white p-3 shadow-xl"
+                        style={{
+                            left: `${popoverPosition.left}px`,
+                            top: `${popoverPosition.top}px`,
+                        }}
+                    >
+                        <div className="flex flex-col gap-2">
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    applyAvailabilityChoice('tutup')
+                                }
+                                className="rounded-lg px-3 py-2 text-left text-sm font-semibold text-[#747B76] hover:bg-[#F2F2EF] focus:outline-none focus:ring-2 focus:ring-[#6594B1]"
+                            >
+                                Tutup
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    applyAvailabilityChoice('gratis')
+                                }
+                                className="rounded-lg bg-[#65B175] px-3 py-2 text-left text-sm font-semibold text-white hover:bg-[#477E50] focus:outline-none focus:ring-2 focus:ring-[#6594B1]"
+                            >
+                                Gratis
+                            </button>
+                            <div className="rounded-lg bg-[#F5F8FA] p-2">
+                                <button
+                                    type="button"
+                                    aria-expanded={paidSelectionOpen}
+                                    onClick={() => {
+                                        const currentSlot = getAvailability(
+                                            editorSlot.day,
+                                            editorSlot,
+                                        );
+
+                                        setPaidSelectionOpen(true);
+                                        setPaidPriceDraft(
+                                            currentSlot?.type === 'berbayar'
+                                                ? (toIntegerPrice(
+                                                      currentSlot.price,
+                                                  ) ?? defaultPrice)
+                                                : defaultPrice,
+                                        );
+                                    }}
+                                    className="w-full rounded-md bg-[#6594B1] px-3 py-2 text-left text-sm font-semibold text-white hover:bg-[#527D98] focus:outline-none focus:ring-2 focus:ring-[#6594B1]"
+                                >
+                                    Berbayar
+                                </button>
+                                {paidSelectionOpen && (
+                                    <form
+                                        onSubmit={(event) => {
+                                            event.preventDefault();
+
+                                            if (
+                                                paidPriceDraft !== null &&
+                                                paidPriceDraft >= 1000
+                                            ) {
+                                                applyAvailabilityChoice(
+                                                    'berbayar',
+                                                    paidPriceDraft,
+                                                );
+                                            }
+                                        }}
+                                        className="mt-2 flex flex-col gap-2"
+                                    >
+                                        <label
+                                            htmlFor="availability-slot-price"
+                                            className="text-xs font-medium text-[#69766F]"
+                                        >
+                                            Harga per sesi
+                                        </label>
+                                        <input
+                                            id="availability-slot-price"
+                                            type="number"
+                                            min="1000"
+                                            step="1000"
+                                            required
+                                            value={paidPriceDraft ?? ''}
+                                            onChange={(event) => {
+                                                const value =
+                                                    event.target.value;
+                                                const price =
+                                                    value === ''
+                                                        ? null
+                                                        : Number(value);
+
+                                                setPaidPriceDraft(
+                                                    Number.isSafeInteger(price)
+                                                        ? price
+                                                        : null,
+                                                );
+                                            }}
+                                            className="w-full rounded-lg border border-[#D9DEDA] px-3 py-2 text-sm text-[#34443D] focus:border-[#6594B1] focus:outline-none focus:ring-2 focus:ring-[#6594B1]/30"
+                                        />
+                                        <button
+                                            type="submit"
+                                            disabled={
+                                                paidPriceDraft === null ||
+                                                paidPriceDraft < 1000
+                                            }
+                                            className="rounded-lg bg-[#6594B1] px-3 py-2 text-sm font-semibold text-white hover:bg-[#527D98] focus:outline-none focus:ring-2 focus:ring-[#6594B1] disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                            Terapkan
+                                        </button>
+                                    </form>
+                                )}
+                            </div>
+                        </div>
+                    </div>,
+                    document.body,
+                )}
         </div>
     );
 }

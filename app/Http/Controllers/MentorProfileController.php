@@ -29,11 +29,28 @@ class MentorProfileController extends Controller
     // Aksi: update jadwal ketersediaan (dipanggil saat mentor klik "Simpan")
     public function updateAvailability(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'availability_schedule' => 'present|array',
             'availability_schedule.*.day' => 'required|string',
             'availability_schedule.*.start' => 'required|date_format:H:i',
             'availability_schedule.*.end' => 'required|date_format:H:i|after:availability_schedule.*.start',
+            'availability_schedule.*.type' => 'required|in:gratis,berbayar',
+            'availability_schedule.*.price' => 'exclude_unless:availability_schedule.*.type,berbayar|required|integer|min:1000',
+        ], [
+            'availability_schedule.present' => 'Jadwal ketersediaan wajib dikirim.',
+            'availability_schedule.array' => 'Format jadwal ketersediaan tidak valid.',
+            'availability_schedule.*.day.required' => 'Hari wajib dipilih.',
+            'availability_schedule.*.day.string' => 'Hari harus berupa teks.',
+            'availability_schedule.*.start.required' => 'Waktu mulai wajib diisi.',
+            'availability_schedule.*.start.date_format' => 'Waktu mulai harus menggunakan format HH:MM.',
+            'availability_schedule.*.end.required' => 'Waktu selesai wajib diisi.',
+            'availability_schedule.*.end.date_format' => 'Waktu selesai harus menggunakan format HH:MM.',
+            'availability_schedule.*.end.after' => 'Waktu selesai harus setelah waktu mulai.',
+            'availability_schedule.*.type.required' => 'Tipe slot wajib dipilih.',
+            'availability_schedule.*.type.in' => 'Tipe slot harus Gratis atau Berbayar.',
+            'availability_schedule.*.price.required' => 'Harga wajib diisi untuk slot berbayar.',
+            'availability_schedule.*.price.integer' => 'Harga slot harus berupa bilangan bulat.',
+            'availability_schedule.*.price.min' => 'Harga slot berbayar minimal Rp 1.000.',
         ]);
 
         $mentorProfile = MentorProfile::where('user_id', Auth::id())->first();
@@ -43,7 +60,16 @@ class MentorProfileController extends Controller
         }
 
         $mentorProfile->update([
-            'availability_schedule' => $request->availability_schedule,
+            'availability_schedule' => array_map(
+                static fn (array $slot): array => [
+                    'day' => $slot['day'],
+                    'start' => $slot['start'],
+                    'end' => $slot['end'],
+                    'type' => $slot['type'],
+                    'price' => $slot['type'] === 'gratis' ? null : (int) $slot['price'],
+                ],
+                $validated['availability_schedule'],
+            ),
         ]);
 
         return redirect()->back()->with('success', 'Jadwal ketersediaan berhasil diperbarui');
