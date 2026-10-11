@@ -235,6 +235,11 @@ class MentoringSessionStoreTest extends TestCase
         [$mentor] = $this->createMentorWithAvailability([
             ['day' => 'senin', 'start' => '09:00', 'end' => '11:00', 'type' => 'gratis', 'price' => null],
         ]);
+        $mentor->forceFill([
+            'bank_name' => 'Bank Contoh',
+            'bank_account_number' => '1234567890',
+            'bank_account_holder' => 'Nama Mentor',
+        ])->save();
         $this->travelTo('2026-10-11 00:00:00');
         $student = User::factory()->create();
         MentoringSession::query()->create([
@@ -260,8 +265,46 @@ class MentoringSessionStoreTest extends TestCase
                 ->where('busy_sessions.0.end_time', '2026-10-12T03:00:00.000000Z')
                 ->missing('busy_sessions.0.student_id')
                 ->missing('busy_sessions.0.student')
+                ->missing('mentor.bank_name')
+                ->missing('mentor.bank_account_number')
+                ->missing('mentor.bank_account_holder')
+                ->missing('busy_sessions.0.bank_name')
+                ->missing('busy_sessions.0.bank_account_number')
+                ->missing('busy_sessions.0.bank_account_holder')
                 ->where('booking_window.from', '2026-10-11')
                 ->where('booking_window.until', '2026-10-21')
+                ->etc());
+    }
+
+    public function test_student_bookings_do_not_expose_mentor_bank_details(): void
+    {
+        $student = User::factory()->create();
+        [$mentor] = $this->createMentorWithAvailability([
+            ['day' => 'senin', 'start' => '09:00', 'end' => '11:00', 'type' => 'gratis', 'price' => null],
+        ]);
+        $mentor->forceFill([
+            'bank_name' => 'Bank Contoh',
+            'bank_account_number' => '1234567890',
+            'bank_account_holder' => 'Nama Mentor',
+        ])->save();
+        MentoringSession::query()->create([
+            'student_id' => $student->id,
+            'mentor_id' => $mentor->id,
+            'status' => 'diajukan',
+            'schedule_time' => '2026-10-12 02:00:00',
+            'end_time' => '2026-10-12 03:00:00',
+            'duration_hours' => 1,
+            'is_free_session' => true,
+            'price_snapshot' => 0,
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('student.bookings.index'))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Student/MyBookings', false)
+                ->missing('bookings.0.mentor.bank_name')
+                ->missing('bookings.0.mentor.bank_account_number')
+                ->missing('bookings.0.mentor.bank_account_holder')
                 ->etc());
     }
 
@@ -310,6 +353,11 @@ class MentoringSessionStoreTest extends TestCase
         [$mentor] = $this->createMentorWithAvailability([
             ['day' => 'senin', 'start' => '09:00', 'end' => '11:00', 'type' => 'gratis', 'price' => null],
         ]);
+        $mentor->forceFill([
+            'bank_name' => null,
+            'bank_account_number' => null,
+            'bank_account_holder' => null,
+        ])->save();
         $this->travelTo('2026-10-11 00:00:00');
 
         $this->actingAs(User::factory()->create())
@@ -330,6 +378,7 @@ class MentoringSessionStoreTest extends TestCase
                 ->where('summary.price_per_hour', 0)
                 ->where('summary.total_price', 0)
                 ->where('summary.dp_amount', 0)
+                ->where('payment_account', null)
                 ->etc());
     }
 
@@ -357,7 +406,62 @@ class MentoringSessionStoreTest extends TestCase
                 ->where('summary.price_per_hour', 50000)
                 ->where('summary.total_price', 100000)
                 ->where('summary.dp_amount', 50000)
+                ->where('payment_account', [
+                    'bank_name' => 'Bank Contoh',
+                    'account_number' => '1234567890',
+                    'account_holder' => 'Nama Mentor',
+                ])
                 ->etc());
+    }
+
+    public function test_booking_confirmation_redirects_when_paid_mentor_has_no_bank_account(): void
+    {
+        [$mentor] = $this->createMentorWithAvailability([
+            ['day' => 'senin', 'start' => '09:00', 'end' => '11:00', 'type' => 'berbayar', 'price' => 50000],
+        ]);
+        $mentor->forceFill([
+            'bank_name' => null,
+            'bank_account_number' => null,
+            'bank_account_holder' => null,
+        ])->save();
+        $this->travelTo('2026-10-11 00:00:00');
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('student.booking.confirm', [
+                'mentor' => $mentor->id,
+                'date' => '2026-10-12',
+                'start' => '09:00',
+                'duration_hours' => 1,
+            ]))
+            ->assertRedirect(route('student.booking.schedule', ['mentor' => $mentor->id]))
+            ->assertSessionHasErrors([
+                'schedule_time' => 'Mentor belum mengisi rekening untuk menerima DP.',
+            ]);
+    }
+
+    public function test_booking_confirmation_redirects_when_paid_mentor_bank_account_is_incomplete(): void
+    {
+        [$mentor] = $this->createMentorWithAvailability([
+            ['day' => 'senin', 'start' => '09:00', 'end' => '11:00', 'type' => 'berbayar', 'price' => 50000],
+        ]);
+        $mentor->forceFill([
+            'bank_name' => 'Bank Contoh',
+            'bank_account_number' => '1234567890',
+            'bank_account_holder' => '  ',
+        ])->save();
+        $this->travelTo('2026-10-11 00:00:00');
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('student.booking.confirm', [
+                'mentor' => $mentor->id,
+                'date' => '2026-10-12',
+                'start' => '09:00',
+                'duration_hours' => 1,
+            ]))
+            ->assertRedirect(route('student.booking.schedule', ['mentor' => $mentor->id]))
+            ->assertSessionHasErrors([
+                'schedule_time' => 'Mentor belum mengisi rekening untuk menerima DP.',
+            ]);
     }
 
     public function test_booking_confirmation_rounds_odd_paid_dp_up_to_an_integer(): void
@@ -553,6 +657,30 @@ class MentoringSessionStoreTest extends TestCase
         ]);
     }
 
+    public function test_store_rejects_paid_booking_when_mentor_has_no_bank_account(): void
+    {
+        [$mentor] = $this->createMentorWithAvailability([
+            ['day' => 'senin', 'start' => '09:00', 'end' => '11:00', 'type' => 'berbayar', 'price' => 50000],
+        ]);
+        $mentor->forceFill([
+            'bank_name' => null,
+            'bank_account_number' => null,
+            'bank_account_holder' => null,
+        ])->save();
+        $this->travelTo('2026-10-11 00:00:00');
+        Storage::fake('public');
+
+        $this->submitBooking($mentor, [
+            'payment_dp_proof' => UploadedFile::fake()->image('payment.png'),
+        ])->assertSessionHasErrors([
+            'schedule_time' => 'Mentor belum mengisi rekening untuk menerima DP.',
+        ]);
+
+        $this->assertDatabaseMissing('mentoring_sessions', [
+            'mentor_id' => $mentor->id,
+        ]);
+    }
+
     /**
      * @param  array<int, array<string, int|string|null>>  $availability
      * @return array{0: User, 1: MentorProfile}
@@ -562,6 +690,16 @@ class MentoringSessionStoreTest extends TestCase
         $this->travelTo('2026-10-04 00:00:00');
 
         $mentor = User::factory()->create();
+        if (collect($availability)->contains(
+            fn (array $slot): bool => ($slot['type'] ?? 'gratis') === 'berbayar',
+        )) {
+            $mentor->forceFill([
+                'bank_name' => 'Bank Contoh',
+                'bank_account_number' => '1234567890',
+                'bank_account_holder' => 'Nama Mentor',
+            ])->save();
+        }
+
         $mentorProfile = MentorProfile::query()->create([
             'user_id' => $mentor->id,
             'expertise' => 'Web Development',

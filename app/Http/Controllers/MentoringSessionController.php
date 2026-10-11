@@ -195,6 +195,13 @@ class MentoringSessionController extends Controller
             );
         }
 
+        if (! $booking['is_free_session'] && ! $this->hasCompletePaymentAccount($mentor)) {
+            return $this->redirectToScheduleWithBookingError(
+                $mentor,
+                'Mentor belum mengisi rekening untuk menerima DP.',
+            );
+        }
+
         if ($this->hasBookingConflict(
             $mentor->id,
             $booking['schedule_time'],
@@ -221,6 +228,13 @@ class MentoringSessionController extends Controller
                 'total_price' => $booking['total_price'],
                 'dp_amount' => $booking['dp_amount'],
             ],
+            'payment_account' => $booking['is_free_session']
+                ? null
+                : [
+                    'bank_name' => $mentor->bank_name,
+                    'account_number' => $mentor->bank_account_number,
+                    'account_holder' => $mentor->bank_account_holder,
+                ],
         ]);
     }
 
@@ -266,6 +280,19 @@ class MentoringSessionController extends Controller
                 throw ValidationException::withMessages([
                     'schedule_time' => 'Jadwal tidak tersedia.',
                 ]);
+            }
+
+            if (! $booking['is_free_session']) {
+                $mentor = User::query()
+                    ->whereKey($validated['mentor_id'])
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if (! $this->hasCompletePaymentAccount($mentor)) {
+                    throw ValidationException::withMessages([
+                        'schedule_time' => 'Mentor belum mengisi rekening untuk menerima DP.',
+                    ]);
+                }
             }
 
             $request->validate([
@@ -413,6 +440,13 @@ class MentoringSessionController extends Controller
         abort_if((int) $mentor->getKey() === (int) Auth::id(), 403);
 
         return $mentorProfile;
+    }
+
+    private function hasCompletePaymentAccount(User $mentor): bool
+    {
+        return trim((string) $mentor->bank_name) !== ''
+            && trim((string) $mentor->bank_account_number) !== ''
+            && trim((string) $mentor->bank_account_holder) !== '';
     }
 
     private function isWithinBookingWindow(Carbon $bookingStart): bool
