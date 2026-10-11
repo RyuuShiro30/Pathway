@@ -232,7 +232,9 @@ class MentoringSessionController extends Controller
 
             $redirect = Route::has('student.bookings.index')
                 ? redirect()->route('student.bookings.index')
-                : redirect()->back();
+                : redirect()->route('student.booking.schedule', [
+                    'mentor' => $validated['mentor_id'],
+                ]);
 
             return $redirect->with('success', 'Booking berhasil diajukan, menunggu konfirmasi mentor.');
         });

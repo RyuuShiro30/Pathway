@@ -350,7 +350,7 @@ export default function BookingSchedule({
     busy_sessions: busySessions = [],
     booking_window: bookingWindow,
 }) {
-    const { errors = {} } = usePage().props;
+    const { errors = {}, flash } = usePage().props;
     const availabilitySchedule = Array.isArray(
         mentor?.availability_schedule,
     )
@@ -393,7 +393,10 @@ export default function BookingSchedule({
     const [selectedIds, setSelectedIds] = useState([]);
     const [activeFilter, setActiveFilter] = useState('semua');
     const [isErrorDismissed, setIsErrorDismissed] = useState(false);
+    const [isSuccessDismissed, setIsSuccessDismissed] = useState(false);
     const scheduleError = getErrorMessage(errors.schedule_time);
+    const successMessage =
+        typeof flash?.success === 'string' ? flash.success : '';
     const allSegments = selectedDate ? slotsByDate[selectedDate] ?? [] : [];
     const selectedSegments = allSegments
         .filter((segment) => selectedIds.includes(segment.id))
@@ -437,6 +440,10 @@ export default function BookingSchedule({
     useEffect(() => {
         setIsErrorDismissed(false);
     }, [scheduleError]);
+
+    useEffect(() => {
+        setIsSuccessDismissed(false);
+    }, [successMessage]);
 
     function selectDate(date) {
         setSelectedDate(date);
@@ -532,6 +539,23 @@ export default function BookingSchedule({
             </header>
 
             <main className="mx-auto max-w-7xl space-y-6 px-4 py-7 sm:px-6 sm:py-9 lg:px-8">
+                {successMessage && !isSuccessDismissed && (
+                    <section
+                        role="status"
+                        className="flex items-start justify-between gap-4 rounded-xl border border-[#C9DEC9] bg-[#E8F2E8] px-4 py-3 text-sm font-medium text-[#477E50]"
+                    >
+                        <p>{successMessage}</p>
+                        <button
+                            type="button"
+                            aria-label="Tutup pesan sukses"
+                            onClick={() => setIsSuccessDismissed(true)}
+                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-lg font-semibold transition-colors hover:bg-white/70 focus:outline-none focus:ring-2 focus:ring-[#65B175]"
+                        >
+                            ×
+                        </button>
+                    </section>
+                )}
+
                 {scheduleError && !isErrorDismissed && (
                     <section
                         role="alert"

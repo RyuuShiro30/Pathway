@@ -24,7 +24,7 @@ class MentoringSessionStoreTest extends TestCase
 
         $response = $this->submitBooking($mentor, ['is_free_session' => false]);
 
-        $response->assertRedirect();
+        $response->assertRedirect(route('student.booking.schedule', ['mentor' => $mentor->id]));
         $response->assertSessionHasNoErrors();
         $this->assertDatabaseHas('mentoring_sessions', [
             'mentor_id' => $mentor->id,
