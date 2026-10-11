@@ -149,7 +149,7 @@ class MentoringSessionController extends Controller
         $validator = validator($request->query(), [
             'date' => 'required|date_format:Y-m-d',
             'start' => 'required|date_format:H:i',
-            'duration_hours' => 'required|integer|min:1|max:4',
+            'duration_hours' => 'required|integer|min:1|max:2',
         ], [
             'date.required' => 'Tanggal booking wajib dipilih.',
             'date.date_format' => 'Tanggal booking tidak valid.',
@@ -158,7 +158,7 @@ class MentoringSessionController extends Controller
             'duration_hours.required' => 'Durasi wajib dipilih.',
             'duration_hours.integer' => 'Durasi harus berupa bilangan bulat.',
             'duration_hours.min' => 'Durasi minimal 1 jam.',
-            'duration_hours.max' => 'Durasi maksimal 4 jam.',
+            'duration_hours.max' => 'Durasi maksimal 2 jam.',
         ]);
 
         if ($validator->fails()) {
@@ -182,11 +182,18 @@ class MentoringSessionController extends Controller
             );
         }
 
-        $booking = $this->resolveBookingDetails(
-            $mentorProfile,
-            $bookingStart,
-            $durationHours,
-        );
+        try {
+            $booking = $this->resolveBookingDetails(
+                $mentorProfile,
+                $bookingStart,
+                $durationHours,
+            );
+        } catch (ValidationException $exception) {
+            return $this->redirectToScheduleWithBookingError(
+                $mentor,
+                $exception->errors()['schedule_time'][0],
+            );
+        }
 
         if ($booking === null) {
             return $this->redirectToScheduleWithBookingError(
@@ -244,12 +251,16 @@ class MentoringSessionController extends Controller
         $validated = $request->validate([
             'mentor_id' => 'required|exists:users,id',
             'schedule_time' => 'required|date_format:Y-m-d\TH:i:sP|after:now',
-            'duration_hours' => 'required|integer|min:1|max:4',
+            'duration_hours' => 'required|integer|min:1|max:2',
             'notes_from_student' => 'nullable|string',
         ], [
             'schedule_time.required' => 'Jadwal booking wajib dipilih.',
             'schedule_time.date_format' => 'Jadwal booking harus menggunakan format ISO 8601 dengan zona waktu.',
             'schedule_time.after' => 'Jadwal booking harus setelah waktu sekarang.',
+            'duration_hours.required' => 'Durasi wajib dipilih.',
+            'duration_hours.integer' => 'Durasi harus berupa bilangan bulat.',
+            'duration_hours.min' => 'Durasi minimal 1 jam.',
+            'duration_hours.max' => 'Durasi maksimal 2 jam.',
         ]);
 
         $bookingStart = Carbon::parse($validated['schedule_time'], 'UTC');
@@ -348,7 +359,7 @@ class MentoringSessionController extends Controller
      *     end: string,
      *     duration_hours: int,
      *     is_free_session: bool,
-     *     price_per_hour: int,
+     *     price_per_hour: int|null,
      *     total_price: int,
      *     dp_amount: int,
      *     schedule_time: Carbon,
@@ -377,46 +388,62 @@ class MentoringSessionController extends Controller
             7 => 'minggu',
         ][$bookingStart->dayOfWeekIso];
         $bookingStartMinutes = ($bookingStart->hour * 60) + $bookingStart->minute;
-        $bookingEndMinutes = ($bookingEnd->hour * 60) + $bookingEnd->minute;
-        $matchingSlot = null;
+        $hourlyTypes = [];
+        $hourlyPrices = [];
 
-        foreach ($mentorProfile->availability_schedule ?? [] as $slot) {
-            if (! is_array($slot) || ($slot['day'] ?? null) !== $weekday) {
-                continue;
+        for ($hour = 0; $hour < $durationHours; $hour++) {
+            $hourStartMinutes = $bookingStartMinutes + ($hour * 60);
+            $hourEndMinutes = $hourStartMinutes + 60;
+            $matchingSlot = null;
+
+            foreach ($mentorProfile->availability_schedule ?? [] as $slot) {
+                if (! is_array($slot) || ($slot['day'] ?? null) !== $weekday) {
+                    continue;
+                }
+
+                $slotStartMinutes = $this->timeToMinutes($slot['start'] ?? null);
+                $slotEndMinutes = $this->timeToMinutes($slot['end'] ?? null);
+                $slotType = $slot['type'] ?? 'gratis';
+
+                if (
+                    $slotStartMinutes === null
+                    || $slotEndMinutes === null
+                    || ! in_array($slotType, ['gratis', 'berbayar'], true)
+                    || $hourStartMinutes < $slotStartMinutes
+                    || $hourEndMinutes > $slotEndMinutes
+                    || (
+                        $slotType === 'berbayar'
+                        && (! is_int($slot['price'] ?? null) || $slot['price'] < 1000)
+                    )
+                ) {
+                    continue;
+                }
+
+                $matchingSlot = $slot;
+                break;
             }
 
-            $slotStartMinutes = $this->timeToMinutes($slot['start'] ?? null);
-            $slotEndMinutes = $this->timeToMinutes($slot['end'] ?? null);
-            $slotType = $slot['type'] ?? 'gratis';
-
-            if (
-                $slotStartMinutes === null
-                || $slotEndMinutes === null
-                || ! in_array($slotType, ['gratis', 'berbayar'], true)
-                || $bookingStartMinutes < $slotStartMinutes
-                || $bookingEndMinutes > $slotEndMinutes
-            ) {
-                continue;
+            if ($matchingSlot === null) {
+                return null;
             }
 
-            if (
-                $slotType === 'berbayar'
-                && (! is_int($slot['price'] ?? null) || $slot['price'] < 1000)
-            ) {
-                continue;
-            }
-
-            $matchingSlot = $slot;
-            break;
+            $hourlyTypes[] = $matchingSlot['type'] ?? 'gratis';
+            $hourlyPrices[] = ($matchingSlot['type'] ?? 'gratis') === 'gratis'
+                ? 0
+                : $matchingSlot['price'];
         }
 
-        if ($matchingSlot === null) {
-            return null;
+        if (count(array_unique($hourlyTypes)) > 1) {
+            throw ValidationException::withMessages([
+                'schedule_time' => 'Jam yang dipilih harus bertipe sama (semua gratis atau semua berbayar).',
+            ]);
         }
 
-        $isFreeSession = ($matchingSlot['type'] ?? 'gratis') === 'gratis';
-        $pricePerHour = $isFreeSession ? 0 : $matchingSlot['price'];
-        $totalPrice = $pricePerHour * $durationHours;
+        $isFreeSession = $hourlyTypes[0] === 'gratis';
+        $totalPrice = array_sum($hourlyPrices);
+        $pricePerHour = $isFreeSession || count(array_unique($hourlyPrices)) === 1
+            ? $hourlyPrices[0]
+            : null;
 
         return [
             'date' => $bookingStart->toDateString(),

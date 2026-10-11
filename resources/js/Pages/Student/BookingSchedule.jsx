@@ -151,7 +151,6 @@ function expandSlotsForDate(availabilitySchedule, date) {
 
             segments.push({
                 id: `${slotIndex}-${segmentStart}`,
-                slotId: slotIndex,
                 date,
                 start: formatMinutes(segmentStart),
                 end: formatMinutes(segmentEnd),
@@ -202,93 +201,28 @@ function findCoveringAvailabilitySlot(availabilitySchedule, date, start, end) {
 function isContiguousSelection(segments) {
     return segments.every(
         (segment, index) =>
-            index === 0 || segments[index - 1].end === segment.start,
+            index === 0 ||
+            (segments[index - 1].date === segment.date &&
+                segments[index - 1].startMinutes + 60 ===
+                    segment.startMinutes),
     );
 }
 
-function canSelectRange(segments, availabilitySchedule, date) {
+function canSelectRange(segments, date) {
     if (
         segments.length === 0 ||
-        segments.length > 4 ||
+        segments.length > 2 ||
+        segments.some((segment) => segment.date !== date) ||
+        !segments.every((segment) => segment.type === segments[0].type) ||
         !isContiguousSelection(segments)
     ) {
         return false;
     }
 
-    return Boolean(
-        findCoveringAvailabilitySlot(
-            availabilitySchedule,
-            date,
-            segments[0].startMinutes,
-            segments[segments.length - 1].startMinutes + 60,
-        ),
-    );
+    return true;
 }
 
-function canExtendSelection(
-    selectedSegments,
-    segment,
-    availabilitySchedule,
-    date,
-) {
-    if (
-        selectedSegments.length === 0 ||
-        selectedSegments.length >= 4 ||
-        selectedSegments.some((item) => item.date !== date)
-    ) {
-        return false;
-    }
-
-    const orderedSelection = [...selectedSegments].sort(
-        (first, second) => first.startMinutes - second.startMinutes,
-    );
-    const isAdjacent =
-        segment.end === orderedSelection[0].start ||
-        segment.start === orderedSelection[orderedSelection.length - 1].end;
-
-    if (!isAdjacent) {
-        return false;
-    }
-
-    const candidate = [...orderedSelection, segment].sort(
-        (first, second) => first.startMinutes - second.startMinutes,
-    );
-
-    return canSelectRange(candidate, availabilitySchedule, date);
-}
-
-function getPriceForSelection(segments, availabilitySchedule, date) {
-    if (segments.length === 0) {
-        return 0;
-    }
-
-    const coveringSlot = findCoveringAvailabilitySlot(
-        availabilitySchedule,
-        date,
-        segments[0].startMinutes,
-        segments[segments.length - 1].startMinutes + 60,
-    );
-    const type = coveringSlot?.type === 'berbayar' ? 'berbayar' : 'gratis';
-
-    if (type === 'gratis') {
-        return 0;
-    }
-
-    const price = Number(coveringSlot?.price);
-
-    return Number.isSafeInteger(price) ? price : 0;
-}
-
-function getSegmentStatus(
-    segment,
-    {
-        selectedIds,
-        allSegments,
-        busySessions,
-        nowTimestamp,
-        availabilitySchedule,
-    },
-) {
+function getSegmentUnavailableStatus(segment, busySessions, nowTimestamp) {
     const startInstant = new Date(
         `${segment.date}T${segment.start}:00+07:00`,
     ).getTime();
@@ -311,8 +245,83 @@ function getSegmentStatus(
         return 'terisi';
     }
 
-    if (startInstant <= nowTimestamp) {
-        return 'lewat';
+    return startInstant <= nowTimestamp ? 'lewat' : null;
+}
+
+function canExtendSelection(
+    selectedSegments,
+    segment,
+    date,
+    busySessions,
+    nowTimestamp,
+) {
+    if (
+        selectedSegments.length === 0 ||
+        selectedSegments.length >= 2 ||
+        selectedSegments.some(
+            (item) =>
+                item.date !== date ||
+                getSegmentUnavailableStatus(item, busySessions, nowTimestamp),
+        ) ||
+        getSegmentUnavailableStatus(segment, busySessions, nowTimestamp)
+    ) {
+        return false;
+    }
+
+    const orderedSelection = [...selectedSegments].sort(
+        (first, second) => first.startMinutes - second.startMinutes,
+    );
+    const isAdjacent =
+        segment.end === orderedSelection[0].start ||
+        segment.start === orderedSelection[orderedSelection.length - 1].end;
+
+    if (!isAdjacent) {
+        return false;
+    }
+
+    const candidate = [...orderedSelection, segment].sort(
+        (first, second) => first.startMinutes - second.startMinutes,
+    );
+
+    return canSelectRange(candidate, date);
+}
+
+function getPriceForSelection(segments, availabilitySchedule, date) {
+    return segments.map((segment) => {
+        const coveringSlot = findCoveringAvailabilitySlot(
+            availabilitySchedule,
+            date,
+            segment.startMinutes,
+            segment.startMinutes + 60,
+        );
+
+        if ((coveringSlot?.type ?? 'gratis') !== 'berbayar') {
+            return 0;
+        }
+
+        const price = Number(coveringSlot.price);
+
+        return Number.isSafeInteger(price) ? price : 0;
+    });
+}
+
+function getSegmentStatus(
+    segment,
+    {
+        selectedIds,
+        allSegments,
+        busySessions,
+        nowTimestamp,
+    },
+) {
+    const unavailableStatus = getSegmentUnavailableStatus(
+        segment,
+        busySessions,
+        nowTimestamp,
+    );
+
+    if (unavailableStatus) {
+        return unavailableStatus;
     }
 
     if (selectedIds.includes(segment.id)) {
@@ -326,8 +335,9 @@ function getSegmentStatus(
     return canExtendSelection(
         selectedSegments,
         segment,
-        availabilitySchedule,
         segment.date,
+        busySessions,
+        nowTimestamp,
     )
         ? 'bisa-ditambahkan'
         : 'tersedia';
@@ -383,7 +393,6 @@ export default function BookingSchedule({
                     allSegments: slotsByDate[date] ?? [],
                     busySessions: safeBusySessions,
                     nowTimestamp,
-                    availabilitySchedule,
                 }) === 'tersedia',
         ),
     );
@@ -422,12 +431,27 @@ export default function BookingSchedule({
     const firstSelected = selectedSegments[0];
     const lastSelected = selectedSegments[selectedSegments.length - 1];
     const durationHours = selectedSegments.length;
-    const pricePerHour = getPriceForSelection(
+    const isSelectionValid =
+        canSelectRange(selectedSegments, selectedDate) &&
+        selectedSegments.every(
+            (segment) =>
+                !getSegmentUnavailableStatus(
+                    segment,
+                    safeBusySessions,
+                    nowTimestamp,
+                ),
+        );
+    const hourlyPrices = getPriceForSelection(
         selectedSegments,
         availabilitySchedule,
         selectedDate,
     );
-    const totalPrice = pricePerHour * durationHours;
+    const totalPrice = hourlyPrices.reduce((total, price) => total + price, 0);
+    const isFreeSession = selectedSegments[0]?.type === 'gratis';
+    const hasUniformHourlyPrice =
+        hourlyPrices.length > 0 &&
+        hourlyPrices.every((price) => price === hourlyPrices[0]);
+    const pricePerHour = hasUniformHourlyPrice ? hourlyPrices[0] : null;
     const dpAmount = Math.ceil(totalPrice * 0.5);
     useEffect(() => {
         const intervalId = window.setInterval(() => {
@@ -484,8 +508,9 @@ export default function BookingSchedule({
             !canExtendSelection(
                 currentSegments,
                 segment,
-                availabilitySchedule,
                 selectedDate,
+                safeBusySessions,
+                nowTimestamp,
             )
         ) {
             setSelectedIds([segment.id]);
@@ -499,7 +524,12 @@ export default function BookingSchedule({
     }
 
     function continueToConfirmation() {
-        if (!firstSelected || !selectedDate || durationHours === 0) {
+        if (
+            !firstSelected ||
+            !selectedDate ||
+            durationHours === 0 ||
+            !isSelectionValid
+        ) {
             return;
         }
 
@@ -757,6 +787,9 @@ export default function BookingSchedule({
                                         Semua waktu ditampilkan dalam WIB
                                     </span>
                                 </div>
+                                <p className="mt-2 text-xs text-[#78827B]">
+                                    Maksimal 2 jam berurutan.
+                                </p>
 
                                 <div
                                     role="group"
@@ -795,7 +828,6 @@ export default function BookingSchedule({
                                                     busySessions:
                                                         safeBusySessions,
                                                     nowTimestamp,
-                                                    availabilitySchedule,
                                                 },
                                             );
                                             const isDisabled =
@@ -933,9 +965,11 @@ export default function BookingSchedule({
                                         <dd className="text-right font-semibold text-[#34443D]">
                                             {durationHours === 0
                                                 ? '—'
-                                                : pricePerHour === 0
+                                                : isFreeSession
                                                   ? 'Gratis'
-                                                  : `${formatRupiah(pricePerHour)} x ${durationHours} jam`}
+                                                  : pricePerHour === null
+                                                    ? formatRupiah(totalPrice)
+                                                    : `${formatRupiah(pricePerHour)} x ${durationHours} jam`}
                                         </dd>
                                     </div>
                                 </div>
@@ -946,12 +980,12 @@ export default function BookingSchedule({
                                     <dd className="text-lg font-bold text-[#34443D]">
                                         {durationHours === 0
                                             ? '—'
-                                            : pricePerHour === 0
+                                            : isFreeSession
                                               ? 'Gratis'
                                               : formatRupiah(totalPrice)}
                                     </dd>
                                 </div>
-                                {durationHours > 0 && pricePerHour > 0 && (
+                                {durationHours > 0 && !isFreeSession && (
                                     <div className="flex items-center justify-between gap-4 rounded-xl bg-[#F7F5F0] px-3 py-3">
                                         <dt className="font-medium text-[#69766F]">
                                             DP 50%
@@ -961,7 +995,7 @@ export default function BookingSchedule({
                                         </dd>
                                     </div>
                                 )}
-                                {durationHours > 0 && pricePerHour === 0 && (
+                                {durationHours > 0 && isFreeSession && (
                                     <div className="flex items-center justify-between gap-4 rounded-xl bg-[#E8F2E8] px-3 py-3">
                                         <dt className="font-medium text-[#477E50]">
                                             Sesi
@@ -980,7 +1014,9 @@ export default function BookingSchedule({
 
                             <button
                                 type="button"
-                                disabled={durationHours === 0}
+                                disabled={
+                                    durationHours === 0 || !isSelectionValid
+                                }
                                 onClick={continueToConfirmation}
                                 className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#6594B1] px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-[#527D98] focus:outline-none focus:ring-2 focus:ring-[#6594B1] focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-[#C8D5DB] disabled:text-white/80"
                             >

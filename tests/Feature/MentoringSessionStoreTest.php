@@ -414,6 +414,138 @@ class MentoringSessionStoreTest extends TestCase
                 ->etc());
     }
 
+    public function test_booking_confirmation_accepts_two_hours_covered_by_separate_paid_slots(): void
+    {
+        [$mentor] = $this->createMentorWithAvailability([
+            ['day' => 'senin', 'start' => '09:00', 'end' => '10:00', 'type' => 'berbayar', 'price' => 50000],
+            ['day' => 'senin', 'start' => '10:00', 'end' => '11:00', 'type' => 'berbayar', 'price' => 50000],
+        ]);
+        $this->travelTo('2026-10-11 00:00:00');
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('student.booking.confirm', [
+                'mentor' => $mentor->id,
+                'date' => '2026-10-12',
+                'start' => '09:00',
+                'duration_hours' => 2,
+            ]))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Student/BookingConfirm', false)
+                ->where('summary.duration_hours', 2)
+                ->where('summary.price_per_hour', 50000)
+                ->where('summary.total_price', 100000)
+                ->where('summary.dp_amount', 50000)
+                ->etc());
+    }
+
+    public function test_booking_confirmation_sums_different_hourly_prices_and_returns_null_average(): void
+    {
+        [$mentor] = $this->createMentorWithAvailability([
+            ['day' => 'senin', 'start' => '09:00', 'end' => '10:00', 'type' => 'berbayar', 'price' => 50000],
+            ['day' => 'senin', 'start' => '10:00', 'end' => '11:00', 'type' => 'berbayar', 'price' => 60000],
+        ]);
+        $this->travelTo('2026-10-11 00:00:00');
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('student.booking.confirm', [
+                'mentor' => $mentor->id,
+                'date' => '2026-10-12',
+                'start' => '09:00',
+                'duration_hours' => 2,
+            ]))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Student/BookingConfirm', false)
+                ->where('summary.price_per_hour', null)
+                ->where('summary.total_price', 110000)
+                ->where('summary.dp_amount', 55000)
+                ->etc());
+    }
+
+    public function test_booking_confirmation_uses_the_first_slot_covering_each_hour(): void
+    {
+        [$mentor] = $this->createMentorWithAvailability([
+            ['day' => 'senin', 'start' => '09:00', 'end' => '11:00', 'type' => 'berbayar', 'price' => 50000],
+            ['day' => 'senin', 'start' => '09:00', 'end' => '10:00', 'type' => 'berbayar', 'price' => 60000],
+            ['day' => 'senin', 'start' => '10:00', 'end' => '11:00', 'type' => 'berbayar', 'price' => 70000],
+        ]);
+        $this->travelTo('2026-10-11 00:00:00');
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('student.booking.confirm', [
+                'mentor' => $mentor->id,
+                'date' => '2026-10-12',
+                'start' => '09:00',
+                'duration_hours' => 2,
+            ]))
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Student/BookingConfirm', false)
+                ->where('summary.price_per_hour', 50000)
+                ->where('summary.total_price', 100000)
+                ->etc());
+    }
+
+    public function test_booking_confirmation_rejects_three_hour_duration(): void
+    {
+        [$mentor] = $this->createMentorWithAvailability([
+            ['day' => 'senin', 'start' => '09:00', 'end' => '12:00', 'type' => 'gratis', 'price' => null],
+        ]);
+        $this->travelTo('2026-10-11 00:00:00');
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('student.booking.confirm', [
+                'mentor' => $mentor->id,
+                'date' => '2026-10-12',
+                'start' => '09:00',
+                'duration_hours' => 3,
+            ]))
+            ->assertRedirect(route('student.booking.schedule', ['mentor' => $mentor->id]))
+            ->assertSessionHasErrors([
+                'schedule_time' => 'Durasi maksimal 2 jam.',
+            ]);
+    }
+
+    public function test_booking_confirmation_rejects_hours_with_a_gap_in_availability(): void
+    {
+        [$mentor] = $this->createMentorWithAvailability([
+            ['day' => 'senin', 'start' => '09:00', 'end' => '10:00', 'type' => 'gratis', 'price' => null],
+            ['day' => 'senin', 'start' => '11:00', 'end' => '12:00', 'type' => 'gratis', 'price' => null],
+        ]);
+        $this->travelTo('2026-10-11 00:00:00');
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('student.booking.confirm', [
+                'mentor' => $mentor->id,
+                'date' => '2026-10-12',
+                'start' => '09:00',
+                'duration_hours' => 2,
+            ]))
+            ->assertRedirect(route('student.booking.schedule', ['mentor' => $mentor->id]))
+            ->assertSessionHasErrors([
+                'schedule_time' => 'Jadwal tidak tersedia.',
+            ]);
+    }
+
+    public function test_booking_confirmation_rejects_mixed_free_and_paid_hours(): void
+    {
+        [$mentor] = $this->createMentorWithAvailability([
+            ['day' => 'senin', 'start' => '09:00', 'end' => '10:00', 'type' => 'gratis', 'price' => null],
+            ['day' => 'senin', 'start' => '10:00', 'end' => '11:00', 'type' => 'berbayar', 'price' => 50000],
+        ]);
+        $this->travelTo('2026-10-11 00:00:00');
+
+        $this->actingAs(User::factory()->create())
+            ->get(route('student.booking.confirm', [
+                'mentor' => $mentor->id,
+                'date' => '2026-10-12',
+                'start' => '09:00',
+                'duration_hours' => 2,
+            ]))
+            ->assertRedirect(route('student.booking.schedule', ['mentor' => $mentor->id]))
+            ->assertSessionHasErrors([
+                'schedule_time' => 'Jam yang dipilih harus bertipe sama (semua gratis atau semua berbayar).',
+            ]);
+    }
+
     public function test_booking_confirmation_redirects_when_paid_mentor_has_no_bank_account(): void
     {
         [$mentor] = $this->createMentorWithAvailability([
@@ -654,6 +786,101 @@ class MentoringSessionStoreTest extends TestCase
         $this->assertDatabaseHas('mentoring_sessions', [
             'mentor_id' => $mentor->id,
             'payment_dp_status' => 'menunggu_verifikasi',
+        ]);
+    }
+
+    public function test_store_accepts_two_hours_covered_by_separate_paid_slots(): void
+    {
+        [$mentor] = $this->createMentorWithAvailability([
+            ['day' => 'senin', 'start' => '09:00', 'end' => '10:00', 'type' => 'berbayar', 'price' => 50000],
+            ['day' => 'senin', 'start' => '10:00', 'end' => '11:00', 'type' => 'berbayar', 'price' => 50000],
+        ]);
+        $this->travelTo('2026-10-11 00:00:00');
+        Storage::fake('public');
+
+        $this->submitBooking($mentor, [
+            'duration_hours' => 2,
+            'payment_dp_proof' => UploadedFile::fake()->image('payment.png'),
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('mentoring_sessions', [
+            'mentor_id' => $mentor->id,
+            'duration_hours' => 2,
+            'price_snapshot' => '100000.00',
+        ]);
+    }
+
+    public function test_store_sums_different_hourly_prices_for_the_price_snapshot(): void
+    {
+        [$mentor] = $this->createMentorWithAvailability([
+            ['day' => 'senin', 'start' => '09:00', 'end' => '10:00', 'type' => 'berbayar', 'price' => 50000],
+            ['day' => 'senin', 'start' => '10:00', 'end' => '11:00', 'type' => 'berbayar', 'price' => 60000],
+        ]);
+        $this->travelTo('2026-10-11 00:00:00');
+        Storage::fake('public');
+
+        $this->submitBooking($mentor, [
+            'duration_hours' => 2,
+            'payment_dp_proof' => UploadedFile::fake()->image('payment.png'),
+        ])->assertRedirect()->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('mentoring_sessions', [
+            'mentor_id' => $mentor->id,
+            'duration_hours' => 2,
+            'price_snapshot' => '110000.00',
+        ]);
+    }
+
+    public function test_store_rejects_three_hour_duration(): void
+    {
+        [$mentor] = $this->createMentorWithAvailability([
+            ['day' => 'senin', 'start' => '09:00', 'end' => '12:00', 'type' => 'gratis', 'price' => null],
+        ]);
+
+        $this->submitBooking($mentor, [
+            'duration_hours' => 3,
+        ])->assertSessionHasErrors([
+            'duration_hours' => 'Durasi maksimal 2 jam.',
+        ]);
+
+        $this->assertDatabaseMissing('mentoring_sessions', [
+            'mentor_id' => $mentor->id,
+        ]);
+    }
+
+    public function test_store_rejects_hours_with_a_gap_in_availability(): void
+    {
+        [$mentor] = $this->createMentorWithAvailability([
+            ['day' => 'senin', 'start' => '09:00', 'end' => '10:00', 'type' => 'gratis', 'price' => null],
+            ['day' => 'senin', 'start' => '11:00', 'end' => '12:00', 'type' => 'gratis', 'price' => null],
+        ]);
+
+        $this->submitBooking($mentor, [
+            'duration_hours' => 2,
+        ])->assertSessionHasErrors([
+            'schedule_time' => 'Jadwal tidak tersedia.',
+        ]);
+
+        $this->assertDatabaseMissing('mentoring_sessions', [
+            'mentor_id' => $mentor->id,
+        ]);
+    }
+
+    public function test_store_rejects_mixed_free_and_paid_hours(): void
+    {
+        [$mentor] = $this->createMentorWithAvailability([
+            ['day' => 'senin', 'start' => '09:00', 'end' => '10:00', 'type' => 'gratis', 'price' => null],
+            ['day' => 'senin', 'start' => '10:00', 'end' => '11:00', 'type' => 'berbayar', 'price' => 50000],
+        ]);
+
+        $this->submitBooking($mentor, [
+            'duration_hours' => 2,
+        ])->assertSessionHasErrors([
+            'schedule_time' => 'Jam yang dipilih harus bertipe sama (semua gratis atau semua berbayar).',
+        ]);
+
+        $this->assertDatabaseMissing('mentoring_sessions', [
+            'mentor_id' => $mentor->id,
         ]);
     }
 

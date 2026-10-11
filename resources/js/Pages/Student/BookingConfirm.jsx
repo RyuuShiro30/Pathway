@@ -520,7 +520,9 @@ export default function BookingConfirm({
                                     <dd className="text-right font-semibold text-[#34443D]">
                                         {summary.is_free_session
                                             ? 'Gratis'
-                                            : `${formatRupiah(summary.price_per_hour)} x ${summary.duration_hours} jam`}
+                                            : summary.price_per_hour === null
+                                              ? formatRupiah(summary.total_price)
+                                              : `${formatRupiah(summary.price_per_hour)} x ${summary.duration_hours} jam`}
                                     </dd>
                                 </div>
                             </div>
