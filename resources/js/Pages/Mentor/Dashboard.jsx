@@ -10,11 +10,15 @@ const weekdays = [
     { value: 'jumat', label: 'Jumat' },
 ];
 
-const defaultTimeSlots = [
-    { start: '09:00', end: '11:00' },
-    { start: '13:00', end: '15:00' },
-    { start: '15:30', end: '17:30' },
-];
+const timeSlots = Array.from({ length: 16 }, (_, index) => {
+    const startHour = index + 6;
+    const endHour = startHour + 1;
+
+    return {
+        start: `${String(startHour).padStart(2, '0')}:00`,
+        end: `${String(endHour).padStart(2, '0')}:00`,
+    };
+});
 
 const sessionDateTimeFormatter = new Intl.DateTimeFormat('id-ID', {
     weekday: 'long',
@@ -56,6 +60,12 @@ function toIntegerPrice(value) {
     return Number.isSafeInteger(price) ? price : null;
 }
 
+function timeToMinutes(value) {
+    const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(value);
+
+    return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+}
+
 export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
     const { auth, flash } = usePage().props;
     const safeBookingRequests = Array.isArray(bookingRequests)
@@ -67,57 +77,46 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
         ? mentorProfile.availability_schedule
         : [];
     const defaultPrice = toIntegerPrice(mentorProfile?.price_per_session);
-    const initialAvailabilitySchedule = availabilitySchedule.flatMap(
-        (schedule) => {
-            const day = weekdays.find(
-                (weekday) =>
-                    weekday.value === String(schedule?.day ?? '').toLowerCase(),
-            );
+    const initialAvailabilitySchedule = [];
+    const initializedCells = new Set();
 
-            if (!day || !schedule?.start || !schedule?.end) {
-                return [];
+    availabilitySchedule.forEach((schedule) => {
+        const day = weekdays.find(
+            (weekday) =>
+                weekday.value === String(schedule?.day ?? '').toLowerCase(),
+        );
+        const startMinutes = timeToMinutes(schedule?.start);
+        const endMinutes = timeToMinutes(schedule?.end);
+
+        if (!day || startMinutes === null || endMinutes === null) {
+            return;
+        }
+
+        const firstHour = Math.max(6, Math.ceil(startMinutes / 60));
+        const lastHour = Math.min(21, Math.floor((endMinutes - 60) / 60));
+
+        for (let hour = firstHour; hour <= lastHour; hour += 1) {
+            const start = `${String(hour).padStart(2, '0')}:00`;
+            const end = `${String(hour + 1).padStart(2, '0')}:00`;
+            const cellKey = `${day.value}-${start}`;
+
+            if (initializedCells.has(cellKey)) {
+                continue;
             }
 
-            return [
-                {
-                    day: day.value,
-                    start: schedule.start,
-                    end: schedule.end,
-                    type: schedule.type === 'berbayar' ? 'berbayar' : 'gratis',
-                    price:
-                        schedule.type === 'berbayar'
-                            ? (toIntegerPrice(schedule.price) ?? defaultPrice)
-                            : null,
-                },
-            ];
-        },
-    );
-    const customTimeSlots = availabilitySchedule
-        .filter((schedule) =>
-            weekdays.some(
-                (weekday) =>
-                    weekday.value === String(schedule?.day ?? '').toLowerCase(),
-            ),
-        )
-        .map(({ start, end }) => ({ start, end }))
-        .filter(
-            (slot, index, slots) =>
-                slot.start &&
-                slot.end &&
-                !defaultTimeSlots.some(
-                    (defaultSlot) =>
-                        defaultSlot.start === slot.start &&
-                        defaultSlot.end === slot.end,
-                ) &&
-                slots.findIndex(
-                    (candidate) =>
-                        candidate.start === slot.start &&
-                        candidate.end === slot.end,
-                ) === index,
-        );
-    const timeSlots = [...defaultTimeSlots, ...customTimeSlots].sort((first, second) =>
-        first.start.localeCompare(second.start),
-    );
+            initializedCells.add(cellKey);
+            initialAvailabilitySchedule.push({
+                day: day.value,
+                start,
+                end,
+                type: schedule.type === 'berbayar' ? 'berbayar' : 'gratis',
+                price:
+                    schedule.type === 'berbayar'
+                        ? (toIntegerPrice(schedule.price) ?? defaultPrice)
+                        : null,
+            });
+        }
+    });
     const form = useForm({
         availability_schedule: initialAvailabilitySchedule,
     });
@@ -163,12 +162,7 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
         );
     }
 
-    const displayedSlotCount = timeSlots.reduce(
-        (total, slot) =>
-            total +
-            weekdays.filter((day) => getAvailability(day.value, slot)).length,
-        0,
-    );
+    const displayedSlotCount = form.data.availability_schedule.length;
     const editorAvailability = editorSlot
         ? getAvailability(editorSlot.day, editorSlot)
         : null;
@@ -575,18 +569,18 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
                         onSubmit={saveAvailability}
                         className="overflow-hidden rounded-xl border border-[#E8E5DD] bg-white shadow-[0_3px_14px_rgba(52,68,61,0.04)]"
                     >
-                        <div className="overflow-x-auto p-4 sm:p-5">
-                            <table className="w-full min-w-[760px] border-separate border-spacing-2 text-left">
+                        <div className="max-h-[520px] overflow-auto p-3 pr-5">
+                            <table className="w-full min-w-[640px] table-fixed border-separate border-spacing-x-2 border-spacing-y-2 text-left">
                                 <thead>
                                     <tr>
-                                        <th className="w-36 px-3 py-2 text-xs font-bold uppercase tracking-wide text-[#78827B]">
+                                        <th className="sticky left-0 top-0 z-30 w-32 border-b border-[#E8E5DD] bg-white px-3 py-2 text-xs font-bold uppercase tracking-wide text-[#78827B] shadow-[0_1px_2px_rgba(52,68,61,0.06)]">
                                             Waktu
                                         </th>
                                         {weekdays.map((day) => (
                                             <th
                                                 key={day.value}
                                                 scope="col"
-                                                className="px-3 py-2 text-center text-sm font-bold text-[#34443D]"
+                                                className="sticky top-0 z-20 border-b border-[#E8E5DD] bg-white px-2 py-2 text-center text-sm font-bold text-[#34443D] shadow-[0_1px_2px_rgba(52,68,61,0.06)]"
                                             >
                                                 {day.label}
                                             </th>
@@ -598,7 +592,7 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
                                         <tr key={`${slot.start}-${slot.end}`}>
                                             <th
                                                 scope="row"
-                                                className="rounded-lg bg-[#F7F5F0] px-3 py-3 text-xs font-semibold text-[#69766F]"
+                                                className="sticky left-0 z-10 h-10 rounded-lg bg-[#F7F5F0] px-3 text-xs font-semibold text-[#69766F]"
                                             >
                                                 {slot.start} - {slot.end}
                                             </th>
@@ -643,7 +637,7 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
                                                                     slot,
                                                                 )
                                                             }
-                                                            className={`min-h-14 w-full rounded-lg border px-2 py-2 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#6594B1] focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 ${
+                                                            className={`h-10 w-full truncate rounded-lg border px-1.5 py-1 text-[11px] font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-[#6594B1] focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-60 sm:text-xs ${
                                                                 isPaid
                                                                     ? 'border-[#6594B1] bg-[#6594B1] text-white hover:bg-[#527D98]'
                                                                     : isFree
@@ -699,12 +693,18 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
                         ref={popoverRef}
                         role="dialog"
                         aria-label="Atur ketersediaan slot"
-                        className="fixed z-50 max-h-[calc(100vh-1rem)] w-64 max-w-[calc(100vw-1rem)] overflow-y-auto rounded-xl border border-[#E8E5DD] bg-white p-3 shadow-xl"
+                        className="fixed z-50 max-h-[calc(100vh-1rem)] w-56 max-w-[calc(100vw-1rem)] overflow-y-auto rounded-xl border border-[#E8E5DD] bg-white p-3 shadow-xl"
                         style={{
                             left: `${popoverPosition.left}px`,
                             top: `${popoverPosition.top}px`,
                         }}
                     >
+                        <p className="mb-3 text-xs font-semibold text-[#69766F]">
+                            {weekdays.find(
+                                (day) => day.value === editorSlot.day,
+                            )?.label ?? editorSlot.day}{' '}
+                            - {editorSlot.start} - {editorSlot.end}
+                        </p>
                         <div className="flex flex-col gap-2">
                             <button
                                 type="button"
@@ -712,13 +712,22 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
                                 onClick={() =>
                                     applyAvailabilityChoice('tutup')
                                 }
-                                className={`rounded-lg border-2 px-3 py-2 text-left text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#6594B1] ${
+                                className={`flex h-10 w-full items-center justify-between gap-2 rounded-lg border-2 px-3 text-left text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#6594B1] ${
                                     selectedAvailabilityType === 'tutup'
                                         ? 'border-[#747B76] bg-[#F2F2EF] text-[#34443D]'
-                                        : 'border-transparent bg-white text-[#747B76] hover:bg-[#F2F2EF]'
+                                        : 'border-[#E1E3DF] bg-white text-[#747B76] hover:bg-[#F2F2EF]'
                                 }`}
                             >
-                                Tutup
+                                <span className="flex items-center gap-2">
+                                    <span
+                                        aria-hidden="true"
+                                        className="h-2.5 w-2.5 rounded-full bg-[#9A9D99]"
+                                    />
+                                    Tutup
+                                </span>
+                                {selectedAvailabilityType === 'tutup' && (
+                                    <span aria-hidden="true">✓</span>
+                                )}
                             </button>
                             <button
                                 type="button"
@@ -726,101 +735,117 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
                                 onClick={() =>
                                     applyAvailabilityChoice('gratis')
                                 }
-                                className={`rounded-lg border-2 px-3 py-2 text-left text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#6594B1] ${
+                                className={`flex h-10 w-full items-center justify-between gap-2 rounded-lg border-2 px-3 text-left text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#6594B1] ${
                                     selectedAvailabilityType === 'gratis'
-                                        ? 'border-[#477E50] bg-[#65B175] text-white'
-                                        : 'border-transparent bg-white text-[#747B76] hover:bg-[#F2F2EF]'
+                                        ? 'border-[#477E50] bg-[#EAF4EC] text-[#34443D]'
+                                        : 'border-[#E1E3DF] bg-white text-[#747B76] hover:bg-[#F2F2EF]'
                                 }`}
                             >
-                                Gratis
-                            </button>
-                            <div className="rounded-lg bg-[#F5F8FA] p-2">
-                                <button
-                                    type="button"
-                                    aria-expanded={paidSelectionOpen}
-                                    aria-pressed={selectedAvailabilityType === 'berbayar'}
-                                    onClick={() => {
-                                        const currentSlot = getAvailability(
-                                            editorSlot.day,
-                                            editorSlot,
-                                        );
-
-                                        setPaidSelectionOpen(true);
-                                        setPaidPriceDraft(
-                                            currentSlot?.type === 'berbayar'
-                                                ? (toIntegerPrice(
-                                                      currentSlot.price,
-                                                  ) ?? defaultPrice)
-                                                : defaultPrice,
-                                        );
-                                    }}
-                                    className={`w-full rounded-md border-2 px-3 py-2 text-left text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#6594B1] ${
-                                        selectedAvailabilityType === 'berbayar'
-                                            ? 'border-[#527D98] bg-[#6594B1] text-white'
-                                            : 'border-transparent bg-white text-[#747B76] hover:bg-[#F2F2EF]'
-                                    }`}
-                                >
-                                    Berbayar
-                                </button>
-                                {paidSelectionOpen && (
-                                    <form
-                                        onSubmit={(event) => {
-                                            event.preventDefault();
-
-                                            if (
-                                                paidPriceDraft !== null &&
-                                                paidPriceDraft >= 1000
-                                            ) {
-                                                applyAvailabilityChoice(
-                                                    'berbayar',
-                                                    paidPriceDraft,
-                                                );
-                                            }
-                                        }}
-                                        className="mt-2 flex flex-col gap-2"
-                                    >
-                                        <label
-                                            htmlFor="availability-slot-price"
-                                            className="text-xs font-medium text-[#69766F]"
-                                        >
-                                            Harga per jam
-                                        </label>
-                                        <input
-                                            id="availability-slot-price"
-                                            type="number"
-                                            min="1000"
-                                            step="1000"
-                                            required
-                                            value={paidPriceDraft ?? ''}
-                                            onChange={(event) => {
-                                                const value =
-                                                    event.target.value;
-                                                const price =
-                                                    value === ''
-                                                        ? null
-                                                        : Number(value);
-
-                                                setPaidPriceDraft(
-                                                    Number.isSafeInteger(price)
-                                                        ? price
-                                                        : null,
-                                                );
-                                            }}
-                                            className="w-full rounded-lg border border-[#D9DEDA] px-3 py-2 text-sm text-[#34443D] focus:border-[#6594B1] focus:outline-none focus:ring-2 focus:ring-[#6594B1]/30"
-                                        />
-                                        <button
-                                            type="submit"
-                                            disabled={
-                                                paidPriceDraft === null ||
-                                                paidPriceDraft < 1000
-                                            }
-                                            className="rounded-lg bg-[#6594B1] px-3 py-2 text-sm font-semibold text-white hover:bg-[#527D98] focus:outline-none focus:ring-2 focus:ring-[#6594B1] disabled:cursor-not-allowed disabled:opacity-60"
-                                        >
-                                            Terapkan
-                                        </button>
-                                    </form>
+                                <span className="flex items-center gap-2">
+                                    <span
+                                        aria-hidden="true"
+                                        className="h-2.5 w-2.5 rounded-full bg-[#65B175]"
+                                    />
+                                    Gratis
+                                </span>
+                                {selectedAvailabilityType === 'gratis' && (
+                                    <span aria-hidden="true">✓</span>
                                 )}
-                            </div>
+                            </button>
+                            <button
+                                type="button"
+                                aria-expanded={paidSelectionOpen}
+                                aria-pressed={selectedAvailabilityType === 'berbayar'}
+                                onClick={() => {
+                                    const currentSlot = getAvailability(
+                                        editorSlot.day,
+                                        editorSlot,
+                                    );
+
+                                    setPaidSelectionOpen(true);
+                                    setPaidPriceDraft(
+                                        currentSlot?.type === 'berbayar'
+                                            ? (toIntegerPrice(
+                                                  currentSlot.price,
+                                              ) ?? defaultPrice)
+                                            : defaultPrice,
+                                    );
+                                }}
+                                className={`flex h-10 w-full items-center justify-between gap-2 rounded-lg border-2 px-3 text-left text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-[#6594B1] ${
+                                    selectedAvailabilityType === 'berbayar'
+                                        ? 'border-[#527D98] bg-[#EAF2F7] text-[#34443D]'
+                                        : 'border-[#E1E3DF] bg-white text-[#747B76] hover:bg-[#F2F2EF]'
+                                }`}
+                            >
+                                <span className="flex items-center gap-2">
+                                    <span
+                                        aria-hidden="true"
+                                        className="h-2.5 w-2.5 rounded-full bg-[#6594B1]"
+                                    />
+                                    Berbayar
+                                </span>
+                                {selectedAvailabilityType === 'berbayar' && (
+                                    <span aria-hidden="true">✓</span>
+                                )}
+                            </button>
+                            {paidSelectionOpen && (
+                                <form
+                                    onSubmit={(event) => {
+                                        event.preventDefault();
+
+                                        if (
+                                            paidPriceDraft !== null &&
+                                            paidPriceDraft >= 1000
+                                        ) {
+                                            applyAvailabilityChoice(
+                                                'berbayar',
+                                                paidPriceDraft,
+                                            );
+                                        }
+                                    }}
+                                    className="mt-3 flex flex-col gap-2 border-t border-[#E8E5DD] pt-3"
+                                >
+                                    <label
+                                        htmlFor="availability-slot-price"
+                                        className="text-xs font-medium text-[#69766F]"
+                                    >
+                                        Harga per jam
+                                    </label>
+                                    <input
+                                        id="availability-slot-price"
+                                        type="number"
+                                        min="1000"
+                                        step="1000"
+                                        required
+                                        value={paidPriceDraft ?? ''}
+                                        onChange={(event) => {
+                                            const value =
+                                                event.target.value;
+                                            const price =
+                                                value === ''
+                                                    ? null
+                                                    : Number(value);
+
+                                            setPaidPriceDraft(
+                                                Number.isSafeInteger(price)
+                                                    ? price
+                                                    : null,
+                                            );
+                                        }}
+                                        className="w-full rounded-lg border border-[#D9DEDA] px-3 py-2 text-sm text-[#34443D] focus:border-[#6594B1] focus:outline-none focus:ring-2 focus:ring-[#6594B1]/30"
+                                    />
+                                    <button
+                                        type="submit"
+                                        disabled={
+                                            paidPriceDraft === null ||
+                                            paidPriceDraft < 1000
+                                        }
+                                        className="w-full rounded-lg bg-[#6594B1] px-3 py-2 text-sm font-semibold text-white hover:bg-[#527D98] focus:outline-none focus:ring-2 focus:ring-[#6594B1] disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        Terapkan
+                                    </button>
+                                </form>
+                            )}
                         </div>
                     </div>,
                     document.body,
