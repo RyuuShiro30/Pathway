@@ -38,6 +38,7 @@ class MentoringSession extends Model
         'refund_deadline' => 'datetime',
         'refund_proof_uploaded_at' => 'datetime',
     ];
+
     public function mentor()
     {
         return $this->belongsTo(User::class, 'mentor_id');
