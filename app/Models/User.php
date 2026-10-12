@@ -23,6 +23,16 @@ class User extends Authenticatable
         return $this->hasOne(MentorProfile::class);
     }
 
+    public function mentoringSessionsAsMentor()
+    {
+        return $this->hasMany(MentoringSession::class, 'mentor_id');
+    }
+
+    public function mentoringSessionsAsStudent()
+    {
+        return $this->hasMany(MentoringSession::class, 'student_id');
+    }
+
     /**
      * Get the attributes that should be cast.
      *
