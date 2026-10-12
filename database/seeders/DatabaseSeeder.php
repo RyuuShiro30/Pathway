@@ -26,5 +26,11 @@ class DatabaseSeeder extends Seeder
         $this->call([
             MentorSeeder::class,
         ]);
+
+        $this->call([
+            MentorProfileSeeder::class,
+            MentoringSessionSeeder::class,
+            MenteeBankAccountSeeder::class,
+        ]);
     }
 }
