@@ -131,6 +131,29 @@ export default function Login({ status, canResetPassword }) {
                         </button>
                     </form>
 
+                    {/* --- TOMBOL GOOGLE BYPASS (OPSI 1) --- */}
+                    <div className="mt-6">
+                        <div className="relative">
+                            <div className="absolute inset-0 flex items-center">
+                                <div className="w-full border-t border-gray-300"></div>
+                            </div>
+                            <div className="relative flex justify-center text-sm">
+                                <span className="px-2 bg-white text-gray-500">Atau lanjutkan dengan</span>
+                            </div>
+                        </div>
+
+                        <div className="mt-6">
+                            <a
+                                href={route('google.login')}
+                                className="w-full flex justify-center items-center gap-3 py-2.5 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#63849c] transition"
+                            >
+                                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" className="w-5 h-5" />
+                                Masuk dengan Google
+                            </a>
+                        </div>
+                    </div>
+                    {/* --- AKHIR TOMBOL GOOGLE --- */}
+
                     <div className="mt-8 text-center text-sm text-gray-600">
                         Belum punya akun?{' '}
                         <Link href={route('register')} className="font-bold text-[#63849c] hover:text-[#527086]">
