@@ -3,35 +3,42 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MentorProfile extends Model
 {
     protected $fillable = [
-    'user_id',
-    'expertise',
-    'bio',
-    'portfolio_url',
-    'discord_room_link',
-    'verification_status',
-    'mentor_type',
-    'price_per_session',
-    'avg_rating',
-    'is_available',
-    'is_suspended',
-    'availability_schedule',
-];
+        'user_id',
+        'expertise',
+        'bio',
+        'portfolio_url',
+        'discord_room_link',
+        'verification_status',
+        'mentor_type',
+        'price_per_session',
+        'avg_rating',
+        'is_available',
+        'is_suspended',
+        'availability_schedule',
+    ];
 
-protected $casts = [
-    'is_available' => 'boolean',
-    'is_suspended' => 'boolean',
-    'price_per_session' => 'decimal:2',
-    'avg_rating' => 'decimal:2',
-    'availability_schedule' => 'array',
-];
+    protected $casts = [
+        'is_available' => 'boolean',
+        'is_suspended' => 'boolean',
+        'price_per_session' => 'decimal:2',
+        'avg_rating' => 'decimal:2',
+        'availability_schedule' => 'array',
+    ];
 
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function certificates(): HasMany
+    {
+        return $this->hasMany(MentorCertificate::class);
     }
 
     public function mentoringSessions()
