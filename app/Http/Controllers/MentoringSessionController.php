@@ -610,34 +610,37 @@ class MentoringSessionController extends Controller
             'action' => 'required|in:terima,tolak',
         ]);
 
-        $session = MentoringSession::where('mentor_id', Auth::id())
-            ->where('id', $id)
-            ->firstOrFail();
+        return DB::transaction(function () use ($request, $id) {
+            $session = MentoringSession::where('mentor_id', Auth::id())
+                ->where('id', $id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if ($session->status !== 'diajukan') {
-            return redirect()->back()->withErrors([
-                'message' => 'Sesi ini sudah tidak dalam status diajukan',
+            if ($session->status !== 'diajukan') {
+                return redirect()->back()->withErrors([
+                    'message' => 'Sesi ini sudah tidak dalam status diajukan',
+                ]);
+            }
+
+            if ($request->action === 'tolak') {
+                $session->update(['status' => 'dibatalkan', 'cancelled_by' => 'mentor']);
+
+                return redirect()->route('mentor.dashboard')->with('success', 'Permintaan berhasil ditolak');
+            }
+
+            // Action: terima
+            $mentorProfile = $session->mentor->mentorProfile;
+
+            $session->update([
+                'status' => 'dikonfirmasi',
+                'discord_link' => $mentorProfile->discord_room_link,
+                'payment_dp_status' => $session->is_free_session ? 'tidak_berlaku' : 'terverifikasi',
             ]);
-        }
 
-        if ($request->action === 'tolak') {
-            $session->update(['status' => 'dibatalkan', 'cancelled_by' => 'mentor']);
+            // TODO: kirim email ke mentee berisi link Discord (nanti ditambahkan)
 
-            return redirect()->route('mentor.dashboard')->with('success', 'Permintaan berhasil ditolak');
-        }
-
-        // Action: terima
-        $mentorProfile = $session->mentor->mentorProfile;
-
-        $session->update([
-            'status' => 'dikonfirmasi',
-            'discord_link' => $mentorProfile->discord_room_link,
-            'payment_dp_status' => $session->is_free_session ? 'tidak_berlaku' : 'terverifikasi',
-        ]);
-
-        // TODO: kirim email ke mentee berisi link Discord (nanti ditambahkan)
-
-        return redirect()->route('mentor.dashboard')->with('success', 'Booking berhasil dikonfirmasi');
+            return redirect()->route('mentor.dashboard')->with('success', 'Booking berhasil dikonfirmasi');
+        });
     }
 
     // GET - halaman session tracking untuk 1 sesi yang sudah dikonfirmasi
