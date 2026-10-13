@@ -3,9 +3,9 @@
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MentorDirectoryController;
+use App\Http\Controllers\MentoringSessionController;
 use App\Http\Controllers\MentorProfileController;
 use App\Http\Controllers\MentorRegistrationController;
-use App\Http\Controllers\MentoringSessionController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -69,6 +69,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/bookings', [MentoringSessionController::class, 'studentIndex'])
         ->name('student.bookings.index');
+
+    Route::patch('/bookings/{id}/cancel', [MentoringSessionController::class, 'cancelBooking'])
+        ->name('student.bookings.cancel');
 
     // Mentor Booking Requests
     Route::get('/mentor/requests', [MentoringSessionController::class, 'requests'])

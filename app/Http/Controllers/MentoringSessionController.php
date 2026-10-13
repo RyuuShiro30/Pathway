@@ -95,6 +95,43 @@ class MentoringSessionController extends Controller
         ]);
     }
 
+    public function cancelBooking(Request $request, int $id): RedirectResponse
+    {
+        $reason = $request->input('cancellation_reason');
+        $request->merge([
+            'cancellation_reason' => is_string($reason) ? trim($reason) : $reason,
+        ]);
+
+        $validated = $request->validate([
+            'cancellation_reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        DB::transaction(function () use ($id, $validated): void {
+            $session = MentoringSession::query()
+                ->where('student_id', Auth::id())
+                ->whereKey($id)
+                ->where('status', 'diajukan')
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $cancellation = [
+                'status' => 'dibatalkan',
+                'cancelled_by' => 'mentee',
+                'cancellation_reason' => $validated['cancellation_reason'],
+            ];
+
+            if (! $session->is_free_session) {
+                $cancellation['refund_status'] = 'menunggu';
+                $cancellation['refund_deadline'] = Carbon::now()->addHours(48);
+            }
+
+            $session->update($cancellation);
+        });
+
+        return redirect()->route('student.bookings.index')
+            ->with('success', 'Pengajuan berhasil dibatalkan.');
+    }
+
     public function schedule(User $mentor): InertiaResponse
     {
         $mentorProfile = $this->mentorProfileForBooking($mentor);
