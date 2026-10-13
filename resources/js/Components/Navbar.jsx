@@ -1,5 +1,5 @@
-import React from "react";
-import { usePage } from "@inertiajs/react";
+import React, { useState } from "react";
+import { usePage, Link } from "@inertiajs/react";
 
 const MENU = [
     { key: "dashboard", label: "Dashboard", href: "/dashboard" },
@@ -13,6 +13,8 @@ const MENU = [
 export default function Navbar({ active = "dashboard" }) {
     const { auth } = usePage().props;
     const user = auth?.user;
+
+    const [showingDropdown, setShowingDropdown] = useState(false);
 
     return (
         <nav className="bg-[#6594B1] px-6 py-3 flex justify-between items-center shadow-md">
@@ -33,8 +35,7 @@ export default function Navbar({ active = "dashboard" }) {
                 {MENU.map((item) => {
                     const isActive = item.key === active;
                     return (
-                        // <a> biasa: dashboard masih halaman Blade, jadi harus full page load
-                        <a
+                        <Link
                             key={item.key}
                             href={item.href}
                             aria-current={isActive ? "page" : undefined}
@@ -45,7 +46,7 @@ export default function Navbar({ active = "dashboard" }) {
                             }`}
                         >
                             {item.label}
-                        </a>
+                        </Link>
                     );
                 })}
             </div>
@@ -60,20 +61,48 @@ export default function Navbar({ active = "dashboard" }) {
                     />
                 </div>
 
-                <div className="flex items-center space-x-3 pl-2 border-l border-white/20 ml-2">
-                    <div className="text-right hidden md:block leading-tight">
-                        <p className="text-sm font-bold text-white">
-                            {user?.name ?? "Triska R."}
-                        </p>
-                        <p className="text-[10px] text-white/70">
-                            Student Portal
-                        </p>
-                    </div>
-                    <img
-                        src={user?.profile_photo_url ?? "/images/bwa.webp"}
-                        alt="User"
-                        className="w-9 h-9 rounded-full object-cover bg-[#6b9bc3]"
-                    />
+                <div className="relative flex items-center space-x-3 pl-2 border-l border-white/20 ml-2">
+                    {/* Tombol Profil (Bisa diklik) */}
+                    <button
+                        onClick={() => setShowingDropdown(!showingDropdown)}
+                        className="flex items-center space-x-3 focus:outline-none"
+                    >
+                        <div className="text-right hidden md:block leading-tight">
+                            <p className="text-sm font-bold text-white">
+                                {user?.name ?? "Triska R."}
+                            </p>
+                            <p className="text-[10px] text-white/70">
+                                Student Portal
+                            </p>
+                        </div>
+                        <img
+                            src={user?.profile_photo_url ?? "/images/bwa.webp"}
+                            alt="User"
+                            className="w-9 h-9 rounded-full object-cover bg-[#6b9bc3] hover:ring-2 hover:ring-white/50 transition"
+                        />
+                    </button>
+
+                    {/* Menu Dropdown (Muncul saat foto diklik) */}
+                    {showingDropdown && (
+                        <div className="absolute top-12 right-0 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-100">
+                            <Link
+                                href={route('profile.edit')}
+                                className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                            >
+                                Edit Profil
+                            </Link>
+
+                            {/* Tombol Logout wajib pakai method="post" */}
+                            <Link
+                                href={route('logout')}
+                                method="post"
+                                as="button"
+                                className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                            >
+                                Keluar (Logout)
+                            </Link>
+                        </div>
+                    )}
                 </div>
             </div>
         </nav>

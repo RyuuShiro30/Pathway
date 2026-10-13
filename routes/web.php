@@ -23,6 +23,14 @@ Route::get('/', function () {
     ]);
 });
 
+Route::get('/courses', function () {
+    return Inertia::render('Course/Courses'); 
+})->name('courses.index');
+
+Route::get('/courses/{id}', function ($id) {
+    return Inertia::render('Course/Show');
+})->name('courses.show');
+
 // Direktori Mentor
 Route::get('/mentors', [MentorDirectoryController::class, 'index'])
     ->name('mentors.index');
