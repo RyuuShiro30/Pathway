@@ -1,34 +1,26 @@
 <?php
 
-namespace App\Models;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Models\MentoringSession;
-use App\Models\User;
-
-class Review extends Model
+return new class extends Migration
 {
-    protected $fillable = [
-        'session_id',
-        'student_id',
-        'mentor_id',
-        'rating',
-        'feedback',
-    ];
-
-    public function session(): BelongsTo
+    public function up(): void
     {
-        return $this->belongsTo(MentoringSession::class, 'session_id');
+        Schema::create('reviews', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('session_id')->constrained('mentoring_sessions')->onDelete('cascade');
+            $table->foreignId('student_id')->constrained('users')->onDelete('cascade');
+            $table->foreignId('mentor_id')->constrained('users')->onDelete('cascade');
+            $table->integer('rating');
+            $table->text('feedback')->nullable();
+            $table->timestamps();
+        });
     }
 
-    public function student(): BelongsTo
+    public function down(): void
     {
-        return $this->belongsTo(User::class, 'student_id');
+        Schema::dropIfExists('reviews');
     }
-
-    public function mentor(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'mentor_id');
-    }
-}
+};
