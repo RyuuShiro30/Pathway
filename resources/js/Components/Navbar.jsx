@@ -76,6 +76,7 @@ export default function Navbar({ active = "dashboard" }) {
                                 Student Portal
                             </p>
                         </div>
+
                         <img
                             src={user?.profile_photo_url ?? "/images/bwa.webp"}
                             alt="User"

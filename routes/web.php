@@ -1,14 +1,15 @@
 <?php
 
+use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\MentorDirectoryController;
+use App\Http\Controllers\MentorProfileController;
 use App\Http\Controllers\MentorRegistrationController;
 use App\Http\Controllers\MentoringSessionController;
-use App\Http\Controllers\MentorProfileController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Http\Controllers\Auth\GoogleController;
 
 Route::get('/auth/google', [GoogleController::class, 'redirect'])->name('google.login');
 Route::get('/auth/google/callback', [GoogleController::class, 'callback']);
@@ -22,6 +23,21 @@ Route::get('/', function () {
     ]);
 });
 
+Route::get('/courses', function () {
+    return Inertia::render('Course/Courses'); 
+})->name('courses.index');
+
+Route::get('/courses/{id}', function ($id) {
+    return Inertia::render('Course/Show');
+})->name('courses.show');
+
+// Direktori Mentor
+Route::get('/mentors', [MentorDirectoryController::class, 'index'])
+    ->name('mentors.index');
+
+Route::get('/mentors/{id}', [MentorDirectoryController::class, 'show'])
+    ->name('mentors.show');
+
 // Group rute yang memerlukan autentikasi
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -29,7 +45,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])
+        ->name('dashboard');
 
     // Mentor Registration
     Route::get('/mentor/become', function () {
