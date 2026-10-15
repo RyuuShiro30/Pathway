@@ -32,6 +32,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Mentor Registration
+    Route::get('/mentor/become', function () {
+        return Inertia::render('Mentor/BecomeMentor');
+    })->name('mentor.become');
+
     Route::get('/mentor/register', [MentorRegistrationController::class, 'create'])
         ->name('mentor.register');
 
