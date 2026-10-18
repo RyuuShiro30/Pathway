@@ -1,3 +1,4 @@
+
 <?php
 
 use App\Http\Controllers\Auth\GoogleController;
@@ -7,11 +8,14 @@ use App\Http\Controllers\MentorProfileController;
 use App\Http\Controllers\MentorRegistrationController;
 use App\Http\Controllers\MentoringSessionController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\ReviewController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/auth/google', [GoogleController::class, 'redirect'])->name('google.login');
+Route::get('/auth/google', [GoogleController::class, 'redirect'])
+    ->name('google.login');
+
 Route::get('/auth/google/callback', [GoogleController::class, 'callback']);
 
 Route::get('/', function () {
@@ -23,6 +27,14 @@ Route::get('/', function () {
     ]);
 });
 
+Route::get('/courses', function () {
+    return Inertia::render('Course/Courses');
+})->name('courses.index');
+
+Route::get('/courses/{id}', function ($id) {
+    return Inertia::render('Course/Show');
+})->name('courses.show');
+
 // Direktori Mentor
 Route::get('/mentors', [MentorDirectoryController::class, 'index'])
     ->name('mentors.index');
@@ -30,15 +42,29 @@ Route::get('/mentors', [MentorDirectoryController::class, 'index'])
 Route::get('/mentors/{id}', [MentorDirectoryController::class, 'show'])
     ->name('mentors.show');
 
-// Group rute yang memerlukan autentikasi
+// Route yang memerlukan autentikasi
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Profile
+    Route::get('/profile', [ProfileController::class, 'edit'])
+        ->name('profile.edit');
+
+    Route::patch('/profile', [ProfileController::class, 'update'])
+        ->name('profile.update');
+
+    Route::delete('/profile', [ProfileController::class, 'destroy'])
+        ->name('profile.destroy');
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
+
+    // Rating & Ulasan Mentor
+    Route::get('/sessions/{session}/review', [ReviewController::class, 'create'])
+        ->name('reviews.create');
+
+    Route::post('/sessions/{session}/review', [ReviewController::class, 'store'])
+        ->name('reviews.store');
 
     // Mentor Registration
     Route::get('/mentor/register', [MentorRegistrationController::class, 'create'])
@@ -47,8 +73,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/mentor/register', [MentorRegistrationController::class, 'store'])
         ->name('mentor.register.store');
 
-    Route::delete('/mentor/certificates/{certificate}', [MentorRegistrationController::class, 'destroyCertificate'])
-        ->name('mentor.certificate.destroy');
+    Route::delete(
+        '/mentor/certificates/{certificate}',
+        [MentorRegistrationController::class, 'destroyCertificate']
+    )->name('mentor.certificate.destroy');
 
     // Mentor Dashboard & Availability
     Route::get('/mentor/dashboard', [MentorProfileController::class, 'dashboard'])
