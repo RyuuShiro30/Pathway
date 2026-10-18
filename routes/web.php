@@ -67,6 +67,10 @@ Route::middleware('auth')->group(function () {
         ->name('reviews.store');
 
     // Mentor Registration
+    Route::get('/mentor/become', function () {
+        return Inertia::render('Mentor/BecomeMentor');
+    })->name('mentor.become');
+
     Route::get('/mentor/register', [MentorRegistrationController::class, 'create'])
         ->name('mentor.register');
 
