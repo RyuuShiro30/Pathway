@@ -25,7 +25,7 @@ export default function CourseShowAesthetic() {
     const activeModule = modules[activeIndex];
     const isFirst = activeIndex === 0;
     const isLast = activeIndex === modules.length - 1;
-    
+
     const completedCount = modules.filter((m) => m.is_completed).length;
     const progressPercentage = Math.round((completedCount / modules.length) * 100);
 
@@ -80,10 +80,10 @@ export default function CourseShowAesthetic() {
 
             {/* MAIN LAYOUT */}
             <main className="pt-32 px-6 lg:px-12 max-w-[1400px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
-                
+
                 {/* KOLOM KIRI: SIDEBAR INFORMASI & TIMELINE */}
                 <div className="lg:col-span-4 space-y-8">
-                    
+
                     {/* Widget Progress Belajar */}
                     <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200">
                         <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Progres Belajar</h3>
@@ -91,7 +91,7 @@ export default function CourseShowAesthetic() {
                             <span className="text-3xl font-extrabold text-slate-900 tracking-tight">{progressPercentage}%</span>
                             <span className="text-sm text-slate-500 font-medium">Diselesaikan</span>
                         </div>
-                        
+
                         <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden relative">
                             <div
                                 className="absolute top-0 left-0 h-full rounded-full bg-emerald-500 transition-all duration-700 ease-out"
@@ -103,17 +103,17 @@ export default function CourseShowAesthetic() {
                     {/* Widget Daftar Materi (Timeline Style) */}
                     <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 sticky top-32">
                         <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-8">Peta Modul</h3>
-                        
+
                         {/* Timeline List */}
                         <div className="ml-1">
                             {modules.map((module, index) => {
                                 const isActive = activeModuleId === module.id;
                                 const isCompleted = module.is_completed;
                                 const isLastItem = index === modules.length - 1; // Deteksi item terakhir
-                                
+
                                 return (
                                     <div key={module.id} className="relative group flex">
-                                        
+
                                         {/* Kolom Kiri: Node (Lingkaran) & Garis */}
                                         <div className="flex flex-col items-center mr-5">
                                             {/* Node Lingkaran */}
@@ -129,7 +129,7 @@ export default function CourseShowAesthetic() {
                                                     <span className="w-2.5 h-2.5 bg-white rounded-full animate-pulse" />
                                                 )}
                                             </span>
-                                            
+
                                             {/* Garis Penghubung (Tidak dirender pada kuis/materi terakhir) */}
                                             {!isLastItem && (
                                                 <div className="w-1 bg-slate-300 h-full my-1 rounded-full"></div>
@@ -138,7 +138,7 @@ export default function CourseShowAesthetic() {
 
                                         {/* Kolom Kanan: Teks Judul */}
                                         <div className={`w-full ${isLastItem ? '' : 'pb-9'}`}>
-                                            <button 
+                                            <button
                                                 onClick={() => setActiveModuleId(module.id)}
                                                 className="text-left w-full focus:outline-none transition-transform group-hover:translate-x-1"
                                             >
@@ -149,7 +149,7 @@ export default function CourseShowAesthetic() {
                                                 </h4>
                                             </button>
                                         </div>
-                                        
+
                                     </div>
                                 );
                             })}
@@ -159,7 +159,7 @@ export default function CourseShowAesthetic() {
 
                 {/* KOLOM KANAN: AREA MEMBACA KONTEN */}
                 <div className="lg:col-span-8 flex flex-col gap-8">
-                    
+
                     {/* Card Konten Utama */}
                     <article className="bg-white rounded-[2rem] p-8 md:p-16 shadow-sm border border-slate-200">
                         {/* Label & Title */}
@@ -179,11 +179,11 @@ export default function CourseShowAesthetic() {
                                 instalasi dan setup layout dasar dari Pathway. Sekarang kita akan membahas bagaimana cara
                                 berpindah halaman di React menggunakan Inertia.js.
                             </p>
-                            
+
                             <h3 className="text-xl font-bold text-slate-900 pt-6">
                                 Kenapa tidak menggunakan tag &lt;a&gt; HTML biasa?
                             </h3>
-                            
+
                             <p>
                                 Jika kita menggunakan tag anchor konvensional, browser akan melakukan <span className="font-semibold text-rose-500">full page reload</span>. Ini akan membuat aplikasi Single Page Application (SPA) kita terasa lambat dan membebani server layaknya website tradisional PHP biasa.
                             </p>
@@ -215,6 +215,7 @@ export default function CourseShowAesthetic() {
                             </svg>
                             Materi Sebelumnya
                         </button>
+
 
                         <button
                             onClick={handleCompleteAndNext}
