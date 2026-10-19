@@ -32,6 +32,10 @@ class User extends Authenticatable
     {
         return $this->hasMany(MentoringSession::class, 'student_id');
     }
+    public function enrollments()
+    {
+        return $this->hasMany(UserEnrollment::class);
+    }
 
     /**
      * Get the attributes that should be cast.

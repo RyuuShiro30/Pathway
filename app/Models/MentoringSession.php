@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class MentoringSession extends Model
 {
@@ -39,13 +41,18 @@ class MentoringSession extends Model
         'refund_proof_uploaded_at' => 'datetime',
     ];
 
-    public function mentor()
+    public function mentor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'mentor_id');
     }
 
-    public function student()
+    public function student(): BelongsTo
     {
         return $this->belongsTo(User::class, 'student_id');
+    }
+
+    public function review(): HasOne
+    {
+        return $this->hasOne(Review::class, 'session_id');
     }
 }
