@@ -64,7 +64,24 @@ const statsCards = [
     },
 ];
 
+function isScheduleOverdue(booking) {
+    if (booking.status !== 'diajukan' || !booking.schedule_time) {
+        return false;
+    }
+
+    const scheduleTime = new Date(booking.schedule_time);
+
+    return (
+        !Number.isNaN(scheduleTime.getTime()) &&
+        scheduleTime.getTime() < Date.now()
+    );
+}
+
 function getStatusLabel(booking) {
+    if (isScheduleOverdue(booking)) {
+        return 'Jadwal Terlewat';
+    }
+
     if (
         booking.status === 'diajukan' &&
         booking.payment_dp_status === 'menunggu_verifikasi'
@@ -428,10 +445,12 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                             </span>
                                             <span
                                                 className={`inline-flex rounded-full px-3 py-1.5 text-xs font-semibold ${
-                                                    statusStyles[
-                                                        booking.status
-                                                    ] ??
-                                                    'bg-[#F2F3EF] text-[#52635A]'
+                                                    isScheduleOverdue(booking)
+                                                        ? 'bg-[#FCE8C8] text-[#754C24]'
+                                                        : statusStyles[
+                                                              booking.status
+                                                          ] ??
+                                                          'bg-[#F2F3EF] text-[#52635A]'
                                                 }`}
                                             >
                                                 {getStatusLabel(booking)}
@@ -478,6 +497,17 @@ export default function MyBookings({ bookings = [], stats = {} }) {
 
                                     {booking.status === 'diajukan' && (
                                         <div className="mt-4">
+                                            {isScheduleOverdue(booking) && (
+                                                <p className="mb-3 rounded-lg border border-[#E7D8A9] bg-[#F3EFDF] px-4 py-3 text-xs leading-5 text-[#78663A]">
+                                                    Jadwal sesi sudah lewat dan
+                                                    pengajuan ini tidak akan
+                                                    diproses mentor. Anda dapat
+                                                    membatalkannya.
+                                                    {booking.is_free_session ===
+                                                        false &&
+                                                        ' DP akan dikembalikan oleh mentor.'}
+                                                </p>
+                                            )}
                                             <button
                                                 type="button"
                                                 onClick={() =>
