@@ -622,6 +622,12 @@ class MentoringSessionController extends Controller
                 ]);
             }
 
+            if ($request->action === 'terima' && $session->schedule_time->isPast()) {
+                return redirect()->back()->withErrors([
+                    'message' => 'Jadwal sesi sudah lewat, pengajuan ini tidak dapat diterima.',
+                ]);
+            }
+
             if ($request->action === 'tolak') {
                 $session->update(['status' => 'dibatalkan', 'cancelled_by' => 'mentor']);
 

@@ -54,11 +54,91 @@ class MentorRespondBookingTest extends TestCase
         ]);
     }
 
+    public function test_mentor_cannot_accept_overdue_paid_booking_and_session_attributes_remain_unchanged(): void
+    {
+        $this->freezeTime();
+
+        $mentor = $this->createMentor();
+        $student = User::factory()->create();
+        $pastSchedule = now()->subDays(3)->setTime(9, 0);
+        $session = $this->createBooking($student, $mentor, false, [
+            'schedule_time' => $pastSchedule,
+            'end_time' => $pastSchedule->copy()->addHour(),
+            'discord_link' => 'https://discord.gg/existing-room',
+        ]);
+        $originalAttributes = $session->getRawOriginal();
+
+        $response = $this->actingAs($mentor)
+            ->from(route('mentor.requests'))
+            ->patch(route('mentor.booking.respond', $session->id), [
+                'action' => 'terima',
+            ]);
+
+        $response->assertRedirect(route('mentor.requests'));
+        $response->assertSessionHasErrors([
+            'message' => 'Jadwal sesi sudah lewat, pengajuan ini tidak dapat diterima.',
+        ]);
+        $this->assertSame($originalAttributes, $session->fresh()->getRawOriginal());
+    }
+
+    public function test_mentor_cannot_accept_overdue_free_booking_and_session_attributes_remain_unchanged(): void
+    {
+        $this->freezeTime();
+
+        $mentor = $this->createMentor();
+        $student = User::factory()->create();
+        $pastSchedule = now()->subDays(3)->setTime(9, 0);
+        $session = $this->createBooking($student, $mentor, true, [
+            'schedule_time' => $pastSchedule,
+            'end_time' => $pastSchedule->copy()->addHour(),
+            'discord_link' => 'https://discord.gg/existing-room',
+        ]);
+        $originalAttributes = $session->getRawOriginal();
+
+        $response = $this->actingAs($mentor)
+            ->from(route('mentor.requests'))
+            ->patch(route('mentor.booking.respond', $session->id), [
+                'action' => 'terima',
+            ]);
+
+        $response->assertRedirect(route('mentor.requests'));
+        $response->assertSessionHasErrors([
+            'message' => 'Jadwal sesi sudah lewat, pengajuan ini tidak dapat diterima.',
+        ]);
+        $this->assertSame($originalAttributes, $session->fresh()->getRawOriginal());
+    }
+
     public function test_mentor_rejects_pending_booking(): void
     {
         $mentor = $this->createMentor();
         $student = User::factory()->create();
         $session = $this->createBooking($student, $mentor, false);
+
+        $response = $this->actingAs($mentor)->patch(
+            route('mentor.booking.respond', $session->id),
+            ['action' => 'tolak'],
+        );
+
+        $response->assertRedirect(route('mentor.dashboard'));
+        $response->assertSessionHas('success', 'Permintaan berhasil ditolak');
+        $this->assertDatabaseHas('mentoring_sessions', [
+            'id' => $session->id,
+            'status' => 'dibatalkan',
+            'cancelled_by' => 'mentor',
+        ]);
+    }
+
+    public function test_mentor_can_reject_overdue_pending_booking(): void
+    {
+        $this->freezeTime();
+
+        $mentor = $this->createMentor();
+        $student = User::factory()->create();
+        $pastSchedule = now()->subDays(3)->setTime(9, 0);
+        $session = $this->createBooking($student, $mentor, false, [
+            'schedule_time' => $pastSchedule,
+            'end_time' => $pastSchedule->copy()->addHour(),
+        ]);
 
         $response = $this->actingAs($mentor)->patch(
             route('mentor.booking.respond', $session->id),
@@ -157,12 +237,14 @@ class MentorRespondBookingTest extends TestCase
         bool $isFreeSession,
         array $overrides = [],
     ): MentoringSession {
+        $scheduleTime = now()->addDays(3)->setTime(9, 0);
+
         return MentoringSession::query()->create(array_merge([
             'student_id' => $student->id,
             'mentor_id' => $mentor->id,
             'status' => 'diajukan',
-            'schedule_time' => '2026-10-20 09:00:00',
-            'end_time' => '2026-10-20 10:00:00',
+            'schedule_time' => $scheduleTime,
+            'end_time' => $scheduleTime->copy()->addHour(),
             'duration_hours' => 1,
             'is_free_session' => $isFreeSession,
             'price_snapshot' => $isFreeSession ? 0 : 100000,
