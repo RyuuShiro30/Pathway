@@ -1,5 +1,5 @@
-import { Head, usePage } from '@inertiajs/react';
-import { useEffect, useMemo, useState } from 'react';
+import { Head, useForm, usePage } from '@inertiajs/react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 const dateFormatter = new Intl.DateTimeFormat('id-ID', {
     weekday: 'long',
@@ -147,6 +147,13 @@ export default function MyBookings({ bookings = [], stats = {} }) {
     const { flash } = usePage().props;
     const [selectedStatus, setSelectedStatus] = useState('semua');
     const [isSuccessDismissed, setIsSuccessDismissed] = useState(false);
+    const [selectedBooking, setSelectedBooking] = useState(null);
+    const [isCancellationModalOpen, setIsCancellationModalOpen] =
+        useState(false);
+    const cancellationReasonRef = useRef(null);
+    const cancelForm = useForm({
+        cancellation_reason: '',
+    });
     const successMessage =
         typeof flash?.success === 'string' ? flash.success : '';
     const safeBookings = Array.isArray(bookings) ? bookings : [];
@@ -169,6 +176,69 @@ export default function MyBookings({ bookings = [], stats = {} }) {
     useEffect(() => {
         setIsSuccessDismissed(false);
     }, [successMessage]);
+
+    useEffect(() => {
+        if (!isCancellationModalOpen) {
+            return;
+        }
+
+        cancellationReasonRef.current?.focus();
+    }, [isCancellationModalOpen]);
+
+    useEffect(() => {
+        if (!isCancellationModalOpen) {
+            return;
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === 'Escape' && !cancelForm.processing) {
+                setIsCancellationModalOpen(false);
+                setSelectedBooking(null);
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [isCancellationModalOpen, cancelForm.processing]);
+
+    function openCancellationModal(booking) {
+        cancelForm.reset();
+        cancelForm.clearErrors();
+        setSelectedBooking(booking);
+        setIsCancellationModalOpen(true);
+    }
+
+    function closeCancellationModal() {
+        if (cancelForm.processing) {
+            return;
+        }
+
+        setIsCancellationModalOpen(false);
+        setSelectedBooking(null);
+    }
+
+    function submitCancellation(event) {
+        event.preventDefault();
+
+        if (!selectedBooking) {
+            return;
+        }
+
+        cancelForm.patch(
+            route('student.bookings.cancel', selectedBooking.id),
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsCancellationModalOpen(false);
+                    setSelectedBooking(null);
+                    cancelForm.reset();
+                },
+            },
+        );
+    }
 
     return (
         <div className="min-h-screen bg-[#F7F5F0] text-[#34443D]">
@@ -405,12 +475,147 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                             </a>
                                         </div>
                                     )}
+
+                                    {booking.status === 'diajukan' && (
+                                        <div className="mt-4">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    openCancellationModal(
+                                                        booking,
+                                                    )
+                                                }
+                                                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#C23B46] bg-white px-4 py-2 text-sm font-bold text-[#A9343D] transition-colors hover:bg-[#FBECEE] focus:outline-none focus:ring-2 focus:ring-[#C23B46] focus:ring-offset-2"
+                                            >
+                                                Batalkan Pengajuan
+                                            </button>
+                                        </div>
+                                    )}
                                 </article>
                             );
                         })}
                     </section>
                 )}
             </main>
+
+            {isCancellationModalOpen && selectedBooking && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#1D2B25]/50 p-4"
+                    onMouseDown={(event) => {
+                        if (
+                            event.target === event.currentTarget &&
+                            !cancelForm.processing
+                        ) {
+                            closeCancellationModal();
+                        }
+                    }}
+                >
+                    <section
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="cancel-booking-heading"
+                        className="w-full max-w-lg rounded-xl border border-[#E8E5DD] bg-white p-5 shadow-xl sm:p-6"
+                    >
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h2
+                                    id="cancel-booking-heading"
+                                    className="text-lg font-bold text-[#34443D]"
+                                >
+                                    Batalkan Pengajuan?
+                                </h2>
+                                <p className="mt-1 text-sm leading-6 text-[#69766F]">
+                                    Anda akan membatalkan pengajuan bersama{' '}
+                                    {selectedBooking.mentor?.name ?? 'Mentor'}{' '}
+                                    pada{' '}
+                                    {formatBookingDateTime(
+                                        selectedBooking.schedule_time,
+                                    )}
+                                    , pukul{' '}
+                                    {formatBookingTimeRange(selectedBooking)}.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closeCancellationModal}
+                                disabled={cancelForm.processing}
+                                aria-label="Tutup dialog pembatalan"
+                                className="rounded-md p-1 text-[#78827B] hover:bg-[#F7F5F0] hover:text-[#34443D] focus:outline-none focus:ring-2 focus:ring-[#6594B1] disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <svg
+                                    aria-hidden="true"
+                                    className="h-5 w-5"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                >
+                                    <path d="m6 6 12 12M18 6 6 18" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <form onSubmit={submitCancellation} className="mt-5">
+                            <label
+                                htmlFor="cancellation_reason"
+                                className="block text-sm font-semibold text-[#34443D]"
+                            >
+                                Alasan Pembatalan
+                            </label>
+                            <textarea
+                                ref={cancellationReasonRef}
+                                id="cancellation_reason"
+                                name="cancellation_reason"
+                                rows="4"
+                                required
+                                maxLength={500}
+                                value={cancelForm.data.cancellation_reason}
+                                onChange={(event) =>
+                                    cancelForm.setData(
+                                        'cancellation_reason',
+                                        event.target.value,
+                                    )
+                                }
+                                className="mt-2 block w-full rounded-lg border border-[#D8D5CC] bg-white px-4 py-3 text-sm leading-6 text-[#34443D] placeholder:text-[#9AA19C] focus:border-[#6594B1] focus:outline-none focus:ring-2 focus:ring-[#6594B1]/30"
+                                placeholder="Tuliskan alasan pembatalan pengajuan..."
+                            />
+                            <p className="mt-1 text-right text-xs text-[#69766F]">
+                                {cancelForm.data.cancellation_reason.length}/500
+                            </p>
+                            {cancelForm.errors.cancellation_reason && (
+                                <p className="mt-2 text-sm font-medium text-[#A34F45]">
+                                    {cancelForm.errors.cancellation_reason}
+                                </p>
+                            )}
+                            {selectedBooking.is_free_session === false && (
+                                <p className="mt-3 rounded-lg bg-[#F3EFDF] px-4 py-3 text-xs leading-5 text-[#78663A]">
+                                    DP akan dikembalikan oleh mentor. Batas
+                                    waktu pengembalian 48 jam.
+                                </p>
+                            )}
+                            <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                                <button
+                                    type="button"
+                                    onClick={closeCancellationModal}
+                                    disabled={cancelForm.processing}
+                                    className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#D8D5CC] bg-white px-4 py-2 text-sm font-semibold text-[#4F5C55] transition-colors hover:bg-[#F7F5F0] focus:outline-none focus:ring-2 focus:ring-[#6594B1] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    Kembali
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={cancelForm.processing}
+                                    className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#C23B46] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[#A9343D] focus:outline-none focus:ring-2 focus:ring-[#C23B46] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {cancelForm.processing
+                                        ? 'Membatalkan...'
+                                        : 'Ya, Batalkan Pengajuan'}
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+                </div>
+            )}
         </div>
     );
 }
