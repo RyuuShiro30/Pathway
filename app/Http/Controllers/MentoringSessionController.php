@@ -95,6 +95,43 @@ class MentoringSessionController extends Controller
         ]);
     }
 
+    public function cancelBooking(Request $request, int $id): RedirectResponse
+    {
+        $reason = $request->input('cancellation_reason');
+        $request->merge([
+            'cancellation_reason' => is_string($reason) ? trim($reason) : $reason,
+        ]);
+
+        $validated = $request->validate([
+            'cancellation_reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        DB::transaction(function () use ($id, $validated): void {
+            $session = MentoringSession::query()
+                ->where('student_id', Auth::id())
+                ->whereKey($id)
+                ->where('status', 'diajukan')
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $cancellation = [
+                'status' => 'dibatalkan',
+                'cancelled_by' => 'mentee',
+                'cancellation_reason' => $validated['cancellation_reason'],
+            ];
+
+            if (! $session->is_free_session) {
+                $cancellation['refund_status'] = 'menunggu';
+                $cancellation['refund_deadline'] = Carbon::now()->addHours(48);
+            }
+
+            $session->update($cancellation);
+        });
+
+        return redirect()->route('student.bookings.index')
+            ->with('success', 'Pengajuan berhasil dibatalkan.');
+    }
+
     public function schedule(User $mentor): InertiaResponse
     {
         $mentorProfile = $this->mentorProfileForBooking($mentor);
@@ -573,34 +610,43 @@ class MentoringSessionController extends Controller
             'action' => 'required|in:terima,tolak',
         ]);
 
-        $session = MentoringSession::where('mentor_id', Auth::id())
-            ->where('id', $id)
-            ->firstOrFail();
+        return DB::transaction(function () use ($request, $id) {
+            $session = MentoringSession::where('mentor_id', Auth::id())
+                ->where('id', $id)
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        if ($session->status !== 'diajukan') {
-            return redirect()->back()->withErrors([
-                'message' => 'Sesi ini sudah tidak dalam status diajukan',
+            if ($session->status !== 'diajukan') {
+                return redirect()->back()->withErrors([
+                    'message' => 'Sesi ini sudah tidak dalam status diajukan',
+                ]);
+            }
+
+            if ($request->action === 'terima' && $session->schedule_time->isPast()) {
+                return redirect()->back()->withErrors([
+                    'message' => 'Jadwal sesi sudah lewat, pengajuan ini tidak dapat diterima.',
+                ]);
+            }
+
+            if ($request->action === 'tolak') {
+                $session->update(['status' => 'dibatalkan', 'cancelled_by' => 'mentor']);
+
+                return redirect()->route('mentor.dashboard')->with('success', 'Permintaan berhasil ditolak');
+            }
+
+            // Action: terima
+            $mentorProfile = $session->mentor->mentorProfile;
+
+            $session->update([
+                'status' => 'dikonfirmasi',
+                'discord_link' => $mentorProfile->discord_room_link,
+                'payment_dp_status' => $session->is_free_session ? 'tidak_berlaku' : 'terverifikasi',
             ]);
-        }
 
-        if ($request->action === 'tolak') {
-            $session->update(['status' => 'dibatalkan', 'cancelled_by' => 'mentor']);
+            // TODO: kirim email ke mentee berisi link Discord (nanti ditambahkan)
 
-            return redirect()->route('mentor.dashboard')->with('success', 'Permintaan berhasil ditolak');
-        }
-
-        // Action: terima
-        $mentorProfile = $session->mentor->mentorProfile;
-
-        $session->update([
-            'status' => 'dikonfirmasi',
-            'discord_link' => $mentorProfile->discord_room_link,
-            'payment_dp_status' => $session->is_free_session ? 'tidak_berlaku' : 'terverifikasi',
-        ]);
-
-        // TODO: kirim email ke mentee berisi link Discord (nanti ditambahkan)
-
-        return redirect()->route('mentor.dashboard')->with('success', 'Booking berhasil dikonfirmasi');
+            return redirect()->route('mentor.dashboard')->with('success', 'Booking berhasil dikonfirmasi');
+        });
     }
 
     // GET - halaman session tracking untuk 1 sesi yang sudah dikonfirmasi
