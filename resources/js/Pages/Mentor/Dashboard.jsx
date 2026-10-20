@@ -42,6 +42,16 @@ function formatSessionDateTime(value) {
         : `${sessionDateTimeFormatter.format(date)} WIB`;
 }
 
+function isRefundOverdue(deadline) {
+    if (!deadline) {
+        return false;
+    }
+
+    const date = new Date(deadline);
+
+    return !Number.isNaN(date.getTime()) && date.getTime() < Date.now();
+}
+
 function truncateNotes(notes) {
     if (!notes) {
         return 'Tidak ada catatan dari student.';
@@ -66,10 +76,17 @@ function timeToMinutes(value) {
     return match ? Number(match[1]) * 60 + Number(match[2]) : null;
 }
 
-export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
+export default function Dashboard({
+    mentorProfile,
+    bookingRequests = [],
+    refundRequests = [],
+}) {
     const { auth, flash } = usePage().props;
     const safeBookingRequests = Array.isArray(bookingRequests)
         ? bookingRequests
+        : [];
+    const safeRefundRequests = Array.isArray(refundRequests)
+        ? refundRequests
         : [];
     const availabilitySchedule = Array.isArray(
         mentorProfile?.availability_schedule,
@@ -546,6 +563,91 @@ export default function Dashboard({ mentorProfile, bookingRequests = [] }) {
                         </div>
                     )}
                 </section>
+
+                {safeRefundRequests.length > 0 && (
+                    <section aria-labelledby="refund-requests-heading">
+                        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+                            <div>
+                                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#C23B46]">
+                                    Aksi Diperlukan
+                                </p>
+                                <h2
+                                    id="refund-requests-heading"
+                                    className="mt-1 text-xl font-bold text-[#34443D]"
+                                >
+                                    Menunggu Refund
+                                </h2>
+                            </div>
+                            <p className="text-sm text-[#78827B]">
+                                {safeRefundRequests.length} refund perlu diproses
+                            </p>
+                        </div>
+
+                        <div className="space-y-3">
+                            {safeRefundRequests.map((refundRequest) => {
+                                const isOverdue = isRefundOverdue(
+                                    refundRequest.refund_deadline,
+                                );
+
+                                return (
+                                    <article
+                                        key={refundRequest.id}
+                                        className="rounded-xl border border-[#E8E5DD] bg-white p-5 shadow-[0_3px_14px_rgba(52,68,61,0.04)] sm:p-6"
+                                    >
+                                        <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex flex-wrap items-center gap-3">
+                                                    <h3 className="text-base font-bold text-[#34443D]">
+                                                        {refundRequest.student
+                                                            ?.name ?? 'Student'}
+                                                    </h3>
+                                                    {isOverdue ? (
+                                                        <span className="inline-flex items-center rounded-full bg-[#FBECEE] px-3 py-1 text-xs font-bold text-[#C23B46]">
+                                                            Melewati batas
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center rounded-full bg-[#F3EFDF] px-3 py-1 text-xs font-bold text-[#78663A]">
+                                                            Menunggu Refund
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <div className="mt-4 grid gap-3 text-sm text-[#69766F] sm:grid-cols-2">
+                                                    <p>
+                                                        <span className="font-semibold text-[#34443D]">
+                                                            Jadwal Sesi:{' '}
+                                                        </span>
+                                                        {formatSessionDateTime(
+                                                            refundRequest.schedule_time,
+                                                        )}
+                                                    </p>
+                                                    <p>
+                                                        <span className="font-semibold text-[#34443D]">
+                                                            Batas Waktu:{' '}
+                                                        </span>
+                                                        {formatSessionDateTime(
+                                                            refundRequest.refund_deadline,
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <Link
+                                                href={route(
+                                                    'mentor.refund.form',
+                                                    refundRequest.id,
+                                                )}
+                                                className="inline-flex min-h-10 shrink-0 items-center justify-center rounded-lg bg-[#6594B1] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#527D98] focus:outline-none focus:ring-2 focus:ring-[#6594B1] focus:ring-offset-2"
+                                            >
+                                                Proses Refund
+                                            </Link>
+                                        </div>
+                                    </article>
+                                );
+                            })}
+                        </div>
+                    </section>
+                )}
 
                 <section aria-labelledby="availability-heading">
                     <div className="mb-4 flex flex-wrap items-end justify-between gap-2">

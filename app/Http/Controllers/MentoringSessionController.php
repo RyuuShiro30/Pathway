@@ -629,7 +629,17 @@ class MentoringSessionController extends Controller
             }
 
             if ($request->action === 'tolak') {
-                $session->update(['status' => 'dibatalkan', 'cancelled_by' => 'mentor']);
+                $cancellation = [
+                    'status' => 'dibatalkan',
+                    'cancelled_by' => 'mentor',
+                ];
+
+                if (! $session->is_free_session) {
+                    $cancellation['refund_status'] = 'menunggu';
+                    $cancellation['refund_deadline'] = Carbon::now()->addHours(48);
+                }
+
+                $session->update($cancellation);
 
                 return redirect()->route('mentor.dashboard')->with('success', 'Permintaan berhasil ditolak');
             }

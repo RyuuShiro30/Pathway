@@ -110,9 +110,14 @@ class MentorRespondBookingTest extends TestCase
 
     public function test_mentor_rejects_pending_booking(): void
     {
+        $this->travelTo('2026-10-20 10:00:00');
+
         $mentor = $this->createMentor();
         $student = User::factory()->create();
-        $session = $this->createBooking($student, $mentor, false);
+        $session = $this->createBooking($student, $mentor, false, [
+            'payment_dp_status' => 'menunggu_verifikasi',
+            'payment_dp_proof' => 'payment-proofs/test_dp.jpg',
+        ]);
 
         $response = $this->actingAs($mentor)->patch(
             route('mentor.booking.respond', $session->id),
@@ -125,12 +130,43 @@ class MentorRespondBookingTest extends TestCase
             'id' => $session->id,
             'status' => 'dibatalkan',
             'cancelled_by' => 'mentor',
+            'refund_status' => 'menunggu',
+            'refund_deadline' => '2026-10-22 10:00:00',
+            'payment_dp_status' => 'menunggu_verifikasi',
+            'payment_dp_proof' => 'payment-proofs/test_dp.jpg',
+        ]);
+    }
+
+    public function test_mentor_rejects_pending_free_booking_without_refund(): void
+    {
+        $mentor = $this->createMentor();
+        $student = User::factory()->create();
+        $session = $this->createBooking($student, $mentor, true, [
+            'payment_dp_status' => 'tidak_berlaku',
+            'payment_dp_proof' => null,
+        ]);
+
+        $response = $this->actingAs($mentor)->patch(
+            route('mentor.booking.respond', $session->id),
+            ['action' => 'tolak'],
+        );
+
+        $response->assertRedirect(route('mentor.dashboard'));
+        $response->assertSessionHas('success', 'Permintaan berhasil ditolak');
+        $this->assertDatabaseHas('mentoring_sessions', [
+            'id' => $session->id,
+            'status' => 'dibatalkan',
+            'cancelled_by' => 'mentor',
+            'refund_status' => 'tidak_berlaku',
+            'refund_deadline' => null,
+            'payment_dp_status' => 'tidak_berlaku',
+            'payment_dp_proof' => null,
         ]);
     }
 
     public function test_mentor_can_reject_overdue_pending_booking(): void
     {
-        $this->freezeTime();
+        $this->travelTo('2026-10-20 10:00:00');
 
         $mentor = $this->createMentor();
         $student = User::factory()->create();
@@ -151,7 +187,30 @@ class MentorRespondBookingTest extends TestCase
             'id' => $session->id,
             'status' => 'dibatalkan',
             'cancelled_by' => 'mentor',
+            'refund_status' => 'menunggu',
+            'refund_deadline' => '2026-10-22 10:00:00',
         ]);
+    }
+
+    public function test_after_rejecting_paid_booking_owner_mentor_can_open_refund_form_while_other_mentor_cannot(): void
+    {
+        $mentor = $this->createMentor();
+        $otherMentor = $this->createMentor();
+        $student = User::factory()->create();
+        $session = $this->createBooking($student, $mentor, false);
+
+        $this->actingAs($mentor)->patch(
+            route('mentor.booking.respond', $session->id),
+            ['action' => 'tolak'],
+        );
+
+        $this->actingAs($mentor)
+            ->get(route('mentor.refund.form', $session->id))
+            ->assertOk();
+
+        $this->actingAs($otherMentor)
+            ->get(route('mentor.refund.form', $session->id))
+            ->assertNotFound();
     }
 
     public function test_mentor_cannot_accept_cancelled_booking_and_refund_data_is_unchanged(): void
