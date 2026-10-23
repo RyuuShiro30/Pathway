@@ -180,6 +180,51 @@ class MyBookingsTest extends TestCase
             ->assertSessionHas('success', 'Booking berhasil diajukan, menunggu konfirmasi mentor.');
     }
 
+    public function test_refund_proof_path_and_uploaded_at_are_exposed_only_when_awaiting_refund_confirmation(): void
+    {
+        $student = User::factory()->create();
+        [$mentor] = $this->createMentor();
+        $mentor->update([
+            'email' => 'mentor@example.test',
+            'bank_name' => 'BCA',
+            'bank_account_number' => '987654321',
+            'bank_account_holder' => 'Mentor Rahasia',
+        ]);
+
+        $awaitingSession = $this->createBooking($student, $mentor, 'dibatalkan', '2026-10-15 02:00:00', [
+            'refund_status' => 'menunggu_konfirmasi',
+            'refund_proof' => 'refund-proofs/receipt.pdf',
+            'refund_proof_uploaded_at' => '2026-10-14 15:30:00',
+        ]);
+
+        $waitingSession = $this->createBooking($student, $mentor, 'dibatalkan', '2026-10-14 02:00:00', [
+            'refund_status' => 'menunggu',
+            'refund_proof' => 'refund-proofs/receipt2.pdf',
+            'refund_proof_uploaded_at' => '2026-10-13 15:30:00',
+        ]);
+
+        $this->actingAs($student)
+            ->get(route('student.bookings.index'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Student/MyBookings', false)
+                ->where('bookings.0.id', $awaitingSession->id)
+                ->where('bookings.0.refund_proof_path', 'refund-proofs/receipt.pdf')
+                ->where('bookings.0.refund_proof_uploaded_at', '2026-10-14T15:30:00.000000Z')
+                ->where('bookings.1.id', $waitingSession->id)
+                ->where('bookings.1.refund_proof_path', null)
+                ->where('bookings.1.refund_proof_uploaded_at', null)
+                ->missing('bookings.0.mentor.email')
+                ->missing('bookings.0.mentor.bank_name')
+                ->missing('bookings.0.mentor.bank_account_number')
+                ->missing('bookings.0.mentor.bank_account_holder')
+                ->missing('bookings.1.mentor.email')
+                ->missing('bookings.1.mentor.bank_name')
+                ->missing('bookings.1.mentor.bank_account_number')
+                ->missing('bookings.1.mentor.bank_account_holder')
+                ->etc());
+    }
+
     /**
      * @param  array<int, array<string, int|string|null>>  $availability
      * @return array{0: User, 1: MentorProfile}

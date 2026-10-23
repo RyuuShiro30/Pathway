@@ -136,6 +136,146 @@ class MentorDashboardRefundTest extends TestCase
                 ->etc());
     }
 
+    public function test_reported_refund_requests_only_contains_dilaporkan_sessions_for_logged_in_mentor(): void
+    {
+        $mentor = $this->createMentor();
+        $otherMentor = $this->createMentor();
+        $student = User::factory()->create();
+
+        $ownReported = $this->createSession($mentor, $student, [
+            'refund_status' => 'dilaporkan',
+            'refund_deadline' => now()->addHours(24),
+            'refund_proof_uploaded_at' => now()->subHours(12),
+        ]);
+        $this->createSession($otherMentor, $student, [
+            'refund_status' => 'dilaporkan',
+            'refund_deadline' => now()->addHours(12),
+            'refund_proof_uploaded_at' => now()->subHours(6),
+        ]);
+
+        $this->actingAs($mentor)
+            ->get(route('mentor.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Mentor/Dashboard', false)
+                ->has('reportedRefundRequests', 1)
+                ->where('reportedRefundRequests.0.id', $ownReported->id)
+                ->etc());
+    }
+
+    public function test_reported_refund_requests_excludes_sessions_with_other_refund_statuses(): void
+    {
+        $mentor = $this->createMentor();
+        $student = User::factory()->create();
+
+        $reported = $this->createSession($mentor, $student, [
+            'refund_status' => 'dilaporkan',
+            'refund_deadline' => now()->addHours(24),
+            'refund_proof_uploaded_at' => now()->subHours(12),
+        ]);
+        $this->createSession($mentor, $student, [
+            'refund_status' => 'menunggu',
+            'refund_deadline' => now()->addHours(24),
+        ]);
+        $this->createSession($mentor, $student, [
+            'refund_status' => 'menunggu_konfirmasi',
+            'refund_deadline' => now()->addHours(24),
+            'refund_proof_uploaded_at' => now()->subHours(6),
+        ]);
+        $this->createSession($mentor, $student, [
+            'refund_status' => 'selesai',
+            'refund_deadline' => now()->addHours(24),
+            'refund_proof_uploaded_at' => now()->subHours(6),
+        ]);
+        $this->createSession($mentor, $student, [
+            'refund_status' => 'tidak_berlaku',
+            'refund_deadline' => null,
+        ]);
+
+        $this->actingAs($mentor)
+            ->get(route('mentor.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Mentor/Dashboard', false)
+                ->has('reportedRefundRequests', 1)
+                ->where('reportedRefundRequests.0.id', $reported->id)
+                ->etc());
+    }
+
+    public function test_reported_refund_requests_only_exposes_safe_columns_and_student_id_and_name(): void
+    {
+        $mentor = $this->createMentor();
+        $student = User::factory()->create([
+            'name' => 'Siti Mentee',
+            'email' => 'siti@example.test',
+            'bank_name' => 'Mandiri',
+            'bank_account_number' => '1112223334',
+            'bank_account_holder' => 'Siti Mentee',
+        ]);
+
+        $session = $this->createSession($mentor, $student, [
+            'refund_status' => 'dilaporkan',
+            'refund_deadline' => now()->addHours(36),
+            'refund_proof' => 'refund-proofs/receipt.pdf',
+            'refund_proof_uploaded_at' => now()->subHours(12),
+            'price_snapshot' => 200000,
+            'payment_dp_proof' => 'payment-proofs/dp.jpg',
+            'cancellation_reason' => 'Rahasia pembatalan',
+        ]);
+
+        $this->actingAs($mentor)
+            ->get(route('mentor.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Mentor/Dashboard', false)
+                ->has('reportedRefundRequests', 1)
+                ->where('reportedRefundRequests.0.id', $session->id)
+                ->has('reportedRefundRequests.0.schedule_time')
+                ->has('reportedRefundRequests.0.end_time')
+                ->has('reportedRefundRequests.0.refund_proof_uploaded_at')
+                ->where('reportedRefundRequests.0.student.id', $student->id)
+                ->where('reportedRefundRequests.0.student.name', 'Siti Mentee')
+                ->missing('reportedRefundRequests.0.student_id')
+                ->missing('reportedRefundRequests.0.student.email')
+                ->missing('reportedRefundRequests.0.student.bank_name')
+                ->missing('reportedRefundRequests.0.student.bank_account_number')
+                ->missing('reportedRefundRequests.0.student.bank_account_holder')
+                ->missing('reportedRefundRequests.0.payment_dp_proof')
+                ->missing('reportedRefundRequests.0.payment_dp_status')
+                ->missing('reportedRefundRequests.0.refund_proof')
+                ->missing('reportedRefundRequests.0.price_snapshot')
+                ->missing('reportedRefundRequests.0.cancellation_reason')
+                ->missing('reportedRefundRequests.0.refund_deadline')
+                ->etc());
+    }
+
+    public function test_reported_refund_requests_are_sorted_by_refund_deadline_ascending(): void
+    {
+        $mentor = $this->createMentor();
+        $student = User::factory()->create();
+
+        $laterSession = $this->createSession($mentor, $student, [
+            'refund_status' => 'dilaporkan',
+            'refund_deadline' => now()->addHours(40),
+            'refund_proof_uploaded_at' => now()->subHours(6),
+        ]);
+        $earlierSession = $this->createSession($mentor, $student, [
+            'refund_status' => 'dilaporkan',
+            'refund_deadline' => now()->addHours(10),
+            'refund_proof_uploaded_at' => now()->subHours(12),
+        ]);
+
+        $this->actingAs($mentor)
+            ->get(route('mentor.dashboard'))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Mentor/Dashboard', false)
+                ->has('reportedRefundRequests', 2)
+                ->where('reportedRefundRequests.0.id', $earlierSession->id)
+                ->where('reportedRefundRequests.1.id', $laterSession->id)
+                ->etc());
+    }
+
     private function createMentor(): User
     {
         $mentor = User::factory()->create();
