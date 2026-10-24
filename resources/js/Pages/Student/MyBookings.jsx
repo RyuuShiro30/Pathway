@@ -77,6 +77,19 @@ function isScheduleOverdue(booking) {
     );
 }
 
+function isScheduleUpcoming(booking) {
+    if (!booking.schedule_time) {
+        return false;
+    }
+
+    const scheduleTime = new Date(booking.schedule_time);
+
+    return (
+        !Number.isNaN(scheduleTime.getTime()) &&
+        scheduleTime.getTime() > Date.now()
+    );
+}
+
 function getStatusLabel(booking) {
     if (isScheduleOverdue(booking)) {
         return 'Jadwal Terlewat';
@@ -202,10 +215,19 @@ export default function MyBookings({ bookings = [], stats = {} }) {
     const [refundDecisionError, setRefundDecisionError] = useState('');
     const [isCancellationModalOpen, setIsCancellationModalOpen] =
         useState(false);
+    const [selectedConfirmedBooking, setSelectedConfirmedBooking] =
+        useState(null);
+    const [isConfirmedCancellationModalOpen, setIsConfirmedCancellationModalOpen] =
+        useState(false);
     const cancellationReasonRef = useRef(null);
+    const confirmedCancellationReasonRef = useRef(null);
     const refundBackButtonRef = useRef(null);
     const cancelForm = useForm({
         cancellation_reason: '',
+    });
+    const confirmedCancelForm = useForm({
+        cancellation_reason: '',
+        acknowledge_dp_forfeit: false,
     });
     const successMessage =
         typeof flash?.success === 'string' ? flash.success : '';
@@ -256,6 +278,38 @@ export default function MyBookings({ bookings = [], stats = {} }) {
             window.removeEventListener('keydown', handleKeyDown);
         };
     }, [isCancellationModalOpen, cancelForm.processing]);
+
+    useEffect(() => {
+        if (!isConfirmedCancellationModalOpen) {
+            return;
+        }
+
+        confirmedCancellationReasonRef.current?.focus();
+    }, [isConfirmedCancellationModalOpen]);
+
+    useEffect(() => {
+        if (!isConfirmedCancellationModalOpen) {
+            return;
+        }
+
+        function handleKeyDown(event) {
+            if (
+                event.key === 'Escape' &&
+                !confirmedCancelForm.processing
+            ) {
+                closeConfirmedCancellationModal();
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [
+        isConfirmedCancellationModalOpen,
+        confirmedCancelForm.processing,
+    ]);
 
     useEffect(() => {
         if (!selectedRefundBooking || !refundDecision) {
@@ -314,6 +368,45 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                     setIsCancellationModalOpen(false);
                     setSelectedBooking(null);
                     cancelForm.reset();
+                },
+            },
+        );
+    }
+
+    function openConfirmedCancellationModal(booking) {
+        confirmedCancelForm.reset();
+        confirmedCancelForm.clearErrors();
+        setSelectedConfirmedBooking(booking);
+        setIsConfirmedCancellationModalOpen(true);
+    }
+
+    function closeConfirmedCancellationModal() {
+        if (confirmedCancelForm.processing) {
+            return;
+        }
+
+        setIsConfirmedCancellationModalOpen(false);
+        setSelectedConfirmedBooking(null);
+    }
+
+    function submitConfirmedCancellation(event) {
+        event.preventDefault();
+
+        if (!selectedConfirmedBooking) {
+            return;
+        }
+
+        confirmedCancelForm.patch(
+            route(
+                'student.bookings.cancel-confirmed',
+                selectedConfirmedBooking.id,
+            ),
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsConfirmedCancellationModalOpen(false);
+                    setSelectedConfirmedBooking(null);
+                    confirmedCancelForm.reset();
                 },
             },
         );
@@ -697,6 +790,23 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                         </div>
                                     )}
 
+                                    {booking.status === 'dikonfirmasi' &&
+                                        isScheduleUpcoming(booking) && (
+                                            <div className="mt-4">
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        openConfirmedCancellationModal(
+                                                            booking,
+                                                        )
+                                                    }
+                                                    className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#C23B46] bg-white px-4 py-2 text-sm font-bold text-[#A9343D] transition-colors hover:bg-[#FBECEE] focus:outline-none focus:ring-2 focus:ring-[#C23B46] focus:ring-offset-2"
+                                                >
+                                                    Batalkan Sesi
+                                                </button>
+                                            </div>
+                                        )}
+
                                     {booking.status === 'diajukan' && (
                                         <div className="mt-4">
                                             {isScheduleOverdue(booking) && (
@@ -848,6 +958,203 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                     </section>
                 </div>
             )}
+
+            {isConfirmedCancellationModalOpen &&
+                selectedConfirmedBooking && (
+                    <div
+                        className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#1D2B25]/50 p-4"
+                        onMouseDown={(event) => {
+                            if (
+                                event.target === event.currentTarget &&
+                                !confirmedCancelForm.processing
+                            ) {
+                                closeConfirmedCancellationModal();
+                            }
+                        }}
+                    >
+                        <section
+                            role="dialog"
+                            aria-modal="true"
+                            aria-labelledby="cancel-confirmed-booking-heading"
+                            className="w-full max-w-lg rounded-xl border border-[#E8E5DD] bg-white p-5 shadow-xl sm:p-6"
+                        >
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <h2
+                                        id="cancel-confirmed-booking-heading"
+                                        className="text-lg font-bold text-[#34443D]"
+                                    >
+                                        Batalkan Sesi?
+                                    </h2>
+                                    <p className="mt-1 text-sm leading-6 text-[#69766F]">
+                                        Anda akan membatalkan sesi bersama{' '}
+                                        {selectedConfirmedBooking.mentor?.name ??
+                                            'Mentor'}{' '}
+                                        pada{' '}
+                                        {formatBookingDateTime(
+                                            selectedConfirmedBooking.schedule_time,
+                                        )}
+                                        , pukul{' '}
+                                        {formatBookingTimeRange(
+                                            selectedConfirmedBooking,
+                                        )}
+                                        .
+                                    </p>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={closeConfirmedCancellationModal}
+                                    disabled={confirmedCancelForm.processing}
+                                    aria-label="Tutup dialog pembatalan sesi"
+                                    className="rounded-md p-1 text-[#78827B] hover:bg-[#F7F5F0] hover:text-[#34443D] focus:outline-none focus:ring-2 focus:ring-[#6594B1] disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    <svg
+                                        aria-hidden="true"
+                                        className="h-5 w-5"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                    >
+                                        <path d="m6 6 12 12M18 6 6 18" />
+                                    </svg>
+                                </button>
+                            </div>
+
+                            <form
+                                onSubmit={submitConfirmedCancellation}
+                                className="mt-5"
+                            >
+                                <label
+                                    htmlFor="confirmed_cancellation_reason"
+                                    className="block text-sm font-semibold text-[#34443D]"
+                                >
+                                    Alasan Pembatalan
+                                </label>
+                                <textarea
+                                    ref={confirmedCancellationReasonRef}
+                                    id="confirmed_cancellation_reason"
+                                    name="cancellation_reason"
+                                    rows="4"
+                                    required
+                                    maxLength={500}
+                                    value={
+                                        confirmedCancelForm.data
+                                            .cancellation_reason
+                                    }
+                                    onChange={(event) =>
+                                        confirmedCancelForm.setData(
+                                            'cancellation_reason',
+                                            event.target.value,
+                                        )
+                                    }
+                                    className="mt-2 block w-full rounded-lg border border-[#D8D5CC] bg-white px-4 py-3 text-sm leading-6 text-[#34443D] placeholder:text-[#9AA19C] focus:border-[#6594B1] focus:outline-none focus:ring-2 focus:ring-[#6594B1]/30"
+                                    placeholder="Tuliskan alasan pembatalan sesi..."
+                                />
+                                <p className="mt-1 text-right text-xs text-[#69766F]">
+                                    {
+                                        confirmedCancelForm.data
+                                            .cancellation_reason.length
+                                    }
+                                    /500
+                                </p>
+                                {confirmedCancelForm.errors
+                                    .cancellation_reason && (
+                                    <p className="mt-2 text-sm font-medium text-[#A34F45]">
+                                        {
+                                            confirmedCancelForm.errors
+                                                .cancellation_reason
+                                        }
+                                    </p>
+                                )}
+
+                                {selectedConfirmedBooking.is_free_session ===
+                                false ? (
+                                    <div className="mt-3 rounded-lg bg-[#FBECEE] px-4 py-3 text-xs leading-5 text-[#C23B46]">
+                                        <p>
+                                            DP yang sudah Anda bayarkan tidak
+                                            akan dikembalikan jika Anda
+                                            membatalkan sesi yang sudah
+                                            dikonfirmasi.
+                                        </p>
+                                        <div className="mt-3">
+                                            <label
+                                                htmlFor="acknowledge_dp_forfeit"
+                                                className="flex items-start gap-2 font-semibold"
+                                            >
+                                                <input
+                                                    id="acknowledge_dp_forfeit"
+                                                    name="acknowledge_dp_forfeit"
+                                                    type="checkbox"
+                                                    checked={
+                                                        confirmedCancelForm.data
+                                                            .acknowledge_dp_forfeit
+                                                    }
+                                                    onChange={(event) => {
+                                                        confirmedCancelForm.setData(
+                                                            'acknowledge_dp_forfeit',
+                                                            event.target.checked,
+                                                        );
+                                                        confirmedCancelForm.clearErrors(
+                                                            'acknowledge_dp_forfeit',
+                                                        );
+                                                    }}
+                                                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-[#C23B46] text-[#C23B46] focus:ring-[#C23B46]"
+                                                />
+                                                Saya mengerti DP tidak
+                                                dikembalikan
+                                            </label>
+                                            {confirmedCancelForm.errors
+                                                .acknowledge_dp_forfeit && (
+                                                <p
+                                                    role="alert"
+                                                    className="mt-2 font-medium"
+                                                >
+                                                    {
+                                                        confirmedCancelForm
+                                                            .errors
+                                                            .acknowledge_dp_forfeit
+                                                    }
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="mt-3 rounded-lg bg-[#E7EEF1] px-4 py-3 text-xs leading-5 text-[#527D98]">
+                                        Sesi ini gratis, tidak ada DP yang
+                                        hangus.
+                                    </p>
+                                )}
+
+                                <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                                    <button
+                                        type="button"
+                                        onClick={closeConfirmedCancellationModal}
+                                        disabled={confirmedCancelForm.processing}
+                                        className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#D8D5CC] bg-white px-4 py-2 text-sm font-semibold text-[#4F5C55] transition-colors hover:bg-[#F7F5F0] focus:outline-none focus:ring-2 focus:ring-[#6594B1] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        Kembali
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={
+                                            confirmedCancelForm.processing ||
+                                            (selectedConfirmedBooking.is_free_session ===
+                                                false &&
+                                                !confirmedCancelForm.data
+                                                    .acknowledge_dp_forfeit)
+                                        }
+                                        className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#C23B46] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[#A9343D] focus:outline-none focus:ring-2 focus:ring-[#C23B46] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                                    >
+                                        {confirmedCancelForm.processing
+                                            ? 'Membatalkan...'
+                                            : 'Ya, Batalkan Sesi'}
+                                    </button>
+                                </div>
+                            </form>
+                        </section>
+                    </div>
+                )}
 
             {selectedRefundBooking && refundDecision && (
                 <div

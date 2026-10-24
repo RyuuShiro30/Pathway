@@ -81,6 +81,7 @@ export default function Dashboard({
     bookingRequests = [],
     refundRequests = [],
     reportedRefundRequests = [],
+    studentCancelledSessions = [],
 }) {
     const { auth, flash } = usePage().props;
     const safeBookingRequests = Array.isArray(bookingRequests)
@@ -91,6 +92,9 @@ export default function Dashboard({
         : [];
     const safeReportedRefundRequests = Array.isArray(reportedRefundRequests)
         ? reportedRefundRequests
+        : [];
+    const safeStudentCancelledSessions = Array.isArray(studentCancelledSessions)
+        ? studentCancelledSessions
         : [];
     const availabilitySchedule = Array.isArray(
         mentorProfile?.availability_schedule,
@@ -705,6 +709,66 @@ export default function Dashboard({
                                         Student melaporkan belum menerima
                                         transfer. Belum ada tindakan yang
                                         tersedia di aplikasi untuk laporan ini.
+                                    </p>
+                                </article>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                {safeStudentCancelledSessions.length > 0 && (
+                    <section aria-labelledby="student-cancelled-sessions-heading">
+                        <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+                            <div>
+                                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A938D]">
+                                    7 hari terakhir
+                                </p>
+                                <h2
+                                    id="student-cancelled-sessions-heading"
+                                    className="mt-1 text-xl font-bold text-[#34443D]"
+                                >
+                                    Dibatalkan Student
+                                </h2>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            {safeStudentCancelledSessions.map((session) => (
+                                <article
+                                    key={session.id}
+                                    className="rounded-xl border border-[#E8E5DD] bg-white p-5 shadow-[0_3px_14px_rgba(52,68,61,0.04)] sm:p-6"
+                                >
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <h3 className="text-base font-bold text-[#34443D]">
+                                            {session.student?.name ?? 'Student'}
+                                        </h3>
+                                        <span className="inline-flex items-center rounded-full bg-[#F1E9E7] px-3 py-1 text-xs font-bold text-[#8E5D54]">
+                                            Dibatalkan Student
+                                        </span>
+                                    </div>
+
+                                    <div className="mt-4 grid gap-3 text-sm text-[#69766F] sm:grid-cols-2">
+                                        <p>
+                                            <span className="font-semibold text-[#34443D]">
+                                                Jadwal Sesi:{' '}
+                                            </span>
+                                            {formatSessionDateTime(
+                                                session.schedule_time,
+                                            )}
+                                        </p>
+                                        <p>
+                                            <span className="font-semibold text-[#34443D]">
+                                                Alasan:{' '}
+                                            </span>
+                                            {session.cancellation_reason ||
+                                                'Tidak ada alasan yang dicatat.'}
+                                        </p>
+                                    </div>
+
+                                    <p className="mt-4 text-sm leading-6 text-[#69766F]">
+                                        {session.is_free_session === false
+                                            ? 'DP hangus dan tetap menjadi hak Anda. Slot kembali kosong.'
+                                            : 'Slot kembali kosong.'}
                                     </p>
                                 </article>
                             ))}

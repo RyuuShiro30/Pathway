@@ -142,6 +142,46 @@ class MentoringSessionController extends Controller
             ->with('success', 'Pengajuan berhasil dibatalkan.');
     }
 
+    public function cancelConfirmedBooking(Request $request, int $id): RedirectResponse
+    {
+        $reason = $request->input('cancellation_reason');
+        $request->merge([
+            'cancellation_reason' => is_string($reason) ? trim($reason) : $reason,
+        ]);
+
+        $validated = $request->validate([
+            'cancellation_reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        DB::transaction(function () use ($request, $id, $validated): void {
+            $session = MentoringSession::query()
+                ->where('student_id', Auth::id())
+                ->whereKey($id)
+                ->where('status', 'dikonfirmasi')
+                ->where('schedule_time', '>', Carbon::now())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (
+                ! $session->is_free_session
+                && ! in_array($request->input('acknowledge_dp_forfeit'), [true, 'true', 'accepted', 'yes', 'on', 1, '1'], true)
+            ) {
+                throw ValidationException::withMessages([
+                    'acknowledge_dp_forfeit' => 'Anda harus menyetujui bahwa DP tidak dikembalikan.',
+                ]);
+            }
+
+            $session->update([
+                'status' => 'dibatalkan',
+                'cancelled_by' => 'mentee',
+                'cancellation_reason' => $validated['cancellation_reason'],
+            ]);
+        });
+
+        return redirect()->route('student.bookings.index')
+            ->with('success', 'Sesi berhasil dibatalkan.');
+    }
+
     public function confirmRefund(Request $request, int $id): RedirectResponse
     {
         $validated = $request->validate([
