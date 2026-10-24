@@ -47,6 +47,8 @@ class MentoringSessionController extends Controller
                 'price_snapshot',
                 'payment_dp_status',
                 'refund_status',
+                'refund_proof',
+                'refund_proof_uploaded_at',
                 'cancelled_by',
                 'discord_link',
             ])
@@ -54,6 +56,8 @@ class MentoringSessionController extends Controller
             ->limit(100)
             ->get()
             ->map(static function (MentoringSession $session): array {
+                $isAwaitingRefundConfirmation = $session->refund_status === 'menunggu_konfirmasi';
+
                 return [
                     'id' => $session->id,
                     'status' => $session->status,
@@ -69,6 +73,12 @@ class MentoringSessionController extends Controller
                     'price_snapshot' => $session->price_snapshot,
                     'payment_dp_status' => $session->payment_dp_status,
                     'refund_status' => $session->refund_status,
+                    'refund_proof_path' => $isAwaitingRefundConfirmation
+                        ? $session->refund_proof
+                        : null,
+                    'refund_proof_uploaded_at' => $isAwaitingRefundConfirmation
+                        ? $session->refund_proof_uploaded_at?->copy()->setTimezone('UTC')->toISOString()
+                        : null,
                     'cancelled_by' => $session->cancelled_by,
                     'mentor' => [
                         'id' => $session->mentor->id,
@@ -130,6 +140,35 @@ class MentoringSessionController extends Controller
 
         return redirect()->route('student.bookings.index')
             ->with('success', 'Pengajuan berhasil dibatalkan.');
+    }
+
+    public function confirmRefund(Request $request, int $id): RedirectResponse
+    {
+        $validated = $request->validate([
+            'decision' => ['required', 'string', 'in:sudah_terima,belum_terima'],
+        ]);
+
+        $newRefundStatus = $validated['decision'] === 'sudah_terima' ? 'selesai' : 'dilaporkan';
+
+        DB::transaction(function () use ($id, $newRefundStatus): void {
+            $session = MentoringSession::query()
+                ->where('student_id', Auth::id())
+                ->whereKey($id)
+                ->where('refund_status', 'menunggu_konfirmasi')
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $session->update([
+                'refund_status' => $newRefundStatus,
+            ]);
+        });
+
+        $message = $validated['decision'] === 'sudah_terima'
+            ? 'Terima kasih, refund Anda sudah dikonfirmasi.'
+            : 'Laporan Anda sudah dikirim.';
+
+        return redirect()->route('student.bookings.index')
+            ->with('success', $message);
     }
 
     public function schedule(User $mentor): InertiaResponse

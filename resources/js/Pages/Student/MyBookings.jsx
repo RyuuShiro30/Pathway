@@ -1,4 +1,4 @@
-import { Head, useForm, usePage } from '@inertiajs/react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 const dateFormatter = new Intl.DateTimeFormat('id-ID', {
@@ -93,6 +93,18 @@ function getStatusLabel(booking) {
         return 'Menunggu Refund';
     }
 
+    if (booking.status === 'dibatalkan') {
+        const refundLabels = {
+            menunggu_konfirmasi: 'Menunggu Konfirmasi Anda',
+            selesai: 'Refund Selesai',
+            dilaporkan: 'Dilaporkan Belum Diterima',
+        };
+
+        if (refundLabels[booking.refund_status]) {
+            return refundLabels[booking.refund_status];
+        }
+    }
+
     const labels = {
         diajukan: 'Diajukan',
         dikonfirmasi: 'Dikonfirmasi',
@@ -125,6 +137,25 @@ function formatBookingDateTime(value) {
     const date = new Date(value);
 
     return Number.isNaN(date.getTime()) ? 'Waktu tidak tersedia' : dateFormatter.format(date);
+}
+
+function getPublicStorageUrl(path) {
+    if (!path) {
+        return null;
+    }
+
+    const value = String(path);
+
+    if (/^https?:\/\//i.test(value)) {
+        return value;
+    }
+
+    return `/storage/${value
+        .replace(/^\/+/, '')
+        .replace(/^storage\//, '')
+        .split('/')
+        .map((segment) => encodeURIComponent(segment))
+        .join('/')}`;
 }
 
 function formatBookingTimeRange(booking) {
@@ -165,9 +196,14 @@ export default function MyBookings({ bookings = [], stats = {} }) {
     const [selectedStatus, setSelectedStatus] = useState('semua');
     const [isSuccessDismissed, setIsSuccessDismissed] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState(null);
+    const [selectedRefundBooking, setSelectedRefundBooking] = useState(null);
+    const [refundDecision, setRefundDecision] = useState(null);
+    const [isRefundSubmitting, setIsRefundSubmitting] = useState(false);
+    const [refundDecisionError, setRefundDecisionError] = useState('');
     const [isCancellationModalOpen, setIsCancellationModalOpen] =
         useState(false);
     const cancellationReasonRef = useRef(null);
+    const refundBackButtonRef = useRef(null);
     const cancelForm = useForm({
         cancellation_reason: '',
     });
@@ -221,6 +257,32 @@ export default function MyBookings({ bookings = [], stats = {} }) {
         };
     }, [isCancellationModalOpen, cancelForm.processing]);
 
+    useEffect(() => {
+        if (!selectedRefundBooking || !refundDecision) {
+            return;
+        }
+
+        refundBackButtonRef.current?.focus();
+    }, [selectedRefundBooking, refundDecision]);
+
+    useEffect(() => {
+        if (!selectedRefundBooking || !refundDecision) {
+            return;
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === 'Escape' && !isRefundSubmitting) {
+                closeRefundConfirmation();
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [selectedRefundBooking, refundDecision, isRefundSubmitting]);
+
     function openCancellationModal(booking) {
         cancelForm.reset();
         cancelForm.clearErrors();
@@ -252,6 +314,56 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                     setIsCancellationModalOpen(false);
                     setSelectedBooking(null);
                     cancelForm.reset();
+                },
+            },
+        );
+    }
+
+    function openRefundConfirmation(booking, decision) {
+        setSelectedRefundBooking(booking);
+        setRefundDecision(decision);
+        setRefundDecisionError('');
+    }
+
+    function closeRefundConfirmation() {
+        if (isRefundSubmitting) {
+            return;
+        }
+
+        setSelectedRefundBooking(null);
+        setRefundDecision(null);
+        setRefundDecisionError('');
+    }
+
+    function submitRefundConfirmation() {
+        if (
+            !selectedRefundBooking ||
+            !refundDecision ||
+            isRefundSubmitting
+        ) {
+            return;
+        }
+
+        setRefundDecisionError('');
+        router.patch(
+            route(
+                'student.bookings.refund.confirm',
+                selectedRefundBooking.id,
+            ),
+            { decision: refundDecision },
+            {
+                preserveScroll: true,
+                onStart: () => setIsRefundSubmitting(true),
+                onFinish: () => setIsRefundSubmitting(false),
+                onSuccess: () => {
+                    setSelectedRefundBooking(null);
+                    setRefundDecision(null);
+                    setRefundDecisionError('');
+                },
+                onError: (errors) => {
+                    setRefundDecisionError(
+                        errors.decision ?? 'Terjadi kesalahan, coba lagi.',
+                    );
                 },
             },
         );
@@ -406,6 +518,13 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                             ].includes(booking.status)
                                 ? getSafeDiscordUrl(booking.discord_link)
                                 : null;
+                            const refundProofUrl =
+                                booking.status === 'dibatalkan' &&
+                                booking.refund_status === 'menunggu_konfirmasi'
+                                    ? getPublicStorageUrl(
+                                          booking.refund_proof_path,
+                                      )
+                                    : null;
 
                             return (
                                 <article
@@ -447,6 +566,21 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                                 className={`inline-flex rounded-full px-3 py-1.5 text-xs font-semibold ${
                                                     isScheduleOverdue(booking)
                                                         ? 'bg-[#FCE8C8] text-[#754C24]'
+                                                        : booking.status ===
+                                                                'dibatalkan' &&
+                                                            booking.refund_status ===
+                                                                'menunggu_konfirmasi'
+                                                          ? 'bg-[#FCE8C8] text-[#754C24]'
+                                                          : booking.status ===
+                                                                  'dibatalkan' &&
+                                                              booking.refund_status ===
+                                                                  'selesai'
+                                                            ? 'bg-[#E8F2E8] text-[#477E50]'
+                                                            : booking.status ===
+                                                                    'dibatalkan' &&
+                                                                booking.refund_status ===
+                                                                    'dilaporkan'
+                                                              ? 'bg-[#FBECEE] text-[#C23B46]'
                                                         : statusStyles[
                                                               booking.status
                                                           ] ??
@@ -480,6 +614,74 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                             </p>
                                         </div>
                                     </div>
+
+                                    {booking.status === 'dibatalkan' &&
+                                        booking.refund_status ===
+                                            'menunggu_konfirmasi' && (
+                                            <div className="mt-4 space-y-3 rounded-xl bg-[#F3EFDF] px-4 py-4 text-sm leading-6 text-[#78663A]">
+                                                <p>
+                                                    Mentor sudah mengunggah
+                                                    bukti transfer refund. Cek
+                                                    rekening Anda, lalu
+                                                    konfirmasi.
+                                                </p>
+                                                {refundProofUrl && (
+                                                    <a
+                                                        href={refundProofUrl}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex font-bold text-[#6594B1] underline decoration-2 underline-offset-2 hover:text-[#527D98] focus:outline-none focus:ring-2 focus:ring-[#6594B1] focus:ring-offset-2"
+                                                    >
+                                                        Lihat Bukti Transfer
+                                                    </a>
+                                                )}
+                                                {booking.refund_proof_uploaded_at && (
+                                                    <p className="text-xs">
+                                                        Diunggah pada{' '}
+                                                        {formatBookingDateTime(
+                                                            booking.refund_proof_uploaded_at,
+                                                        )}
+                                                    </p>
+                                                )}
+                                                <div className="flex flex-wrap gap-3 pt-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            openRefundConfirmation(
+                                                                booking,
+                                                                'sudah_terima',
+                                                            )
+                                                        }
+                                                        disabled={isRefundSubmitting}
+                                                        className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#3E4C3F] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[#34443D] focus:outline-none focus:ring-2 focus:ring-[#3E4C3F] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                                                    >
+                                                        Sudah Terima
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            openRefundConfirmation(
+                                                                booking,
+                                                                'belum_terima',
+                                                            )
+                                                        }
+                                                        disabled={isRefundSubmitting}
+                                                        className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#C23B46] bg-white px-4 py-2 text-sm font-bold text-[#C23B46] transition-colors hover:bg-[#FBECEE] focus:outline-none focus:ring-2 focus:ring-[#C23B46] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                                                    >
+                                                        Belum Terima
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                    {booking.status === 'dibatalkan' &&
+                                        booking.refund_status ===
+                                            'dilaporkan' && (
+                                            <p className="mt-4 rounded-lg bg-[#FBECEE] px-4 py-3 text-xs leading-5 text-[#C23B46]">
+                                                Anda melaporkan belum menerima
+                                                refund. Laporan sudah tercatat.
+                                            </p>
+                                        )}
 
                                     {discordUrl && (
                                         <div className="mt-4">
@@ -643,6 +845,76 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                 </button>
                             </div>
                         </form>
+                    </section>
+                </div>
+            )}
+
+            {selectedRefundBooking && refundDecision && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#1D2B25]/50 p-4"
+                    onMouseDown={(event) => {
+                        if (
+                            event.target === event.currentTarget &&
+                            !isRefundSubmitting
+                        ) {
+                            closeRefundConfirmation();
+                        }
+                    }}
+                >
+                    <section
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="refund-confirmation-heading"
+                        className="w-full max-w-lg rounded-xl border border-[#E8E5DD] bg-white p-5 shadow-xl sm:p-6"
+                    >
+                        <h2
+                            id="refund-confirmation-heading"
+                            className="text-lg font-bold text-[#34443D]"
+                        >
+                            {refundDecision === 'sudah_terima'
+                                ? 'Konfirmasi Refund Sudah Diterima?'
+                                : 'Laporkan Refund Belum Diterima?'}
+                        </h2>
+                        <p className="mt-2 text-sm leading-6 text-[#69766F]">
+                            {refundDecision === 'sudah_terima'
+                                ? 'Pastikan uang refund sudah masuk ke rekening Anda. Pilihan ini tidak dapat diubah.'
+                                : 'Laporan akan dikirim dan tidak dapat diubah. Pastikan Anda sudah mengecek rekening.'}
+                        </p>
+                        {refundDecisionError && (
+                            <p
+                                role="alert"
+                                className="mt-3 rounded-lg bg-[#FBECEE] px-4 py-3 text-sm font-medium text-[#C23B46]"
+                            >
+                                {refundDecisionError}
+                            </p>
+                        )}
+                        <div className="mt-5 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                            <button
+                                ref={refundBackButtonRef}
+                                type="button"
+                                onClick={closeRefundConfirmation}
+                                disabled={isRefundSubmitting}
+                                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#D8D5CC] bg-white px-4 py-2 text-sm font-semibold text-[#4F5C55] transition-colors hover:bg-[#F7F5F0] focus:outline-none focus:ring-2 focus:ring-[#6594B1] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                Kembali
+                            </button>
+                            <button
+                                type="button"
+                                onClick={submitRefundConfirmation}
+                                disabled={isRefundSubmitting}
+                                className={`inline-flex min-h-10 items-center justify-center rounded-lg px-4 py-2 text-sm font-bold text-white transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
+                                    refundDecision === 'sudah_terima'
+                                        ? 'bg-[#3E4C3F] hover:bg-[#34443D] focus:ring-[#3E4C3F]'
+                                        : 'bg-[#C23B46] hover:bg-[#A9343D] focus:ring-[#C23B46]'
+                                }`}
+                            >
+                                {isRefundSubmitting
+                                    ? 'Mengirim...'
+                                    : refundDecision === 'sudah_terima'
+                                      ? 'Ya, Sudah Terima'
+                                      : 'Ya, Laporkan'}
+                            </button>
+                        </div>
                     </section>
                 </div>
             )}
