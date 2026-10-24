@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\MentoringSession;
 use App\Models\MentorProfile;
+use App\Models\NoShowReport;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -36,6 +37,7 @@ class MentoringSessionController extends Controller
                 'mentor:id,name',
                 'mentor.mentorProfile:user_id,expertise',
             ])
+            ->with('noShowReport')
             ->select([
                 'id',
                 'mentor_id',
@@ -50,6 +52,7 @@ class MentoringSessionController extends Controller
                 'refund_proof',
                 'refund_proof_uploaded_at',
                 'cancelled_by',
+                'cancellation_reason',
                 'discord_link',
             ])
             ->orderByDesc('schedule_time')
@@ -80,6 +83,11 @@ class MentoringSessionController extends Controller
                         ? $session->refund_proof_uploaded_at?->copy()->setTimezone('UTC')->toISOString()
                         : null,
                     'cancelled_by' => $session->cancelled_by,
+                    'cancellation_reason' => $session->cancelled_by === 'sistem'
+                        ? $session->cancellation_reason
+                        : null,
+                    'can_report_no_show' => $session->canReportNoShow(),
+                    'no_show_report' => $session->noShowReportPayloadFor((int) Auth::id()),
                     'mentor' => [
                         'id' => $session->mentor->id,
                         'name' => $session->mentor->name,
@@ -161,7 +169,11 @@ class MentoringSessionController extends Controller
                 ->where('schedule_time', '>', Carbon::now())
                 ->lockForUpdate()
                 ->firstOrFail();
-
+            if ($this->hasActiveNoShowReport($session->id)) {
+                throw ValidationException::withMessages([
+                    'cancellation_reason' => 'Sesi ini sedang memiliki laporan no-show, jadi tidak bisa dibatalkan.',
+                ]);
+            }
             if (
                 ! $session->is_free_session
                 && ! in_array($request->input('acknowledge_dp_forfeit'), [true, 'true', 'accepted', 'yes', 'on', 1, '1'], true)
@@ -746,8 +758,16 @@ class MentoringSessionController extends Controller
             ->whereIn('status', ['dikonfirmasi', 'berlangsung', 'selesai'])
             ->findOrFail($id);
 
+        $canReportNoShow = $session->canReportNoShow();
+        $noShowReport = $session->noShowReportPayloadFor((int) Auth::id());
+
+        // Lepas relasi mentah supaya path screenshot tidak ikut terkirim ke browser.
+        $session->unsetRelation('noShowReport');
+
         return Inertia::render('Mentor/SessionTracking', [
             'session' => $session,
+            'canReportNoShow' => $canReportNoShow,
+            'noShowReport' => $noShowReport,
         ]);
     }
 
@@ -767,14 +787,23 @@ class MentoringSessionController extends Controller
     // PATCH - mentor klik "Mulai Sesi"
     public function startSession($id)
     {
-        $session = MentoringSession::where('mentor_id', Auth::id())
-            ->where('id', $id)
-            ->where('status', 'dikonfirmasi')
-            ->firstOrFail();
+        return DB::transaction(function () use ($id) {
+            $session = MentoringSession::where('mentor_id', Auth::id())
+                ->where('id', $id)
+                ->where('status', 'dikonfirmasi')
+                ->lockForUpdate()
+                ->firstOrFail();
 
-        $session->update(['status' => 'berlangsung']);
+            if ($this->hasActiveNoShowReport($session->id)) {
+                return redirect()->back()->withErrors([
+                    'message' => 'Sesi ini sedang memiliki laporan no-show, jadi tidak bisa dimulai.',
+                ]);
+            }
 
-        return redirect()->back()->with('success', 'Sesi dimulai');
+            $session->update(['status' => 'berlangsung']);
+
+            return redirect()->back()->with('success', 'Sesi dimulai');
+        });
     }
 
     // PATCH - mentor submit bukti mentoring dan selesaikan sesi
@@ -814,7 +843,11 @@ class MentoringSessionController extends Controller
                 ->where('status', 'dikonfirmasi')
                 ->lockForUpdate()
                 ->firstOrFail();
-
+            if ($this->hasActiveNoShowReport($session->id)) {
+                throw ValidationException::withMessages([
+                    'cancellation_reason' => 'Sesi ini sedang memiliki laporan no-show, jadi tidak bisa dibatalkan.',
+                ]);
+            }
             $cancellation = [
                 'status' => 'dibatalkan',
                 'cancelled_by' => 'mentor',
@@ -853,5 +886,13 @@ class MentoringSessionController extends Controller
         ]);
 
         return redirect()->route('mentor.dashboard')->with('success', 'Bukti refund berhasil diupload, menunggu konfirmasi mentee');
+    }
+
+    private function hasActiveNoShowReport(int $sessionId): bool
+    {
+        return NoShowReport::query()
+            ->where('session_id', $sessionId)
+            ->whereIn('status', ['menunggu_respons', 'disanggah'])
+            ->exists();
     }
 }

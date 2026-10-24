@@ -76,7 +76,22 @@ function isScheduleOverdue(booking) {
         scheduleTime.getTime() < Date.now()
     );
 }
+function formatNoShowDeadline(value) {
+    const date = new Date(value);
 
+    if (Number.isNaN(date.getTime())) {
+        return 'batas waktu tidak tersedia';
+    }
+
+    return `${new Intl.DateTimeFormat('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+        timeZone: 'Asia/Jakarta',
+    }).format(date)} WIB`;
+}
 function isScheduleUpcoming(booking) {
     if (!booking.schedule_time) {
         return false;
@@ -228,6 +243,16 @@ export default function MyBookings({ bookings = [], stats = {} }) {
     const confirmedCancelForm = useForm({
         cancellation_reason: '',
         acknowledge_dp_forfeit: false,
+    });
+        const [noShowReportBooking, setNoShowReportBooking] = useState(null);
+    const [noShowRespondBooking, setNoShowRespondBooking] = useState(null);
+    const noShowReportForm = useForm({
+        evidence: null,
+        reporter_note: '',
+    });
+    const noShowRespondForm = useForm({
+        response_note: '',
+        response_evidence: null,
     });
     const successMessage =
         typeof flash?.success === 'string' ? flash.success : '';
@@ -411,7 +436,76 @@ export default function MyBookings({ bookings = [], stats = {} }) {
             },
         );
     }
+    function openNoShowReportModal(booking) {
+        noShowReportForm.reset();
+        noShowReportForm.clearErrors();
+        setNoShowReportBooking(booking);
+    }
 
+    function closeNoShowReportModal() {
+        if (noShowReportForm.processing) {
+            return;
+        }
+
+        setNoShowReportBooking(null);
+    }
+
+    function submitNoShowReport(event) {
+        event.preventDefault();
+
+        if (!noShowReportBooking) {
+            return;
+        }
+
+        noShowReportForm.post(
+            route('no-show.store', noShowReportBooking.id),
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    setNoShowReportBooking(null);
+                    noShowReportForm.reset();
+                },
+            },
+        );
+    }
+
+    function openNoShowRespondModal(booking) {
+        noShowRespondForm.reset();
+        noShowRespondForm.clearErrors();
+        setNoShowRespondBooking(booking);
+    }
+
+    function closeNoShowRespondModal() {
+        if (noShowRespondForm.processing) {
+            return;
+        }
+
+        setNoShowRespondBooking(null);
+    }
+
+    function submitNoShowRespond(event) {
+        event.preventDefault();
+
+        if (!noShowRespondBooking?.no_show_report) {
+            return;
+        }
+
+        noShowRespondForm.patch(
+            route(
+                'no-show.respond',
+                noShowRespondBooking.no_show_report.id,
+            ),
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    setNoShowRespondBooking(null);
+                    noShowRespondForm.reset();
+                },
+            },
+        );
+    }
     function openRefundConfirmation(booking, decision) {
         setSelectedRefundBooking(booking);
         setRefundDecision(decision);
@@ -707,7 +801,13 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                             </p>
                                         </div>
                                     </div>
-
+{booking.status === 'dibatalkan' &&
+    booking.cancellation_reason && (
+        <p className="mt-4 rounded-lg bg-[#F1E9E7] px-4 py-3 text-xs leading-5 text-[#8E5D54]">
+            Alasan pembatalan:{' '}
+            {booking.cancellation_reason}
+        </p>
+    )}
                                     {booking.status === 'dibatalkan' &&
                                         booking.refund_status ===
                                             'menunggu_konfirmasi' && (
@@ -806,7 +906,123 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                                 </button>
                                             </div>
                                         )}
+                                    {booking.no_show_report && (
+                                        <div className="mt-4 rounded-lg bg-[#F3EFDF] px-4 py-3 text-sm leading-6 text-[#78663A]">
+                                            <p className="font-bold">
+                                                Laporan No-Show
+                                            </p>
+                                            {booking.no_show_report.status ===
+                                                'menunggu_respons' && (
+                                                <p className="mt-1">
+                                                    {booking.no_show_report
+                                                        .is_reporter
+                                                        ? `Laporan Anda terkirim. Mentor punya waktu sampai ${formatNoShowDeadline(booking.no_show_report.respond_deadline)} untuk menanggapi. Jika tidak ada tanggapan, laporan berlaku.`
+                                                        : `Mentor melaporkan Anda tidak hadir. Tanggapi sebelum ${formatNoShowDeadline(booking.no_show_report.respond_deadline)}, kalau tidak laporan berlaku.`}
+                                                </p>
+                                            )}
+                                            {booking.no_show_report.status ===
+                                                'disanggah' && (
+                                                <p className="mt-1">
+                                                    Laporan disanggah. Menunggu
+                                                    keputusan admin.
+                                                </p>
+                                            )}
+                                            {booking.no_show_report.status ===
+                                                'berlaku' && (
+                                                <p className="mt-1">
+                                                    Laporan berlaku dan sanksi
+                                                    sudah dijalankan.
+                                                </p>
+                                            )}
+                                            {booking.no_show_report
+                                                .reporter_note && (
+                                                <p className="mt-1">
+                                                    Catatan pelapor:{' '}
+                                                    {
+                                                        booking.no_show_report
+                                                            .reporter_note
+                                                    }
+                                                </p>
+                                            )}
+                                            {booking.no_show_report
+                                                .response_note && (
+                                                <p className="mt-1">
+                                                    Sanggahan:{' '}
+                                                    {
+                                                        booking.no_show_report
+                                                            .response_note
+                                                    }
+                                                </p>
+                                            )}
+                                            <div className="mt-2 flex flex-wrap gap-4 font-semibold">
+                                                <a
+                                                    href={route(
+                                                        'no-show.evidence',
+                                                        [
+                                                            booking
+                                                                .no_show_report
+                                                                .id,
+                                                            'report',
+                                                        ],
+                                                    )}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="underline"
+                                                >
+                                                    Lihat bukti laporan
+                                                </a>
+                                                {booking.no_show_report
+                                                    .has_response_evidence && (
+                                                    <a
+                                                        href={route(
+                                                            'no-show.evidence',
+                                                            [
+                                                                booking
+                                                                    .no_show_report
+                                                                    .id,
+                                                                'response',
+                                                            ],
+                                                        )}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="underline"
+                                                    >
+                                                        Lihat bukti sanggahan
+                                                    </a>
+                                                )}
+                                            </div>
+                                            {booking.no_show_report
+                                                .can_respond && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        openNoShowRespondModal(
+                                                            booking,
+                                                        )
+                                                    }
+                                                    className="mt-3 inline-flex min-h-10 items-center justify-center rounded-lg bg-[#6594B1] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[#527D98] focus:outline-none focus:ring-2 focus:ring-[#6594B1] focus:ring-offset-2"
+                                                >
+                                                    Tanggapi Laporan
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
 
+                                    {booking.can_report_no_show && (
+                                        <div className="mt-4">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    openNoShowReportModal(
+                                                        booking,
+                                                    )
+                                                }
+                                                className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#C23B46] bg-white px-4 py-2 text-sm font-bold text-[#A9343D] transition-colors hover:bg-[#FBECEE] focus:outline-none focus:ring-2 focus:ring-[#C23B46] focus:ring-offset-2"
+                                            >
+                                                Laporkan Mentor Tidak Hadir
+                                            </button>
+                                        </div>
+                                    )}
                                     {booking.status === 'diajukan' && (
                                         <div className="mt-4">
                                             {isScheduleOverdue(booking) && (
@@ -1155,7 +1371,271 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                         </section>
                     </div>
                 )}
+            {noShowReportBooking && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#1D2B25]/50 p-4"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget) {
+                            closeNoShowReportModal();
+                        }
+                    }}
+                >
+                    <section
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="no-show-report-heading"
+                        className="w-full max-w-lg rounded-xl border border-[#E8E5DD] bg-white p-5 shadow-xl sm:p-6"
+                    >
+                        <h2
+                            id="no-show-report-heading"
+                            className="text-lg font-bold text-[#34443D]"
+                        >
+                            Laporkan Mentor Tidak Hadir
+                        </h2>
+                        <p className="mt-1 text-sm leading-6 text-[#69766F]">
+                            Sesi bersama{' '}
+                            {noShowReportBooking.mentor?.name ?? 'Mentor'} pada{' '}
+                            {formatBookingDateTime(
+                                noShowReportBooking.schedule_time,
+                            )}
+                            , pukul{' '}
+                            {formatBookingTimeRange(noShowReportBooking)}.
+                        </p>
 
+                        <form
+                            onSubmit={submitNoShowReport}
+                            className="mt-5 space-y-4"
+                        >
+                            <div>
+                                <label
+                                    htmlFor="no_show_evidence"
+                                    className="block text-sm font-semibold text-[#34443D]"
+                                >
+                                    Screenshot Bukti
+                                </label>
+                                <input
+                                    id="no_show_evidence"
+                                    name="evidence"
+                                    type="file"
+                                    accept="image/png,image/jpeg"
+                                    required
+                                    onChange={(event) =>
+                                        noShowReportForm.setData(
+                                            'evidence',
+                                            event.target.files?.[0] ?? null,
+                                        )
+                                    }
+                                    className="mt-2 block w-full rounded-lg border border-[#D8D5CC] bg-white text-sm text-[#4F5C55] file:mr-4 file:border-0 file:bg-[#E7EEF1] file:px-4 file:py-3 file:text-sm file:font-semibold file:text-[#527D98]"
+                                />
+                                <p className="mt-1 text-xs text-[#78827B]">
+                                    Format JPG atau PNG, maksimal 5 MB.
+                                </p>
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="no_show_note"
+                                    className="block text-sm font-semibold text-[#34443D]"
+                                >
+                                    Catatan{' '}
+                                    <span className="font-normal text-[#78827B]">
+                                        (opsional)
+                                    </span>
+                                </label>
+                                <textarea
+                                    id="no_show_note"
+                                    name="reporter_note"
+                                    rows="3"
+                                    maxLength={500}
+                                    value={noShowReportForm.data.reporter_note}
+                                    onChange={(event) =>
+                                        noShowReportForm.setData(
+                                            'reporter_note',
+                                            event.target.value,
+                                        )
+                                    }
+                                    className="mt-2 block w-full rounded-lg border border-[#D8D5CC] bg-white px-4 py-3 text-sm leading-6 text-[#34443D] focus:border-[#6594B1] focus:outline-none focus:ring-2 focus:ring-[#6594B1]/30"
+                                    placeholder="Ceritakan singkat apa yang terjadi..."
+                                />
+                            </div>
+
+                            <p className="rounded-lg bg-[#F3EFDF] px-4 py-3 text-xs leading-5 text-[#78663A]">
+                                Mentor punya 24 jam untuk menanggapi. Jika tidak
+                                ada tanggapan, sesi dibatalkan dan sesi berbayar
+                                masuk proses refund. Jika mentor menyanggah,
+                                admin yang memutuskan.
+                            </p>
+
+                            {[
+                                noShowReportForm.errors.message,
+                                noShowReportForm.errors.evidence,
+                                noShowReportForm.errors.reporter_note,
+                            ]
+                                .filter(Boolean)
+                                .map((message) => (
+                                    <p
+                                        key={message}
+                                        role="alert"
+                                        className="text-sm font-medium text-[#A34F45]"
+                                    >
+                                        {message}
+                                    </p>
+                                ))}
+
+                            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                                <button
+                                    type="button"
+                                    onClick={closeNoShowReportModal}
+                                    disabled={noShowReportForm.processing}
+                                    className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#D8D5CC] bg-white px-4 py-2 text-sm font-semibold text-[#4F5C55] hover:bg-[#F7F5F0] disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    Kembali
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={
+                                        noShowReportForm.processing ||
+                                        !noShowReportForm.data.evidence
+                                    }
+                                    className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#C23B46] px-4 py-2 text-sm font-bold text-white hover:bg-[#A9343D] disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {noShowReportForm.processing
+                                        ? 'Mengirim...'
+                                        : 'Kirim Laporan'}
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+                </div>
+            )}
+
+            {noShowRespondBooking && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#1D2B25]/50 p-4"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget) {
+                            closeNoShowRespondModal();
+                        }
+                    }}
+                >
+                    <section
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="no-show-respond-heading"
+                        className="w-full max-w-lg rounded-xl border border-[#E8E5DD] bg-white p-5 shadow-xl sm:p-6"
+                    >
+                        <h2
+                            id="no-show-respond-heading"
+                            className="text-lg font-bold text-[#34443D]"
+                        >
+                            Tanggapi Laporan No-Show
+                        </h2>
+                        <p className="mt-1 text-sm leading-6 text-[#69766F]">
+                            Jika Anda tidak menanggapi sebelum{' '}
+                            {formatNoShowDeadline(
+                                noShowRespondBooking.no_show_report
+                                    .respond_deadline,
+                            )}
+                            , laporan berlaku: sesi dibatalkan dan DP (untuk
+                            sesi berbayar) hangus.
+                        </p>
+
+                        <form
+                            onSubmit={submitNoShowRespond}
+                            className="mt-5 space-y-4"
+                        >
+                            <div>
+                                <label
+                                    htmlFor="no_show_response_note"
+                                    className="block text-sm font-semibold text-[#34443D]"
+                                >
+                                    Alasan Sanggahan
+                                </label>
+                                <textarea
+                                    id="no_show_response_note"
+                                    name="response_note"
+                                    rows="4"
+                                    required
+                                    maxLength={500}
+                                    value={noShowRespondForm.data.response_note}
+                                    onChange={(event) =>
+                                        noShowRespondForm.setData(
+                                            'response_note',
+                                            event.target.value,
+                                        )
+                                    }
+                                    className="mt-2 block w-full rounded-lg border border-[#D8D5CC] bg-white px-4 py-3 text-sm leading-6 text-[#34443D] focus:border-[#6594B1] focus:outline-none focus:ring-2 focus:ring-[#6594B1]/30"
+                                    placeholder="Jelaskan versi Anda..."
+                                />
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="no_show_response_evidence"
+                                    className="block text-sm font-semibold text-[#34443D]"
+                                >
+                                    Screenshot{' '}
+                                    <span className="font-normal text-[#78827B]">
+                                        (opsional)
+                                    </span>
+                                </label>
+                                <input
+                                    id="no_show_response_evidence"
+                                    name="response_evidence"
+                                    type="file"
+                                    accept="image/png,image/jpeg"
+                                    onChange={(event) =>
+                                        noShowRespondForm.setData(
+                                            'response_evidence',
+                                            event.target.files?.[0] ?? null,
+                                        )
+                                    }
+                                    className="mt-2 block w-full rounded-lg border border-[#D8D5CC] bg-white text-sm text-[#4F5C55] file:mr-4 file:border-0 file:bg-[#E7EEF1] file:px-4 file:py-3 file:text-sm file:font-semibold file:text-[#527D98]"
+                                />
+                            </div>
+
+                            {[
+                                noShowRespondForm.errors.message,
+                                noShowRespondForm.errors.response_note,
+                                noShowRespondForm.errors.response_evidence,
+                            ]
+                                .filter(Boolean)
+                                .map((message) => (
+                                    <p
+                                        key={message}
+                                        role="alert"
+                                        className="text-sm font-medium text-[#A34F45]"
+                                    >
+                                        {message}
+                                    </p>
+                                ))}
+
+                            <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                                <button
+                                    type="button"
+                                    onClick={closeNoShowRespondModal}
+                                    disabled={noShowRespondForm.processing}
+                                    className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#D8D5CC] bg-white px-4 py-2 text-sm font-semibold text-[#4F5C55] hover:bg-[#F7F5F0] disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    Kembali
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={
+                                        noShowRespondForm.processing ||
+                                        !noShowRespondForm.data.response_note.trim()
+                                    }
+                                    className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#6594B1] px-4 py-2 text-sm font-bold text-white hover:bg-[#527D98] disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {noShowRespondForm.processing
+                                        ? 'Mengirim...'
+                                        : 'Kirim Sanggahan'}
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+                </div>
+            )}
             {selectedRefundBooking && refundDecision && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#1D2B25]/50 p-4"

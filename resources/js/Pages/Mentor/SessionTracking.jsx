@@ -45,7 +45,22 @@ function formatSessionDateTime(value) {
         ? 'Waktu tidak tersedia'
         : `${sessionDateTimeFormatter.format(date)} WIB`;
 }
+function formatNoShowDeadline(value) {
+    const date = new Date(value);
 
+    if (Number.isNaN(date.getTime())) {
+        return 'batas waktu tidak tersedia';
+    }
+
+    return `${new Intl.DateTimeFormat('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+        timeZone: 'Asia/Jakarta',
+    }).format(date)} WIB`;
+}
 function getInitials(name) {
     return (
         String(name ?? 'Student')
@@ -95,7 +110,11 @@ function ErrorMessages({ messages }) {
     );
 }
 
-export default function SessionTracking({ session }) {
+export default function SessionTracking({
+    session,
+    canReportNoShow = false,
+    noShowReport = null,
+}) {
     const { auth, errors: pageErrors = {}, flash } = usePage().props;
     const [isCancellationModalOpen, setIsCancellationModalOpen] =
         useState(false);
@@ -109,7 +128,18 @@ export default function SessionTracking({ session }) {
     const cancelForm = useForm({
         cancellation_reason: '',
     });
-
+    const [isNoShowReportModalOpen, setIsNoShowReportModalOpen] =
+        useState(false);
+    const [isNoShowRespondModalOpen, setIsNoShowRespondModalOpen] =
+        useState(false);
+    const noShowReportForm = useForm({
+        evidence: null,
+        reporter_note: '',
+    });
+    const noShowRespondForm = useForm({
+        response_note: '',
+        response_evidence: null,
+    });
     const mentorName = auth?.user?.name ?? 'Mentor';
     const mentorInitials = getInitials(mentorName);
     const studentName = session.student?.name ?? 'Student';
@@ -145,7 +175,34 @@ export default function SessionTracking({ session }) {
             },
         );
     }
+    function submitNoShowReport(event) {
+        event.preventDefault();
+        noShowReportForm.post(route('no-show.store', session.id), {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsNoShowReportModalOpen(false);
+                noShowReportForm.reset();
+            },
+        });
+    }
 
+    function submitNoShowRespond(event) {
+        event.preventDefault();
+
+        if (!noShowReport) {
+            return;
+        }
+
+        noShowRespondForm.patch(route('no-show.respond', noShowReport.id), {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsNoShowRespondModalOpen(false);
+                noShowRespondForm.reset();
+            },
+        });
+    }
     function cancelSession(event) {
         event.preventDefault();
         cancelForm.patch(route('mentor.session.cancel', session.id), {
@@ -692,7 +749,333 @@ export default function SessionTracking({ session }) {
                     </aside>
                 </div>
             </main>
+{noShowReport && (
+    <section className="rounded-xl border border-[#E8E5DD] bg-[#F3EFDF] p-5 text-sm leading-6 text-[#78663A] sm:p-6">
+        <h2 className="text-base font-bold">Laporan No-Show</h2>
+        {noShowReport.status === 'menunggu_respons' && (
+            <p className="mt-2">
+                {noShowReport.is_reporter
+                    ? `Laporan Anda terkirim. Student punya waktu sampai ${formatNoShowDeadline(noShowReport.respond_deadline)} untuk menanggapi. Jika tidak ada tanggapan, laporan berlaku.`
+                    : `Student melaporkan Anda tidak hadir. Tanggapi sebelum ${formatNoShowDeadline(noShowReport.respond_deadline)}, kalau tidak laporan berlaku dan sesi dibatalkan.`}
+            </p>
+        )}
+        {noShowReport.status === 'disanggah' && (
+            <p className="mt-2">
+                Laporan disanggah. Menunggu keputusan admin.
+            </p>
+        )}
+        {noShowReport.reporter_note && (
+            <p className="mt-2">
+                Catatan pelapor: {noShowReport.reporter_note}
+            </p>
+        )}
+        {noShowReport.response_note && (
+            <p className="mt-2">Sanggahan: {noShowReport.response_note}</p>
+        )}
+        <div className="mt-3 flex flex-wrap gap-4 font-semibold">
+            <a
+                href={route('no-show.evidence', [noShowReport.id, 'report'])}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+            >
+                Lihat bukti laporan
+            </a>
+            {noShowReport.has_response_evidence && (
+                <a
+                    href={route('no-show.evidence', [
+                        noShowReport.id,
+                        'response',
+                    ])}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                >
+                    Lihat bukti sanggahan
+                </a>
+            )}
+        </div>
+        {noShowReport.can_respond && (
+            <button
+                type="button"
+                onClick={() => setIsNoShowRespondModalOpen(true)}
+                className="mt-4 inline-flex min-h-10 items-center justify-center rounded-lg bg-[#6594B1] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[#527D98] focus:outline-none focus:ring-2 focus:ring-[#6594B1] focus:ring-offset-2"
+            >
+                Tanggapi Laporan
+            </button>
+        )}
+    </section>
+)}
 
+{canReportNoShow && (
+    <section className="rounded-xl border border-[#E8E5DD] bg-white p-5 shadow-[0_3px_14px_rgba(52,68,61,0.04)] sm:p-6">
+        <h2 className="text-base font-bold text-[#34443D]">
+            Student Tidak Hadir?
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-[#69766F]">
+            Laporkan dengan screenshot bukti. Student punya 24 jam untuk
+            menanggapi. Jika tidak ada tanggapan, sesi dibatalkan dan DP
+            (untuk sesi berbayar) hangus.
+        </p>
+        <button
+            type="button"
+            onClick={() => {
+                noShowReportForm.reset();
+                noShowReportForm.clearErrors();
+                setIsNoShowReportModalOpen(true);
+            }}
+            className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-[#C23B46] bg-white px-4 py-2.5 text-sm font-bold text-[#A9343D] transition-colors hover:bg-[#FBECEE] focus:outline-none focus:ring-2 focus:ring-[#C23B46] focus:ring-offset-2"
+        >
+            Laporkan Student Tidak Hadir
+        </button>
+    </section>
+)}
+
+{isNoShowReportModalOpen && (
+    <div
+        className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#1D2B25]/50 p-4"
+        onMouseDown={(event) => {
+            if (
+                event.target === event.currentTarget &&
+                !noShowReportForm.processing
+            ) {
+                setIsNoShowReportModalOpen(false);
+            }
+        }}
+    >
+        <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mentor-no-show-report-heading"
+            className="w-full max-w-lg rounded-xl border border-[#E8E5DD] bg-white p-5 shadow-xl sm:p-6"
+        >
+            <h2
+                id="mentor-no-show-report-heading"
+                className="text-lg font-bold text-[#34443D]"
+            >
+                Laporkan Student Tidak Hadir
+            </h2>
+
+            <form onSubmit={submitNoShowReport} className="mt-5 space-y-4">
+                <div>
+                    <label
+                        htmlFor="mentor_no_show_evidence"
+                        className="block text-sm font-semibold text-[#34443D]"
+                    >
+                        Screenshot Bukti
+                    </label>
+                    <input
+                        id="mentor_no_show_evidence"
+                        name="evidence"
+                        type="file"
+                        accept="image/png,image/jpeg"
+                        required
+                        onChange={(event) =>
+                            noShowReportForm.setData(
+                                'evidence',
+                                event.target.files?.[0] ?? null,
+                            )
+                        }
+                        className="mt-2 block w-full rounded-lg border border-[#D8D5CC] bg-white text-sm text-[#4F5C55] file:mr-4 file:border-0 file:bg-[#E7EEF1] file:px-4 file:py-3 file:text-sm file:font-semibold file:text-[#527D98]"
+                    />
+                    <p className="mt-1 text-xs text-[#78827B]">
+                        Format JPG atau PNG, maksimal 5 MB.
+                    </p>
+                </div>
+
+                <div>
+                    <label
+                        htmlFor="mentor_no_show_note"
+                        className="block text-sm font-semibold text-[#34443D]"
+                    >
+                        Catatan{' '}
+                        <span className="font-normal text-[#78827B]">
+                            (opsional)
+                        </span>
+                    </label>
+                    <textarea
+                        id="mentor_no_show_note"
+                        name="reporter_note"
+                        rows="3"
+                        maxLength={500}
+                        value={noShowReportForm.data.reporter_note}
+                        onChange={(event) =>
+                            noShowReportForm.setData(
+                                'reporter_note',
+                                event.target.value,
+                            )
+                        }
+                        className="mt-2 block w-full rounded-lg border border-[#D8D5CC] bg-white px-4 py-3 text-sm leading-6 text-[#34443D] focus:border-[#6594B1] focus:outline-none focus:ring-2 focus:ring-[#6594B1]/30"
+                        placeholder="Ceritakan singkat apa yang terjadi..."
+                    />
+                </div>
+
+                {[
+                    noShowReportForm.errors.message,
+                    noShowReportForm.errors.evidence,
+                    noShowReportForm.errors.reporter_note,
+                ]
+                    .filter(Boolean)
+                    .map((message) => (
+                        <p
+                            key={message}
+                            role="alert"
+                            className="text-sm font-medium text-[#A34F45]"
+                        >
+                            {message}
+                        </p>
+                    ))}
+
+                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <button
+                        type="button"
+                        onClick={() => setIsNoShowReportModalOpen(false)}
+                        disabled={noShowReportForm.processing}
+                        className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#D8D5CC] bg-white px-4 py-2 text-sm font-semibold text-[#4F5C55] hover:bg-[#F7F5F0] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        Kembali
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={
+                            noShowReportForm.processing ||
+                            !noShowReportForm.data.evidence
+                        }
+                        className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#C23B46] px-4 py-2 text-sm font-bold text-white hover:bg-[#A9343D] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {noShowReportForm.processing
+                            ? 'Mengirim...'
+                            : 'Kirim Laporan'}
+                    </button>
+                </div>
+            </form>
+        </section>
+    </div>
+)}
+
+{isNoShowRespondModalOpen && noShowReport && (
+    <div
+        className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#1D2B25]/50 p-4"
+        onMouseDown={(event) => {
+            if (
+                event.target === event.currentTarget &&
+                !noShowRespondForm.processing
+            ) {
+                setIsNoShowRespondModalOpen(false);
+            }
+        }}
+    >
+        <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mentor-no-show-respond-heading"
+            className="w-full max-w-lg rounded-xl border border-[#E8E5DD] bg-white p-5 shadow-xl sm:p-6"
+        >
+            <h2
+                id="mentor-no-show-respond-heading"
+                className="text-lg font-bold text-[#34443D]"
+            >
+                Tanggapi Laporan No-Show
+            </h2>
+            <p className="mt-1 text-sm leading-6 text-[#69766F]">
+                Jika Anda tidak menanggapi sebelum{' '}
+                {formatNoShowDeadline(noShowReport.respond_deadline)}, laporan
+                berlaku: sesi dibatalkan dan sesi berbayar masuk proses refund.
+            </p>
+
+            <form onSubmit={submitNoShowRespond} className="mt-5 space-y-4">
+                <div>
+                    <label
+                        htmlFor="mentor_no_show_response_note"
+                        className="block text-sm font-semibold text-[#34443D]"
+                    >
+                        Alasan Sanggahan
+                    </label>
+                    <textarea
+                        id="mentor_no_show_response_note"
+                        name="response_note"
+                        rows="4"
+                        required
+                        maxLength={500}
+                        value={noShowRespondForm.data.response_note}
+                        onChange={(event) =>
+                            noShowRespondForm.setData(
+                                'response_note',
+                                event.target.value,
+                            )
+                        }
+                        className="mt-2 block w-full rounded-lg border border-[#D8D5CC] bg-white px-4 py-3 text-sm leading-6 text-[#34443D] focus:border-[#6594B1] focus:outline-none focus:ring-2 focus:ring-[#6594B1]/30"
+                        placeholder="Jelaskan versi Anda..."
+                    />
+                </div>
+
+                <div>
+                    <label
+                        htmlFor="mentor_no_show_response_evidence"
+                        className="block text-sm font-semibold text-[#34443D]"
+                    >
+                        Screenshot{' '}
+                        <span className="font-normal text-[#78827B]">
+                            (opsional)
+                        </span>
+                    </label>
+                    <input
+                        id="mentor_no_show_response_evidence"
+                        name="response_evidence"
+                        type="file"
+                        accept="image/png,image/jpeg"
+                        onChange={(event) =>
+                            noShowRespondForm.setData(
+                                'response_evidence',
+                                event.target.files?.[0] ?? null,
+                            )
+                        }
+                        className="mt-2 block w-full rounded-lg border border-[#D8D5CC] bg-white text-sm text-[#4F5C55] file:mr-4 file:border-0 file:bg-[#E7EEF1] file:px-4 file:py-3 file:text-sm file:font-semibold file:text-[#527D98]"
+                    />
+                </div>
+
+                {[
+                    noShowRespondForm.errors.message,
+                    noShowRespondForm.errors.response_note,
+                    noShowRespondForm.errors.response_evidence,
+                ]
+                    .filter(Boolean)
+                    .map((message) => (
+                        <p
+                            key={message}
+                            role="alert"
+                            className="text-sm font-medium text-[#A34F45]"
+                        >
+                            {message}
+                        </p>
+                    ))}
+
+                <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <button
+                        type="button"
+                        onClick={() => setIsNoShowRespondModalOpen(false)}
+                        disabled={noShowRespondForm.processing}
+                        className="inline-flex min-h-10 items-center justify-center rounded-lg border border-[#D8D5CC] bg-white px-4 py-2 text-sm font-semibold text-[#4F5C55] hover:bg-[#F7F5F0] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        Kembali
+                    </button>
+                    <button
+                        type="submit"
+                        disabled={
+                            noShowRespondForm.processing ||
+                            !noShowRespondForm.data.response_note.trim()
+                        }
+                        className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#6594B1] px-4 py-2 text-sm font-bold text-white hover:bg-[#527D98] disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {noShowRespondForm.processing
+                            ? 'Mengirim...'
+                            : 'Kirim Sanggahan'}
+                    </button>
+                </div>
+            </form>
+        </section>
+    </div>
+)}
             {isCancellationModalOpen && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#1D2B25]/50 p-4"

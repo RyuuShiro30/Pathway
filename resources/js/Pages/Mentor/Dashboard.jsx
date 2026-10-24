@@ -82,6 +82,7 @@ export default function Dashboard({
     refundRequests = [],
     reportedRefundRequests = [],
     studentCancelledSessions = [],
+    confirmedSessions = [],
 }) {
     const { auth, flash } = usePage().props;
     const safeBookingRequests = Array.isArray(bookingRequests)
@@ -96,6 +97,9 @@ export default function Dashboard({
     const safeStudentCancelledSessions = Array.isArray(studentCancelledSessions)
         ? studentCancelledSessions
         : [];
+    const safeConfirmedSessions = Array.isArray(confirmedSessions)
+        ? confirmedSessions
+        : [];    
     const availabilitySchedule = Array.isArray(
         mentorProfile?.availability_schedule,
     )
@@ -715,7 +719,89 @@ export default function Dashboard({
                         </div>
                     </section>
                 )}
+                {safeConfirmedSessions.length > 0 && (
+                    <section aria-labelledby="confirmed-sessions-heading">
+                        <div className="mb-4">
+                            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8A938D]">
+                                Siap dijalankan
+                            </p>
+                            <h2
+                                id="confirmed-sessions-heading"
+                                className="mt-1 text-xl font-bold text-[#34443D]"
+                            >
+                                Sesi Dikonfirmasi
+                            </h2>
+                        </div>
 
+                        <div className="space-y-3">
+                            {safeConfirmedSessions.map((session) => (
+                                <article
+                                    key={session.id}
+                                    className="rounded-xl border border-[#E8E5DD] bg-white p-5 shadow-[0_3px_14px_rgba(52,68,61,0.04)] sm:p-6"
+                                >
+                                    <div className="flex flex-wrap items-start justify-between gap-4">
+                                        <div>
+                                            <div className="flex flex-wrap items-center gap-3">
+                                                <h3 className="text-base font-bold text-[#34443D]">
+                                                    {session.student?.name ??
+                                                        'Student'}
+                                                </h3>
+                                                <span
+                                                    className={
+                                                        session.status ===
+                                                        'berlangsung'
+                                                            ? 'inline-flex items-center rounded-full bg-[#E8F2E8] px-3 py-1 text-xs font-bold text-[#477E50]'
+                                                            : 'inline-flex items-center rounded-full bg-[#E7EEF1] px-3 py-1 text-xs font-bold text-[#527D98]'
+                                                    }
+                                                >
+                                                    {session.status ===
+                                                    'berlangsung'
+                                                        ? 'Berlangsung'
+                                                        : 'Dikonfirmasi'}
+                                                </span>
+                                                <span className="inline-flex items-center rounded-full bg-[#F0EFEB] px-3 py-1 text-xs font-bold text-[#737B76]">
+                                                    {session.is_free_session
+                                                        ? 'Gratis'
+                                                        : 'Berbayar'}
+                                                </span>
+                                            </div>
+                                            <p className="mt-3 text-sm text-[#69766F]">
+                                                <span className="font-semibold text-[#34443D]">
+                                                    Jadwal Sesi:{' '}
+                                                </span>
+                                                {formatSessionDateTime(
+                                                    session.schedule_time,
+                                                )}
+                                            </p>
+                                            {session.no_show_report &&
+                                            ['menunggu_respons', 'disanggah'].includes(
+                                                session.no_show_report.status,
+                                            ) && (
+                                                <p className="mt-3 rounded-lg bg-[#F3EFDF] px-3 py-2 text-xs leading-5 text-[#78663A]">
+                                                    {session.no_show_report.status === 'disanggah'
+                                                        ? 'Laporan no-show disanggah. Menunggu keputusan admin.'
+                                                        : session.no_show_report.can_respond
+                                                        ? 'Anda dilaporkan tidak hadir. Tanggapi lewat Kelola Sesi sebelum batas waktu.'
+                                                        : 'Anda melaporkan no-show. Menunggu tanggapan pihak lawan.'}
+                                                </p>
+                                            )}
+                                                                                </div>
+
+                                        <a
+                                            href={route(
+                                                'mentor.session.tracking',
+                                                session.id,
+                                            )}
+                                            className="inline-flex min-h-10 items-center justify-center rounded-lg bg-[#6594B1] px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-[#527D98] focus:outline-none focus:ring-2 focus:ring-[#6594B1] focus:ring-offset-2"
+                                        >
+                                            Kelola Sesi
+                                        </a>
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
+                    </section>
+                )}
                 {safeStudentCancelledSessions.length > 0 && (
                     <section aria-labelledby="student-cancelled-sessions-heading">
                         <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
@@ -763,6 +849,7 @@ export default function Dashboard({
                                             {session.cancellation_reason ||
                                                 'Tidak ada alasan yang dicatat.'}
                                         </p>
+
                                     </div>
 
                                     <p className="mt-4 text-sm leading-6 text-[#69766F]">
