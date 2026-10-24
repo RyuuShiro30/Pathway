@@ -102,6 +102,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/bookings/{id}/cancel', [MentoringSessionController::class, 'cancelBooking'])
         ->name('student.bookings.cancel');
 
+    Route::patch('/bookings/{id}/cancel-confirmed', [MentoringSessionController::class, 'cancelConfirmedBooking'])
+        ->name('student.bookings.cancel-confirmed');
+
     Route::patch('/bookings/{id}/refund-confirmation', [MentoringSessionController::class, 'confirmRefund'])
         ->name('student.bookings.refund.confirm');
 
