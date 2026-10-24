@@ -80,6 +80,7 @@ export default function Dashboard({
     mentorProfile,
     bookingRequests = [],
     refundRequests = [],
+    reportedRefundRequests = [],
 }) {
     const { auth, flash } = usePage().props;
     const safeBookingRequests = Array.isArray(bookingRequests)
@@ -87,6 +88,9 @@ export default function Dashboard({
         : [];
     const safeRefundRequests = Array.isArray(refundRequests)
         ? refundRequests
+        : [];
+    const safeReportedRefundRequests = Array.isArray(reportedRefundRequests)
+        ? reportedRefundRequests
         : [];
     const availabilitySchedule = Array.isArray(
         mentorProfile?.availability_schedule,
@@ -645,6 +649,65 @@ export default function Dashboard({
                                     </article>
                                 );
                             })}
+                        </div>
+                    </section>
+                )}
+
+                {safeReportedRefundRequests.length > 0 && (
+                    <section aria-labelledby="reported-refunds-heading">
+                        <div className="mb-4">
+                            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#C23B46]">
+                                Perlu Ditinjau
+                            </p>
+                            <h2
+                                id="reported-refunds-heading"
+                                className="mt-1 text-xl font-bold text-[#34443D]"
+                            >
+                                Dilaporkan Belum Diterima
+                            </h2>
+                        </div>
+
+                        <div className="space-y-3">
+                            {safeReportedRefundRequests.map((request) => (
+                                <article
+                                    key={request.id}
+                                    className="rounded-xl border border-[#E8E5DD] bg-white p-5 shadow-[0_3px_14px_rgba(52,68,61,0.04)] sm:p-6"
+                                >
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <h3 className="text-base font-bold text-[#34443D]">
+                                            {request.student?.name ?? 'Student'}
+                                        </h3>
+                                        <span className="inline-flex items-center rounded-full bg-[#FBECEE] px-3 py-1 text-xs font-bold text-[#C23B46]">
+                                            Dilaporkan Belum Diterima
+                                        </span>
+                                    </div>
+
+                                    <div className="mt-4 grid gap-3 text-sm text-[#69766F] sm:grid-cols-2">
+                                        <p>
+                                            <span className="font-semibold text-[#34443D]">
+                                                Jadwal Sesi:{' '}
+                                            </span>
+                                            {formatSessionDateTime(
+                                                request.schedule_time,
+                                            )}
+                                        </p>
+                                        <p>
+                                            <span className="font-semibold text-[#34443D]">
+                                                Bukti diunggah:{' '}
+                                            </span>
+                                            {formatSessionDateTime(
+                                                request.refund_proof_uploaded_at,
+                                            )}
+                                        </p>
+                                    </div>
+
+                                    <p className="mt-4 text-sm leading-6 text-[#69766F]">
+                                        Student melaporkan belum menerima
+                                        transfer. Belum ada tindakan yang
+                                        tersedia di aplikasi untuk laporan ini.
+                                    </p>
+                                </article>
+                            ))}
                         </div>
                     </section>
                 )}
