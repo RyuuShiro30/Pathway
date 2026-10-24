@@ -20,13 +20,11 @@ class CourseController extends Controller
     public function show($slug)
     {
         // Cari course berdasarkan slug
-        $course = Course::where('slug', $slug)->firstOrFail();
-
-        $materials = []; 
+        $course = Course::with('courseMaterials')->where('slug', $slug)->firstOrFail(); 
 
         return Inertia::render('Course/Show', [
             'course' => $course,
-            'materials' => $materials
+            'materials' => $course->courseMaterials
         ]);
     }
 }
