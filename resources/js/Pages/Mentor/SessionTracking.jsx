@@ -1,5 +1,5 @@
 import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import {useEffect, useState } from 'react';
 
 const sessionDateTimeFormatter = new Intl.DateTimeFormat('id-ID', {
     weekday: 'long',
@@ -159,6 +159,37 @@ export default function SessionTracking({
         ...new Set([flash?.error, ...formErrors, copyError].filter(Boolean)),
     ];
 
+        useEffect(() => {
+        if (!isNoShowReportModalOpen && !isNoShowRespondModalOpen) {
+            return;
+        }
+
+        function handleKeyDown(event) {
+            if (event.key !== 'Escape') {
+                return;
+            }
+
+            if (isNoShowRespondModalOpen && !noShowRespondForm.processing) {
+                setIsNoShowRespondModalOpen(false);
+            } else if (
+                isNoShowReportModalOpen &&
+                !noShowReportForm.processing
+            ) {
+                setIsNoShowReportModalOpen(false);
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [
+        isNoShowReportModalOpen,
+        isNoShowRespondModalOpen,
+        noShowReportForm.processing,
+        noShowRespondForm.processing,
+    ]);
     function startSession() {
         startForm.patch(route('mentor.session.start', session.id), {
             preserveScroll: true,
