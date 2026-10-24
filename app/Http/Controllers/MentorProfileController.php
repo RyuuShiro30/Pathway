@@ -103,6 +103,31 @@ class MentorProfileController extends Controller
                 ] : null,
             ])
             ->values();
+        $confirmedSessions = MentoringSession::query()
+            ->where('mentor_id', Auth::id())
+            ->whereIn('status', ['dikonfirmasi', 'berlangsung'])
+            ->with(['student:id,name'])
+            ->orderBy('schedule_time', 'asc')
+            ->limit(20)
+            ->get(['id', 'student_id', 'status', 'schedule_time', 'end_time', 'is_free_session'])
+            ->map(static fn (MentoringSession $session): array => [
+                'id' => $session->id,
+                'status' => $session->status,
+                'schedule_time' => $session->schedule_time
+                    ?->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'end_time' => $session->end_time
+                    ?->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'is_free_session' => $session->is_free_session,
+                'student' => $session->student ? [
+                    'id' => $session->student->id,
+                    'name' => $session->student->name,
+                ] : null,
+            ])
+            ->values();
 
         return Inertia::render('Mentor/Dashboard', [
             'mentorProfile' => $mentorProfile,
@@ -110,6 +135,7 @@ class MentorProfileController extends Controller
             'refundRequests' => $refundRequests,
             'reportedRefundRequests' => $reportedRefundRequests,
             'studentCancelledSessions' => $studentCancelledSessions,
+            'confirmedSessions' => $confirmedSessions,
         ]);
     }
 
