@@ -52,6 +52,7 @@ class MentoringSessionController extends Controller
                 'refund_proof',
                 'refund_proof_uploaded_at',
                 'cancelled_by',
+                'cancellation_reason',
                 'discord_link',
             ])
             ->orderByDesc('schedule_time')
@@ -82,6 +83,9 @@ class MentoringSessionController extends Controller
                         ? $session->refund_proof_uploaded_at?->copy()->setTimezone('UTC')->toISOString()
                         : null,
                     'cancelled_by' => $session->cancelled_by,
+                    'cancellation_reason' => $session->cancelled_by === 'sistem'
+                        ? $session->cancellation_reason
+                        : null,
                     'can_report_no_show' => $session->canReportNoShow(),
                     'no_show_report' => $session->noShowReportPayloadFor((int) Auth::id()),
                     'mentor' => [

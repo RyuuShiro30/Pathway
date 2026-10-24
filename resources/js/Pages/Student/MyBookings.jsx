@@ -801,7 +801,13 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                             </p>
                                         </div>
                                     </div>
-
+{booking.status === 'dibatalkan' &&
+    booking.cancellation_reason && (
+        <p className="mt-4 rounded-lg bg-[#F1E9E7] px-4 py-3 text-xs leading-5 text-[#8E5D54]">
+            Alasan pembatalan:{' '}
+            {booking.cancellation_reason}
+        </p>
+    )}
                                     {booking.status === 'dibatalkan' &&
                                         booking.refund_status ===
                                             'menunggu_konfirmasi' && (
