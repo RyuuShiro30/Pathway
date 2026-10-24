@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
+
 class DatabaseSeeder extends Seeder
 {
     use WithoutModelEvents;
@@ -31,6 +32,8 @@ class DatabaseSeeder extends Seeder
             MentorProfileSeeder::class,
             MentoringSessionSeeder::class,
             MenteeBankAccountSeeder::class,
+            CourseSeeder::class,
+            CourseMaterialSeeder::class,
         ]);
     }
 }
