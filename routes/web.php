@@ -9,6 +9,7 @@ use App\Http\Controllers\MentorProfileController;
 use App\Http\Controllers\MentorRegistrationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\CourseController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -27,13 +28,9 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/courses', function () {
-    return Inertia::render('Course/Courses');
-})->name('courses.index');
+Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 
-Route::get('/courses/{id}', function ($id) {
-    return Inertia::render('Course/Show');
-})->name('courses.show');
+Route::get('/courses/{slug}', [CourseController::class, 'show'])->name('courses.show');
 
 // Direktori Mentor
 Route::get('/mentors', [MentorDirectoryController::class, 'index'])
