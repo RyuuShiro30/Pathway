@@ -1,24 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { Head } from '@inertiajs/react';
 
-export default function CourseShowAesthetic() {
-    const courseDetail = {
-        id: 1,
-        title: 'Mastering React & Inertia.js untuk Single Page Application',
-        instructor: 'Andi Mentor',
-    };
+// 1. Menerima props 'course' dan 'materials' dari Backend
+export default function Show({ course, materials = [] }) {
+    
+    // 2. Inisialisasi state modules (Pakai data database jika ada, jika kosong pakai dummy aslimu)
+    const [modules, setModules] = useState(
+        materials.length > 0 
+            ? materials.map(m => ({ ...m, is_completed: false })) 
+            : [
+                { id: 101, title: 'Pendahuluan React & Inertia.js', is_completed: true },
+                { id: 102, title: 'Setup Environment & Instalasi', is_completed: true },
+                { id: 103, title: 'Membuat Layout Dasar SPA', is_completed: true },
+                { id: 104, title: 'Routing dengan Inertia Link', is_completed: true },
+                { id: 105, title: 'Passing Data dari Controller ke View', is_completed: true },
+                { id: 106, title: 'Penanganan Form & Validasi', is_completed: true },
+                { id: 107, title: 'Kuis: Optimasi dan Build Asset', is_completed: false },
+            ]
+    );
 
-    const [modules, setModules] = useState([
-        { id: 101, title: 'Pendahuluan React & Inertia.js', is_completed: true },
-        { id: 102, title: 'Setup Environment & Instalasi', is_completed: true },
-        { id: 103, title: 'Membuat Layout Dasar SPA', is_completed: true },
-        { id: 104, title: 'Routing dengan Inertia Link', is_completed: true },
-        { id: 105, title: 'Passing Data dari Controller ke View', is_completed: true },
-        { id: 106, title: 'Penanganan Form & Validasi', is_completed: true },
-        { id: 107, title: 'Kuis: Optimasi dan Build Asset', is_completed: false },
-    ]);
-
-    const [activeModuleId, setActiveModuleId] = useState(107);
+    // 3. Set materi aktif pertama secara dinamis berdasarkan array
+    const [activeModuleId, setActiveModuleId] = useState(modules[0]?.id);
 
     // Kalkulasi
     const activeIndex = modules.findIndex((m) => m.id === activeModuleId);
@@ -27,7 +29,7 @@ export default function CourseShowAesthetic() {
     const isLast = activeIndex === modules.length - 1;
 
     const completedCount = modules.filter((m) => m.is_completed).length;
-    const progressPercentage = Math.round((completedCount / modules.length) * 100);
+    const progressPercentage = Math.round((completedCount / modules.length) * 100) || 0;
 
     // Otomatis scroll ke atas setiap pindah materi
     useEffect(() => {
@@ -52,12 +54,13 @@ export default function CourseShowAesthetic() {
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20">
-            <Head title={`${activeModule?.title} - Pathway`} />
+            {/* Typo di tag Head sudah diperbaiki */}
+            <Head title={`${activeModule?.title || 'Materi'} - Pathway`} />
 
             {/* TOP NAVIGATION BAR */}
             <header className="fixed top-0 inset-x-0 h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 z-50 flex items-center px-6 md:px-12">
                 <div className="flex-1">
-                    <a href="/dashboard" className="group inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
+                    <a href="/courses" className="group inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
                         <span className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 group-hover:bg-slate-200 transition-colors">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -67,13 +70,15 @@ export default function CourseShowAesthetic() {
                     </a>
                 </div>
                 <div className="flex-1 text-center hidden md:block">
+                    {/* Judul Course dari Database */}
                     <h2 className="text-sm font-bold text-slate-900 truncate px-4">
-                        {courseDetail.title}
+                        {course?.title || 'Judul Course'}
                     </h2>
                 </div>
                 <div className="flex-1 flex justify-end items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xs uppercase">
-                        {courseDetail.instructor.charAt(0)}
+                        {/* Inisial Instructor / Author dari Database (Fallback 'A') */}
+                        {course?.instructor?.charAt(0) || 'A'}
                     </div>
                 </div>
             </header>
@@ -109,7 +114,7 @@ export default function CourseShowAesthetic() {
                             {modules.map((module, index) => {
                                 const isActive = activeModuleId === module.id;
                                 const isCompleted = module.is_completed;
-                                const isLastItem = index === modules.length - 1; // Deteksi item terakhir
+                                const isLastItem = index === modules.length - 1;
 
                                 return (
                                     <div key={module.id} className="relative group flex">
@@ -130,7 +135,7 @@ export default function CourseShowAesthetic() {
                                                 )}
                                             </span>
 
-                                            {/* Garis Penghubung (Tidak dirender pada kuis/materi terakhir) */}
+                                            {/* Garis Penghubung */}
                                             {!isLastItem && (
                                                 <div className="w-1 bg-slate-300 h-full my-1 rounded-full"></div>
                                             )}
@@ -172,33 +177,24 @@ export default function CourseShowAesthetic() {
                             </h1>
                         </div>
 
-                        {/* Isi Materi */}
-                        <div className="text-slate-600 text-lg leading-relaxed space-y-6">
-                            <p>
-                                Halo calon <span className="italic text-slate-800 font-medium">developer</span>! Pada modul sebelumnya, kita sudah berhasil melakukan
-                                instalasi dan setup layout dasar dari Pathway. Sekarang kita akan membahas bagaimana cara
-                                berpindah halaman di React menggunakan Inertia.js.
-                            </p>
-
-                            <h3 className="text-xl font-bold text-slate-900 pt-6">
-                                Kenapa tidak menggunakan tag &lt;a&gt; HTML biasa?
-                            </h3>
-
-                            <p>
-                                Jika kita menggunakan tag anchor konvensional, browser akan melakukan <span className="font-semibold text-rose-500">full page reload</span>. Ini akan membuat aplikasi Single Page Application (SPA) kita terasa lambat dan membebani server layaknya website tradisional PHP biasa.
-                            </p>
-
-                            <div className="p-6 bg-slate-50 border-l-4 border-emerald-500 rounded-r-2xl my-8">
-                                <p className="text-slate-700 italic m-0">
-                                    "Sebagai solusinya, Inertia.js menyediakan komponen <code>&lt;Link&gt;</code>. Komponen ini
-                                    bekerja dengan cara mencegat klik pengguna, lalu melakukan request XHR di belakang layar secara mulus."
+                        {/* Isi Materi - Render konten DB jika ada, jika tidak pakai dummy text */}
+                        {activeModule?.content ? (
+                            <div className="text-slate-600 text-lg leading-relaxed space-y-6" dangerouslySetInnerHTML={{ __html: activeModule.content }} />
+                        ) : (
+                            <div className="text-slate-600 text-lg leading-relaxed space-y-6">
+                                <p>
+                                    Halo calon <span className="italic text-slate-800 font-medium">developer</span>! Pada modul ini kita akan membahas tentang materi <strong>{activeModule?.title}</strong>.
+                                </p>
+                                <div className="p-6 bg-slate-50 border-l-4 border-emerald-500 rounded-r-2xl my-8">
+                                    <p className="text-slate-700 italic m-0">
+                                        "Ini adalah teks dummy karena tabel course_materials di database kamu mungkin belum ada isinya untuk materi ini."
+                                    </p>
+                                </div>
+                                <p>
+                                    Silakan selesaikan materi ini dengan menekan tombol <strong>Selesai & Lanjut</strong> di bawah.
                                 </p>
                             </div>
-
-                            <p>
-                                Mari kita implementasikan komponen tersebut pada navigasi sidebar yang sudah kita buat sebelumnya.
-                            </p>
-                        </div>
+                        )}
                     </article>
 
                     {/* Navigasi Bawah */}

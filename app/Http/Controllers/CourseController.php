@@ -17,4 +17,16 @@ class CourseController extends Controller
             'courses' => $courses
         ]);
     }
+    public function show($slug)
+    {
+        // Cari course berdasarkan slug
+        $course = Course::where('slug', $slug)->firstOrFail();
+
+        $materials = []; 
+
+        return Inertia::render('Course/Show', [
+            'course' => $course,
+            'materials' => $materials
+        ]);
+    }
 }
