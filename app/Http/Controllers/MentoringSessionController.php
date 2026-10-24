@@ -37,6 +37,7 @@ class MentoringSessionController extends Controller
                 'mentor:id,name',
                 'mentor.mentorProfile:user_id,expertise',
             ])
+            ->with('noShowReport')
             ->select([
                 'id',
                 'mentor_id',
@@ -81,6 +82,8 @@ class MentoringSessionController extends Controller
                         ? $session->refund_proof_uploaded_at?->copy()->setTimezone('UTC')->toISOString()
                         : null,
                     'cancelled_by' => $session->cancelled_by,
+                    'can_report_no_show' => $session->canReportNoShow(),
+                    'no_show_report' => $session->noShowReportPayloadFor((int) Auth::id()),
                     'mentor' => [
                         'id' => $session->mentor->id,
                         'name' => $session->mentor->name,
@@ -751,8 +754,16 @@ class MentoringSessionController extends Controller
             ->whereIn('status', ['dikonfirmasi', 'berlangsung', 'selesai'])
             ->findOrFail($id);
 
+        $canReportNoShow = $session->canReportNoShow();
+        $noShowReport = $session->noShowReportPayloadFor((int) Auth::id());
+
+        // Lepas relasi mentah supaya path screenshot tidak ikut terkirim ke browser.
+        $session->unsetRelation('noShowReport');
+
         return Inertia::render('Mentor/SessionTracking', [
             'session' => $session,
+            'canReportNoShow' => $canReportNoShow,
+            'noShowReport' => $noShowReport,
         ]);
     }
 
