@@ -55,4 +55,53 @@ class MentoringSession extends Model
     {
         return $this->hasOne(Review::class, 'session_id');
     }
+
+    public function noShowReport(): HasOne
+    {
+        return $this->hasOne(NoShowReport::class, 'session_id');
+    }
+
+    public function canReportNoShow(): bool
+    {
+        if ($this->status !== 'dikonfirmasi' || $this->noShowReport !== null) {
+            return false;
+        }
+
+        $now = now();
+        $endTime = $this->end_time
+            ?? $this->schedule_time->copy()->addHours($this->duration_hours ?? 1);
+
+        return $now->gte($this->schedule_time->copy()->addMinutes(15))
+            && $now->lte($endTime->copy()->addHours(24));
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function noShowReportPayloadFor(int $viewerId): ?array
+    {
+        $report = $this->noShowReport;
+
+        if (! $report) {
+            return null;
+        }
+
+        $isReporter = (int) $report->reporter_id === $viewerId;
+
+        return [
+            'id' => $report->id,
+            'status' => $report->status,
+            'is_reporter' => $isReporter,
+            'reporter_note' => $report->reporter_note,
+            'response_note' => $report->response_note,
+            'has_response_evidence' => $report->response_evidence_path !== null,
+            'respond_deadline' => $report->respond_deadline
+                ->copy()
+                ->setTimezone('UTC')
+                ->toISOString(),
+            'can_respond' => ! $isReporter
+                && $report->status === 'menunggu_respons'
+                && now()->lt($report->respond_deadline),
+        ];
+    }
 }
