@@ -9,7 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class NoShowReportController extends Controller
 {
@@ -119,6 +121,27 @@ class NoShowReportController extends Controller
             'success',
             'Sanggahan terkirim. Laporan ini akan ditinjau admin.',
         );
+    }
+
+    public function evidence(int $id, string $type): StreamedResponse
+    {
+        $userId = (int) Auth::id();
+
+        $report = NoShowReport::query()
+            ->whereKey($id)
+            ->where(function ($query) use ($userId): void {
+                $query->where('reporter_id', $userId)
+                    ->orWhere('reported_user_id', $userId);
+            })
+            ->firstOrFail();
+
+        $path = $type === 'response'
+            ? $report->response_evidence_path
+            : $report->evidence_path;
+
+        abort_if(! $path || ! Storage::disk('local')->exists($path), 404);
+
+        return Storage::disk('local')->response($path);
     }
 
     private function fail(string $message): never

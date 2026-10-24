@@ -143,6 +143,9 @@ Route::middleware('auth')->group(function () {
         ->name('no-show.store');
     Route::patch('/no-show-reports/{id}/respond', [NoShowReportController::class, 'respond'])
         ->name('no-show.respond');
+    Route::get('/no-show-reports/{id}/evidence/{type}', [NoShowReportController::class, 'evidence'])
+        ->where('type', 'report|response')
+        ->name('no-show.evidence');
 });
 
 require __DIR__.'/auth.php';
