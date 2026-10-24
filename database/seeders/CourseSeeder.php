@@ -14,15 +14,13 @@ class CourseSeeder extends Seeder
             [
                 'title' => 'UI/UX Design Dasar',
                 'description' => 'Belajar dasar-dasar desain antarmuka dan pengalaman pengguna dari awal hingga membuat prototipe di Figma.',
-                'instructor' => 'Siti Rahma',
-                'category' => 'Design',
+                'level' => 'beginner',
                 'is_published' => true,
             ],
             [
                 'title' => 'Pemrograman Laravel 11 untuk Pemula',
                 'description' => 'Menguasai framework Laravel terbaru untuk membangun aplikasi web yang cepat, aman, dan scalable.',
-                'instructor' => 'Andi Pratama',
-                'category' => 'Web Development',
+                'level' => 'beginner',
                 'is_published' => true,
             ],
         ];
@@ -32,8 +30,7 @@ class CourseSeeder extends Seeder
                 'title' => $course['title'],
                 'slug' => Str::slug($course['title']),
                 'description' => $course['description'],
-                'instructor' => $course['instructor'],
-                'category' => $course['category'],
+                'level' => $course['level'],
                 'is_published' => $course['is_published'],
                 'created_at' => now(),
                 'updated_at' => now(),
