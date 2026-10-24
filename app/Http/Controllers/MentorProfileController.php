@@ -106,7 +106,7 @@ class MentorProfileController extends Controller
         $confirmedSessions = MentoringSession::query()
             ->where('mentor_id', Auth::id())
             ->whereIn('status', ['dikonfirmasi', 'berlangsung'])
-            ->with(['student:id,name'])
+            ->with(['student:id,name', 'noShowReport'])
             ->orderBy('schedule_time', 'asc')
             ->limit(20)
             ->get(['id', 'student_id', 'status', 'schedule_time', 'end_time', 'is_free_session'])
@@ -122,6 +122,7 @@ class MentorProfileController extends Controller
                     ->setTimezone('UTC')
                     ->toISOString(),
                 'is_free_session' => $session->is_free_session,
+                'no_show_report' => $session->noShowReportPayloadFor((int) Auth::id()),
                 'student' => $session->student ? [
                     'id' => $session->student->id,
                     'name' => $session->student->name,

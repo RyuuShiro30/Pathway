@@ -773,7 +773,19 @@ export default function Dashboard({
                                                     session.schedule_time,
                                                 )}
                                             </p>
-                                        </div>
+                                            {session.no_show_report &&
+                                            ['menunggu_respons', 'disanggah'].includes(
+                                                session.no_show_report.status,
+                                            ) && (
+                                                <p className="mt-3 rounded-lg bg-[#F3EFDF] px-3 py-2 text-xs leading-5 text-[#78663A]">
+                                                    {session.no_show_report.status === 'disanggah'
+                                                        ? 'Laporan no-show disanggah. Menunggu keputusan admin.'
+                                                        : session.no_show_report.can_respond
+                                                        ? 'Anda dilaporkan tidak hadir. Tanggapi lewat Kelola Sesi sebelum batas waktu.'
+                                                        : 'Anda melaporkan no-show. Menunggu tanggapan pihak lawan.'}
+                                                </p>
+                                            )}
+                                                                                </div>
 
                                         <a
                                             href={route(
@@ -837,6 +849,7 @@ export default function Dashboard({
                                             {session.cancellation_reason ||
                                                 'Tidak ada alasan yang dicatat.'}
                                         </p>
+
                                     </div>
 
                                     <p className="mt-4 text-sm leading-6 text-[#69766F]">
