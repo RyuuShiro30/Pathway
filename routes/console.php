@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('bookings:auto-cancel')->everyFiveMinutes();
+Schedule::command('no-show:finalize')->everyFiveMinutes();

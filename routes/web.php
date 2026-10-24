@@ -141,6 +141,8 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/sessions/{id}/no-show', [NoShowReportController::class, 'store'])
         ->name('no-show.store');
+    Route::patch('/no-show-reports/{id}/respond', [NoShowReportController::class, 'respond'])
+        ->name('no-show.respond');
 });
 
 require __DIR__.'/auth.php';

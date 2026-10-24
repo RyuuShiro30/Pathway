@@ -79,6 +79,48 @@ class NoShowReportController extends Controller
         );
     }
 
+    public function respond(Request $request, int $id): RedirectResponse
+    {
+        $validated = $request->validate([
+            'response_note' => ['required', 'string', 'max:500'],
+            'response_evidence' => ['nullable', 'file', 'mimes:jpg,jpeg,png', 'max:5120'],
+        ]);
+
+        DB::transaction(function () use ($request, $id, $validated): void {
+            $report = NoShowReport::query()
+                ->whereKey($id)
+                ->where('reported_user_id', Auth::id())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ($report->status !== 'menunggu_respons') {
+                $this->fail('Laporan ini sudah tidak menunggu tanggapan.');
+            }
+
+            $now = Carbon::now();
+
+            if ($now->gte($report->respond_deadline)) {
+                $this->fail('Batas waktu menanggapi (24 jam) sudah lewat.');
+            }
+
+            $evidencePath = $request->hasFile('response_evidence')
+                ? $request->file('response_evidence')->store('no-show-responses', 'local')
+                : null;
+
+            $report->update([
+                'status' => 'disanggah',
+                'response_note' => $validated['response_note'],
+                'response_evidence_path' => $evidencePath,
+                'responded_at' => $now,
+            ]);
+        });
+
+        return redirect()->back()->with(
+            'success',
+            'Sanggahan terkirim. Laporan ini akan ditinjau admin.',
+        );
+    }
+
     private function fail(string $message): never
     {
         throw ValidationException::withMessages(['message' => $message]);
