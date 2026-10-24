@@ -2,14 +2,15 @@
 <?php
 
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MentorDirectoryController;
 use App\Http\Controllers\MentoringSessionController;
 use App\Http\Controllers\MentorProfileController;
 use App\Http\Controllers\MentorRegistrationController;
+use App\Http\Controllers\NoShowReportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReviewController;
-use App\Http\Controllers\CourseController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -137,6 +138,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/mentor/session/{id}/refund', [MentoringSessionController::class, 'refundForm'])
         ->name('mentor.refund.form');
+
+    Route::post('/sessions/{id}/no-show', [NoShowReportController::class, 'store'])
+        ->name('no-show.store');
 });
 
 require __DIR__.'/auth.php';
