@@ -436,6 +436,34 @@ export default function MyBookings({ bookings = [], stats = {} }) {
             },
         );
     }
+        useEffect(() => {
+        if (!noShowReportBooking && !noShowRespondBooking) {
+            return;
+        }
+
+        function handleKeyDown(event) {
+            if (event.key !== 'Escape') {
+                return;
+            }
+
+            if (noShowRespondBooking) {
+                closeNoShowRespondModal();
+            } else {
+                closeNoShowReportModal();
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [
+        noShowReportBooking,
+        noShowRespondBooking,
+        noShowReportForm.processing,
+        noShowRespondForm.processing,
+    ]);
     function openNoShowReportModal(booking) {
         noShowReportForm.reset();
         noShowReportForm.clearErrors();
