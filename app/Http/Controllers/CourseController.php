@@ -9,11 +9,11 @@ class CourseController extends Controller
 {
     public function index()
     {
-        // Tarik semua data course dari database
-        $courses = Course::latest()->get();
+        // Ambil semua course yang sudah di-publish
+        $courses = Course::where('is_published', true)->latest()->get();
 
-        // Lempar data ke halaman React
-        return Inertia::render('Course/Index', [
+        // Lempar datanya ke file resources/js/Pages/Course/Courses.jsx
+        return Inertia::render('Course/Courses', [
             'courses' => $courses
         ]);
     }
