@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 use App\Models\MentoringSession;
 use App\Models\Review;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ReviewController extends Controller
 {
@@ -13,7 +14,7 @@ class ReviewController extends Controller
             abort(404);
         }
 
-        if ((int) $session->student_id !== (int) auth()->id()) {
+        if ((int) $session->student_id !== (int) Auth::id()) {
             abort(403);
         }
 
@@ -31,7 +32,7 @@ class ReviewController extends Controller
             abort(404);
         }
 
-        if ((int) $session->student_id !== (int) auth()->id()) {
+        if ((int) $session->student_id !== (int) Auth::id()) {
             abort(403);
         }
 
