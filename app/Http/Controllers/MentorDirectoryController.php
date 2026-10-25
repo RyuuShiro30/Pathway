@@ -8,7 +8,6 @@ use Inertia\Inertia;
 
 class MentorDirectoryController extends Controller
 {
-    // Menampilkan daftar mentor dan filter
     public function index(Request $request)
     {
         $search = $request->input('search');
@@ -20,9 +19,9 @@ class MentorDirectoryController extends Controller
         $minRating = $request->input('min_rating');
 
         $mentors = MentorProfile::with('user')
+            ->withCount('reviews')
+            ->withAvg('reviews', 'rating')
             ->where('verification_status', 'verified')
-
-            // Pencarian berdasarkan nama mentor
             ->when($search, function ($query) use ($search) {
                 $query->whereHas('user', function ($userQuery) use ($search) {
                     $userQuery->whereRaw(
@@ -31,46 +30,46 @@ class MentorDirectoryController extends Controller
                     );
                 });
             })
-
-            // Filter berdasarkan expertise
             ->when($expertise, function ($query) use ($expertise) {
                 $query->where('expertise', $expertise);
             })
-
-            // Filter berdasarkan ketersediaan
             ->when(
                 $availability !== null && $availability !== '',
                 function ($query) use ($availability) {
                     $query->where('is_available', $availability);
                 }
             )
-
-            // Filter berdasarkan jenis mentoring
             ->when($mentorType, function ($query) use ($mentorType) {
                 $query->where('mentor_type', $mentorType);
             })
-
-            // Filter berdasarkan harga min
             ->when($minPrice !== null && $minPrice !== '', function ($query) use ($minPrice) {
                 $query->where('price_per_session', '>=', $minPrice);
             })
-
-            // Filter berdasarkan harga max
             ->when($maxPrice !== null && $maxPrice !== '', function ($query) use ($maxPrice) {
                 $query->where('price_per_session', '<=', $maxPrice);
             })
-
-            // Filter berdasarkan rating min
             ->when($minRating !== null && $minRating !== '', function ($query) use ($minRating) {
-                if ($minRating == 5) {
-                    $query->where('avg_rating', 5);
+                if ((float) $minRating === 5.0) {
+                    $query->whereRaw(
+                        'COALESCE((SELECT AVG(rating) FROM reviews WHERE reviews.mentor_id = mentor_profiles.user_id), mentor_profiles.avg_rating) >= ?',
+                        [5]
+                    );
                 } else {
-                    $query->where('avg_rating', '>=', $minRating);
+                    $query->whereRaw(
+                        'COALESCE((SELECT AVG(rating) FROM reviews WHERE reviews.mentor_id = mentor_profiles.user_id), mentor_profiles.avg_rating) >= ?',
+                        [$minRating]
+                    );
                 }
             })
-            ->get();
+            ->get()
+            ->map(function ($mentor) {
+                $mentor->avg_rating = $mentor->reviews_avg_rating !== null
+                    ? round((float) $mentor->reviews_avg_rating, 1)
+                    : (float) ($mentor->avg_rating ?? 0);
 
-        // Mengambil daftar expertise yang tersedia
+                return $mentor;
+            });
+
         $expertises = MentorProfile::where('verification_status', 'verified')
             ->select('expertise')
             ->distinct()
@@ -83,19 +82,28 @@ class MentorDirectoryController extends Controller
             'expertise' => $expertise,
             'expertises' => $expertises,
             'availability' => $availability,
-            'mentorType' => $mentorType,    
+            'mentorType' => $mentorType,
             'minPrice' => $minPrice,
             'maxPrice' => $maxPrice,
-            'minRating' => $minRating
+            'minRating' => $minRating,
         ]);
     }
 
-    // Menampilkan detail mentor
     public function show($id)
     {
-        $mentor = MentorProfile::with('user')
+        $mentor = MentorProfile::with([
+                'user',
+                'certificates',
+                'reviews.student',
+            ])
+            ->withCount('reviews')
+            ->withAvg('reviews', 'rating')
             ->where('verification_status', 'verified')
             ->findOrFail($id);
+
+        $mentor->avg_rating = $mentor->reviews_avg_rating !== null
+            ? round((float) $mentor->reviews_avg_rating, 1)
+            : (float) ($mentor->avg_rating ?? 0);
 
         return Inertia::render('Mentors/Show', [
             'mentor' => $mentor,

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Review;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -41,8 +42,13 @@ class MentorProfile extends Model
         return $this->hasMany(MentorCertificate::class);
     }
 
-    public function mentoringSessions()
+    public function mentoringSessions(): HasMany
     {
         return $this->hasMany(MentoringSession::class, 'mentor_id', 'user_id');
+    }
+
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(Review::class, 'mentor_id', 'user_id');
     }
 }

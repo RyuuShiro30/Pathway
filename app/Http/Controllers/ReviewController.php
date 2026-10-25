@@ -1,16 +1,18 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use App\Models\MentoringSession;
 use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Inertia\Inertia;
 
 class ReviewController extends Controller
 {
     public function create(MentoringSession $session)
     {
-        if ($session->status !== 'completed') {
+        if ($session->status !== 'selesai') {
             abort(404);
         }
 
@@ -19,32 +21,44 @@ class ReviewController extends Controller
         }
 
         if (Review::where('session_id', $session->id)->exists()) {
-            return redirect('/dashboard')
+            return redirect()
+                ->route('mentors.show', $session->mentor->mentorProfile->id)
                 ->with('error', 'Sesi ini sudah memiliki ulasan.');
         }
 
-        return view('reviews.create', compact('session'));
+        $session->load('mentor');
+
+        return Inertia::render('Reviews/Create', [
+            'session' => [
+                'id' => $session->id,
+                'status' => $session->status,
+                'schedule_time' => $session->schedule_time?->format('d M Y'),
+                'mentor' => [
+                    'id' => $session->mentor?->id,
+                    'name' => $session->mentor?->name ?? 'Mentor',
+                ],
+            ],
+        ]);
     }
 
     public function store(Request $request, MentoringSession $session)
     {
-        if ($session->status !== 'completed') {
+        if ($session->status !== 'selesai') {
             abort(404);
         }
 
         if ((int) $session->student_id !== (int) Auth::id()) {
             abort(403);
+        }
+
+        if (Review::where('session_id', $session->id)->exists()) {
+            return back()->with('error', 'Sesi ini sudah memiliki ulasan.');
         }
 
         $validated = $request->validate([
             'rating' => ['required', 'integer', 'min:1', 'max:5'],
             'feedback' => ['nullable', 'string', 'max:1000'],
         ]);
-
-        if (Review::where('session_id', $session->id)->exists()) {
-            return redirect('/dashboard')
-                ->with('error', 'Sesi ini sudah memiliki ulasan.');
-        }
 
         Review::create([
             'session_id' => $session->id,
@@ -54,7 +68,20 @@ class ReviewController extends Controller
             'feedback' => $validated['feedback'] ?? null,
         ]);
 
-        return redirect('/dashboard')
-            ->with('success', 'Ulasan berhasil dikirim.');
+        $mentorProfile = \App\Models\MentorProfile::where(
+            'user_id',
+            $session->mentor_id
+        )->firstOrFail();
+
+        $averageRating = Review::where('mentor_id', $session->mentor_id)
+            ->avg('rating');
+
+        $mentorProfile->update([
+            'avg_rating' => round((float) $averageRating, 2),
+        ]);
+
+        return redirect()
+            ->route('mentors.show', $mentorProfile->id)
+            ->with('success', 'Rating dan ulasan berhasil dikirim.');
     }
 }
