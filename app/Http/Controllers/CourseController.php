@@ -17,11 +17,19 @@ class CourseController extends Controller
             'courses' => $courses
         ]);
     }
-    public function show($slug)
+    public function show(string $slug)
     {
-        // Cari course berdasarkan slug
         $course = Course::with('courseMaterials')->where('slug', $slug)->firstOrFail(); 
+        return Inertia::render('Course/Window', [
+            'course' => $course,
+            'materials' => $course->courseMaterials
+        ]);
+    }
 
+    // Ruang Baca Materi (File Show.jsx lamamu)
+    public function learn(string $slug)
+    {
+        $course = Course::with('courseMaterials')->where('slug', $slug)->firstOrFail(); 
         return Inertia::render('Course/Show', [
             'course' => $course,
             'materials' => $course->courseMaterials

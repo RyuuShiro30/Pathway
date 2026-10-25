@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react'; // Tambahkan Link di sini
 
 export default function Show({ course, materials = [] }) {
-    
+
     const [modules, setModules] = useState(
-        materials.length > 0 
-            ? materials.map(m => ({ ...m, is_completed: false })) 
+        materials.length > 0
+            ? materials.map(m => ({ ...m, is_completed: false }))
             : [
                 { id: 101, title: 'Pendahuluan', is_completed: true, content_body: '<p>Teks dummy.</p>' }
             ]
@@ -41,32 +41,31 @@ export default function Show({ course, materials = [] }) {
         }
     };
 
-    // Fungsi canggih untuk mengubah link YouTube biasa menjadi format Embed
     const getYouTubeEmbedUrl = (url) => {
         if (!url) return null;
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
         const match = url.match(regExp);
         if (match && match[2].length === 11) {
-            return `https://www.youtube.com/embed/${match[2]}?rel=0`; // rel=0 agar video rekomendasi di akhir nggak ngaco
+            return `https://www.youtube.com/embed/${match[2]}?rel=0`;
         }
         return url;
     };
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-20">
-            <Head title={`${activeModule?.title || 'Materi'} - Pathway`} />
+            <Head title={`${activeModule?.title || 'Materi'} | Pathway`} />
 
             {/* TOP NAVIGATION BAR */}
             <header className="fixed top-0 inset-x-0 h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 z-50 flex items-center px-6 md:px-12">
                 <div className="flex-1">
-                    <a href="/courses" className="group inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
+                    <Link href={`/courses/${course.slug}`} className="group inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
                         <span className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 group-hover:bg-slate-200 transition-colors">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
                             </svg>
                         </span>
-                        Kembali
-                    </a>
+                        Kembali ke Jendela Kelas
+                    </Link>
                 </div>
                 <div className="flex-1 text-center hidden md:block">
                     <h2 className="text-sm font-bold text-slate-900 truncate px-4">
@@ -85,6 +84,7 @@ export default function Show({ course, materials = [] }) {
 
                 {/* KOLOM KIRI: SIDEBAR INFORMASI & TIMELINE */}
                 <div className="lg:col-span-4 space-y-8">
+
                     {/* Widget Progress Belajar */}
                     <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200">
                         <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Progres Belajar</h3>
@@ -100,7 +100,7 @@ export default function Show({ course, materials = [] }) {
                         </div>
                     </div>
 
-                    {/* Widget Daftar Materi (Timeline Style) */}
+                    {/* Widget Daftar Materi (Timeline Style) - Dibuat sticky agar ngikutin scroll */}
                     <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 sticky top-32">
                         <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-8">Peta Modul</h3>
                         <div className="ml-1">
@@ -160,7 +160,7 @@ export default function Show({ course, materials = [] }) {
                             </h1>
                         </div>
 
-                        {/* FITUR BARU: Video Embed YouTube (Hanya muncul jika content_url ada isinya) */}
+                        {/* Video Embed YouTube */}
                         {activeModule?.content_url && (
                             <div className="mb-12 rounded-2xl overflow-hidden shadow-md border border-slate-200 aspect-video bg-slate-900">
                                 <iframe
