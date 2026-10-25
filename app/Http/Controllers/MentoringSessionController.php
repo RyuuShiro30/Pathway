@@ -6,6 +6,7 @@ use App\Models\MentoringSession;
 use App\Models\MentorProfile;
 use App\Models\NoShowReport;
 use App\Models\User;
+use App\Notifications\RefundProofUploaded;
 use App\Services\MentorSuspensionService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -902,6 +903,10 @@ class MentoringSessionController extends Controller
             'refund_status' => 'menunggu_konfirmasi',
             'refund_proof_uploaded_at' => now(),
         ]);
+
+        $session->student?->notify(
+            new RefundProofUploaded(route('student.bookings.index', [], false)),
+        );
 
         return redirect()->route('mentor.dashboard')->with('success', 'Bukti refund berhasil diupload, menunggu konfirmasi mentee');
     }
