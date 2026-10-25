@@ -8,6 +8,7 @@ const MENU = [
     { key: "jadwal", label: "Jadwal Saya", href: "#" },
     { key: "forum", label: "Forum", href: "#" },
     { key: "sharing", label: "Sharing Journey", href: "#" },
+    { key: "jadi-mentor", label: "Jadi Mentor", href: "/mentor/become" },
 ];
 
 export default function Navbar({ active = "dashboard" }) {
@@ -75,6 +76,7 @@ export default function Navbar({ active = "dashboard" }) {
                                 Student Portal
                             </p>
                         </div>
+
                         <img
                             src={user?.profile_photo_url ?? "/images/bwa.webp"}
                             alt="User"
@@ -86,7 +88,7 @@ export default function Navbar({ active = "dashboard" }) {
                     {showingDropdown && (
                         <div className="absolute top-12 right-0 w-48 bg-white rounded-md shadow-lg py-1 z-50 border border-gray-100">
                             <Link
-                                href={route('profile.edit')}
+                                href={route("profile.edit")}
                                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                             >
                                 Edit Profil
@@ -94,7 +96,7 @@ export default function Navbar({ active = "dashboard" }) {
 
                             {/* Tombol Logout wajib pakai method="post" */}
                             <Link
-                                href={route('logout')}
+                                href={route("logout")}
                                 method="post"
                                 as="button"
                                 className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"

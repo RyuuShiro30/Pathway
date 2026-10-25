@@ -5,8 +5,11 @@ import Navbar from '@/Components/Navbar';
 export default function Dashboard() {
     const props = usePage().props || {};
     const auth = props.auth;
+    
+    // Menangkap data dari DashboardController
     const activeCourses = props.activeCourses || [];
     const lastBooking = props.lastBooking || null;
+    const myCourses = props.myCourses || []; // <-- Ini tambahan baru untuk semua kelas
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-800 antialiased">
@@ -34,7 +37,10 @@ export default function Dashboard() {
                                     </div>
                                     <div>
                                         <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Course Selesai</p>
-                                        <p className="text-2xl font-bold text-slate-900">0</p>
+                                        <p className="text-2xl font-bold text-slate-900">
+                                            {/* Hitung otomatis berapa course yang sudah tamat (opsional) */}
+                                            {myCourses.filter(c => c.status === 'completed').length || 0}
+                                        </p>
                                     </div>
                                 </div>
 
@@ -46,7 +52,7 @@ export default function Dashboard() {
                                         </svg>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Modul Diselesaikan</p>
+                                        <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Modul Selesai</p>
                                         <p className="text-2xl font-bold text-slate-900">0</p>
                                     </div>
                                 </div>
@@ -65,29 +71,46 @@ export default function Dashboard() {
                                 </div>
                             </div>
 
-                            {/* Section 1: Course yang Sedang Dipelajari */}
+                            {/* Section 1: Course yang Sedang & Sudah Dipelajari */}
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                                <h2 className="text-lg font-bold text-slate-900 mb-4">Lanjutkan Belajarmu</h2>
+                                <div className="flex items-center justify-between mb-4">
+                                    <h2 className="text-lg font-bold text-slate-900">Kelas Saya</h2>
+                                </div>
 
-                                {activeCourses && activeCourses.length > 0 ? (
-                                    activeCourses.map((enrollment) => (
-                                        <div key={enrollment.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border border-slate-100 rounded-lg hover:shadow-md transition mb-3">
-                                            <div className="mb-4 md:mb-0 w-full md:w-2/3">
-                                                <h3 className="font-semibold text-slate-800">{enrollment.course?.title}</h3>
-                                                <p className="text-sm text-slate-500 mt-1">
-                                                    {enrollment.completed_modules_count} / {enrollment.total_modules_count} Bab Selesai
-                                                </p>
+                                {/* KITA GUNAKAN myCourses DI SINI */}
+                                {myCourses && myCourses.length > 0 ? (
+                                    myCourses.map((enrollment) => {
+                                        // Menentukan apakah course sudah selesai 100%
+                                        const isCompleted = enrollment.status === 'completed' || enrollment.progress_percentage === 100;
+                                        
+                                        return (
+                                            <div key={enrollment.id} className="flex flex-col md:flex-row justify-between items-start md:items-center p-4 border border-slate-100 rounded-lg hover:shadow-md transition mb-3">
+                                                <div className="mb-4 md:mb-0 w-full md:w-2/3">
+                                                    <h3 className="font-semibold text-slate-800">{enrollment.course?.title}</h3>
+                                                    <p className="text-sm text-slate-500 mt-1">
+                                                        {enrollment.completed_modules_count ?? 0} / {enrollment.total_modules_count ?? 0} Bab Selesai
+                                                    </p>
 
-                                                {/* Progress Bar */}
-                                                <div className="w-full bg-slate-200 rounded-full h-2 mt-3">
-                                                    <div className="bg-emerald-500 h-2 rounded-full" style={{ width: `${enrollment.progress_percentage}%` }}></div>
+                                                    {/* Progress Bar */}
+                                                    <div className="w-full bg-slate-200 rounded-full h-2 mt-3">
+                                                        <div 
+                                                            className={`h-2 rounded-full ${isCompleted ? 'bg-indigo-500' : 'bg-emerald-500'}`} 
+                                                            style={{ width: `${enrollment.progress_percentage ?? 0}%` }}
+                                                        ></div>
+                                                    </div>
                                                 </div>
+                                                
+                                                <Link 
+                                                    href={`/courses/${enrollment.course_id}`} 
+                                                    className={`px-5 py-2 text-white text-sm font-semibold rounded-lg shadow transition whitespace-nowrap
+                                                        ${isCompleted ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-cyan-600 hover:bg-cyan-700'}
+                                                    `}
+                                                >
+                                                    {isCompleted ? 'Pelajari Ulang' : 'Lanjutkan'}
+                                                </Link>
                                             </div>
-                                            <Link href={`/courses/${enrollment.id}`} className="px-5 py-2 bg-cyan-600 hover:bg-cyan-700 text-white text-sm font-semibold rounded-lg shadow transition whitespace-nowrap">
-                                                Lanjutkan
-                                            </Link>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 ) : (
                                     <div className="text-center py-6 bg-slate-50 rounded-lg border border-dashed border-slate-300">
                                         <p className="text-slate-500 text-sm">Belum ada course yang sedang dipelajari.</p>
@@ -142,19 +165,7 @@ export default function Dashboard() {
                                     <h2 className="text-lg font-bold text-slate-900">Top Learner</h2>
                                     <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-full">Bulan Ini</span>
                                 </div>
-                                {/* 
-                                <ul className="space-y-4">
-                                    @foreach($pointLeaderboard as $index =>$user)
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center space-x-3">
-                                            <span className="text-lg font-bold w-4">...</span>
-                                            <span className="text-sm font-semibold text-slate-700">User</span>
-                                        </div>
-                                        <span className="text-sm font-bold text-emerald-500">Poin</span>
-                                    </div>
-                                    @endforeach
-                                </ul> 
-                                */}
+                                {/* Konten Leaderboard */}
                             </div>
 
                             {/* Leaderboard: Streak Aktif */}
@@ -162,11 +173,7 @@ export default function Dashboard() {
                                 <div className="flex items-center justify-between mb-4">
                                     <h2 className="text-lg font-bold text-slate-900">Fire Streak 🔥</h2>
                                 </div>
-                                {/* 
-                                <ul className="space-y-4">
-                                    ...
-                                </ul> 
-                                */}
+                                {/* Konten Streak */}
                             </div>
 
                         </div>

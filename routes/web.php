@@ -1,12 +1,13 @@
-
 <?php
 
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\MentorDirectoryController;
+use App\Http\Controllers\MentoringSessionController;
 use App\Http\Controllers\MentorProfileController;
 use App\Http\Controllers\MentorRegistrationController;
-use App\Http\Controllers\MentoringSessionController;
+use App\Http\Controllers\NoShowReportController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReviewController;
 use Illuminate\Foundation\Application;
@@ -27,13 +28,9 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/courses', function () {
-    return Inertia::render('Course/Courses');
-})->name('courses.index');
+Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
 
-Route::get('/courses/{id}', function ($id) {
-    return Inertia::render('Course/Show');
-})->name('courses.show');
+Route::get('/courses/{slug}', [CourseController::class, 'show'])->name('courses.show');
 
 // Direktori Mentor
 Route::get('/mentors', [MentorDirectoryController::class, 'index'])
@@ -67,6 +64,10 @@ Route::middleware('auth')->group(function () {
         ->name('reviews.store');
 
     // Mentor Registration
+    Route::get('/mentor/become', function () {
+        return Inertia::render('Mentor/BecomeMentor');
+    })->name('mentor.become');
+
     Route::get('/mentor/register', [MentorRegistrationController::class, 'create'])
         ->name('mentor.register');
 
@@ -98,6 +99,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/bookings', [MentoringSessionController::class, 'studentIndex'])
         ->name('student.bookings.index');
 
+    Route::patch('/bookings/{id}/cancel', [MentoringSessionController::class, 'cancelBooking'])
+        ->name('student.bookings.cancel');
+
+    Route::patch('/bookings/{id}/cancel-confirmed', [MentoringSessionController::class, 'cancelConfirmedBooking'])
+        ->name('student.bookings.cancel-confirmed');
+
+    Route::patch('/bookings/{id}/refund-confirmation', [MentoringSessionController::class, 'confirmRefund'])
+        ->name('student.bookings.refund.confirm');
+
     // Mentor Booking Requests
     Route::get('/mentor/requests', [MentoringSessionController::class, 'requests'])
         ->name('mentor.requests');
@@ -127,6 +137,14 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/mentor/session/{id}/refund', [MentoringSessionController::class, 'refundForm'])
         ->name('mentor.refund.form');
+
+    Route::post('/sessions/{id}/no-show', [NoShowReportController::class, 'store'])
+        ->name('no-show.store');
+    Route::patch('/no-show-reports/{id}/respond', [NoShowReportController::class, 'respond'])
+        ->name('no-show.respond');
+    Route::get('/no-show-reports/{id}/evidence/{type}', [NoShowReportController::class, 'evidence'])
+        ->where('type', 'report|response')
+        ->name('no-show.evidence');
 });
 
 require __DIR__.'/auth.php';

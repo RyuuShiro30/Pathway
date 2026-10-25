@@ -21,9 +21,122 @@ class MentorProfileController extends Controller
             ->orderBy('schedule_time', 'asc')
             ->get();
 
+        $refundRequests = MentoringSession::query()
+            ->where('mentor_id', Auth::id())
+            ->where('refund_status', 'menunggu')
+            ->with(['student:id,name'])
+            ->orderBy('refund_deadline', 'asc')
+            ->get(['id', 'student_id', 'schedule_time', 'end_time', 'refund_deadline'])
+            ->map(static fn (MentoringSession $session): array => [
+                'id' => $session->id,
+                'schedule_time' => $session->schedule_time
+                    ?->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'end_time' => $session->end_time
+                    ?->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'refund_deadline' => $session->refund_deadline
+                    ?->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'student' => $session->student ? [
+                    'id' => $session->student->id,
+                    'name' => $session->student->name,
+                ] : null,
+            ])
+            ->values();
+
+        $reportedRefundRequests = MentoringSession::query()
+            ->where('mentor_id', Auth::id())
+            ->where('refund_status', 'dilaporkan')
+            ->with(['student:id,name'])
+            ->orderBy('refund_deadline', 'asc')
+            ->get(['id', 'student_id', 'schedule_time', 'end_time', 'refund_proof_uploaded_at', 'refund_deadline'])
+            ->map(static fn (MentoringSession $session): array => [
+                'id' => $session->id,
+                'schedule_time' => $session->schedule_time
+                    ?->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'end_time' => $session->end_time
+                    ?->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'refund_proof_uploaded_at' => $session->refund_proof_uploaded_at
+                    ?->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'student' => $session->student ? [
+                    'id' => $session->student->id,
+                    'name' => $session->student->name,
+                ] : null,
+            ])
+            ->values();
+
+        $studentCancelledSessions = MentoringSession::query()
+            ->where('mentor_id', Auth::id())
+            ->where('status', 'dibatalkan')
+            ->where('cancelled_by', 'mentee')
+            ->where('refund_status', 'tidak_berlaku')
+            ->where('updated_at', '>=', now()->subDays(7))
+            ->with(['student:id,name'])
+            ->orderByDesc('updated_at')
+            ->limit(20)
+            ->get(['id', 'student_id', 'schedule_time', 'end_time', 'cancellation_reason', 'is_free_session'])
+            ->map(static fn (MentoringSession $session): array => [
+                'id' => $session->id,
+                'schedule_time' => $session->schedule_time
+                    ?->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'end_time' => $session->end_time
+                    ?->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'cancellation_reason' => $session->cancellation_reason,
+                'is_free_session' => $session->is_free_session,
+                'student' => $session->student ? [
+                    'id' => $session->student->id,
+                    'name' => $session->student->name,
+                ] : null,
+            ])
+            ->values();
+        $confirmedSessions = MentoringSession::query()
+            ->where('mentor_id', Auth::id())
+            ->whereIn('status', ['dikonfirmasi', 'berlangsung'])
+            ->with(['student:id,name', 'noShowReport'])
+            ->orderBy('schedule_time', 'asc')
+            ->limit(20)
+            ->get(['id', 'student_id', 'status', 'schedule_time', 'end_time', 'is_free_session'])
+            ->map(static fn (MentoringSession $session): array => [
+                'id' => $session->id,
+                'status' => $session->status,
+                'schedule_time' => $session->schedule_time
+                    ?->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'end_time' => $session->end_time
+                    ?->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'is_free_session' => $session->is_free_session,
+                'no_show_report' => $session->noShowReportPayloadFor((int) Auth::id()),
+                'student' => $session->student ? [
+                    'id' => $session->student->id,
+                    'name' => $session->student->name,
+                ] : null,
+            ])
+            ->values();
+
         return Inertia::render('Mentor/Dashboard', [
             'mentorProfile' => $mentorProfile,
             'bookingRequests' => $requests,
+            'refundRequests' => $refundRequests,
+            'reportedRefundRequests' => $reportedRefundRequests,
+            'studentCancelledSessions' => $studentCancelledSessions,
+            'confirmedSessions' => $confirmedSessions,
         ]);
     }
 

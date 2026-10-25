@@ -28,10 +28,16 @@ class DashboardController extends Controller
             ->orderBy('schedule_time', 'asc')
             ->first();
 
+        $myCourses = UserEnrollment::with('course')
+            ->where('user_id', $user->id)
+            ->orderBy('updated_at', 'desc')
+            ->get();
+
         // Ubah return view menjadi Inertia::render untuk memanggil Dashboard.jsx
         return Inertia::render('Dashboard', [
             'activeCourses' => $activeCourses,
             'lastBooking' => $lastBooking,
+            'myCourses' => $myCourses,
         ]);
     }
 }
