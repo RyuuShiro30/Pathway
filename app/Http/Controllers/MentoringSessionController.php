@@ -6,6 +6,7 @@ use App\Models\MentoringSession;
 use App\Models\MentorProfile;
 use App\Models\NoShowReport;
 use App\Models\User;
+use App\Services\MentorSuspensionService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -718,7 +719,14 @@ class MentoringSessionController extends Controller
                     'message' => 'Jadwal sesi sudah lewat, pengajuan ini tidak dapat diterima.',
                 ]);
             }
-
+            if (
+                $request->action === 'terima'
+                && app(MentorSuspensionService::class)->isSuspended((int) $session->mentor_id)
+            ) {
+                return redirect()->back()->withErrors([
+                    'message' => 'Akun Anda sedang disuspend, jadi tidak bisa menerima pengajuan. Anda masih bisa menolak pengajuan.',
+                ]);
+            }
             if ($request->action === 'tolak') {
                 $cancellation = [
                     'status' => 'dibatalkan',
