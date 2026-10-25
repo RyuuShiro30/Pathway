@@ -274,6 +274,12 @@ class MentoringSessionController extends Controller
 
     public function confirm(Request $request, User $mentor): InertiaResponse|RedirectResponse
     {
+        if (app(MentorSuspensionService::class)->isSuspended((int) $mentor->id)) {
+            return $this->redirectToScheduleWithBookingError(
+                $mentor,
+                'Mentor ini sedang tidak menerima booking baru.',
+            );
+        }
         $mentorProfile = $this->mentorProfileForBooking($mentor);
         $validator = validator($request->query(), [
             'date' => 'required|date_format:Y-m-d',
@@ -391,7 +397,11 @@ class MentoringSessionController extends Controller
             'duration_hours.min' => 'Durasi minimal 1 jam.',
             'duration_hours.max' => 'Durasi maksimal 2 jam.',
         ]);
-
+        if (app(MentorSuspensionService::class)->isSuspended((int) $validated['mentor_id'])) {
+            throw ValidationException::withMessages([
+                'schedule_time' => 'Mentor ini sedang tidak menerima booking baru.',
+            ]);
+        }
         $bookingStart = Carbon::parse($validated['schedule_time'], 'UTC');
 
         if (! $this->isWithinBookingWindow($bookingStart)) {
