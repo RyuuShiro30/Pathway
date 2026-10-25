@@ -9,6 +9,7 @@ use App\Http\Controllers\MentoringSessionController;
 use App\Http\Controllers\MentorProfileController;
 use App\Http\Controllers\MentorRegistrationController;
 use App\Http\Controllers\NoShowReportController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReviewController;
 use Illuminate\Foundation\Application;
@@ -126,6 +127,15 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/bookings', [MentoringSessionController::class, 'studentIndex'])
         ->name('student.bookings.index');
+
+    Route::get('/notifications', [NotificationController::class, 'index'])
+        ->name('notifications.index');
+
+    Route::patch('/notifications/read-all', [NotificationController::class, 'readAll'])
+        ->name('notifications.read-all');
+
+    Route::patch('/notifications/{id}/read', [NotificationController::class, 'read'])
+        ->name('notifications.read');
 
     Route::patch('/bookings/{id}/cancel', [MentoringSessionController::class, 'cancelBooking'])
         ->name('student.bookings.cancel');

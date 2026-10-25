@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\MentoringSession;
 use App\Models\NoShowReport;
+use App\Models\User;
+use App\Notifications\NoShowReported;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -62,7 +64,7 @@ class NoShowReportController extends Controller
 
             $evidencePath = $request->file('evidence')->store('no-show-reports', 'local');
 
-            NoShowReport::query()->create([
+            $report = NoShowReport::query()->create([
                 'session_id' => $session->id,
                 'reporter_id' => $userId,
                 'reported_user_id' => $session->student_id === $userId
@@ -73,6 +75,16 @@ class NoShowReportController extends Controller
                 'evidence_path' => $evidencePath,
                 'respond_deadline' => $now->copy()->addHours(self::RESPONSE_WINDOW_HOURS),
             ]);
+
+            $isReportedStudent = (int) $report->reported_user_id === (int) $session->student_id;
+
+            User::query()
+                ->find($report->reported_user_id)
+                ?->notify(new NoShowReported(
+                    $isReportedStudent
+                        ? route('student.bookings.index', [], false)
+                        : route('mentor.session.tracking', $session->id, false),
+                ));
         });
 
         return redirect()->back()->with(
