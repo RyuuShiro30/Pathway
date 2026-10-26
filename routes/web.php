@@ -1,5 +1,3 @@
-Route/web.php
--------------
 <?php
 
 use App\Http\Controllers\Auth\GoogleController;
