@@ -1,3 +1,5 @@
+Route/web.php
+-------------
 <?php
 
 use App\Http\Controllers\Auth\GoogleController;
@@ -63,6 +65,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/courses/{course:slug}/learn', [CourseController::class, 'learn'])
         ->name('courses.learn');
 
+    Route::post('/courses/{slug}/materials/{materialId}/complete', [CourseController::class, 'markAsCompleted'])
+        ->name('courses.materials.complete');
     // Forum Diskusi Kelas
     Route::get('/courses/{course:slug}/forums', [ForumController::class, 'index'])
         ->name('forums.index');
@@ -188,3 +192,4 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
