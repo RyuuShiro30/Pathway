@@ -1,9 +1,11 @@
+
 <?php
 
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ForumController;
+use App\Http\Controllers\JourneyController;
 use App\Http\Controllers\MentorDirectoryController;
 use App\Http\Controllers\MentoringSessionController;
 use App\Http\Controllers\MentorProfileController;
@@ -50,6 +52,13 @@ Route::get('/mentors', [MentorDirectoryController::class, 'index'])
 Route::get('/mentors/{id}', [MentorDirectoryController::class, 'show'])
     ->name('mentors.show');
 
+// Sharing Journey - halaman publik
+Route::get('/journeys', [JourneyController::class, 'index'])
+    ->name('journeys.index');
+
+Route::get('/journeys/{journey:slug}', [JourneyController::class, 'show'])
+    ->name('journeys.show');
+
 
 /*
 |--------------------------------------------------------------------------
@@ -59,12 +68,13 @@ Route::get('/mentors/{id}', [MentorDirectoryController::class, 'show'])
 
 Route::middleware('auth')->group(function () {
 
-    // Ruang Belajar Materi (Show.jsx)
+    // Ruang Belajar Materi
     Route::get('/courses/{course:slug}/learn', [CourseController::class, 'learn'])
         ->name('courses.learn');
 
     Route::post('/courses/{slug}/materials/{materialId}/complete', [CourseController::class, 'markAsCompleted'])
         ->name('courses.materials.complete');
+
     // Forum Diskusi Kelas
     Route::get('/courses/{course:slug}/forums', [ForumController::class, 'index'])
         ->name('forums.index');
@@ -88,6 +98,22 @@ Route::middleware('auth')->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
+
+    // Sharing Journey - kelola artikel
+    Route::get('/journeys/create', [JourneyController::class, 'create'])
+        ->name('journeys.create');
+
+    Route::post('/journeys', [JourneyController::class, 'store'])
+        ->name('journeys.store');
+
+    Route::get('/journeys/{journey:slug}/edit', [JourneyController::class, 'edit'])
+        ->name('journeys.edit');
+
+    Route::put('/journeys/{journey:slug}', [JourneyController::class, 'update'])
+        ->name('journeys.update');
+
+    Route::delete('/journeys/{journey:slug}', [JourneyController::class, 'destroy'])
+        ->name('journeys.destroy');
 
     // Rating & Ulasan Mentor
     Route::get('/sessions/{session}/review', [ReviewController::class, 'create'])
@@ -190,4 +216,3 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
-
