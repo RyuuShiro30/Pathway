@@ -69,16 +69,36 @@ class MentorSeeder extends Seeder
         ];
 
         foreach ($mentors as $mentor) {
-            $userId = DB::table('users')->insertGetId([
-                'name' => $mentor['name'],
-                'email' => $mentor['email'],
-                'password' => Hash::make('password'),
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            $now = now();
 
-            DB::table('mentor_profiles')->insert([
-                'user_id' => $userId,
+            $user = DB::table('users')
+                ->where('email', $mentor['email'])
+                ->first();
+
+            if ($user) {
+                $userId = $user->id;
+
+                DB::table('users')
+                    ->where('id', $userId)
+                    ->update([
+                        'name' => $mentor['name'],
+                        'updated_at' => $now,
+                    ]);
+            } else {
+                $userId = DB::table('users')->insertGetId([
+                    'name' => $mentor['name'],
+                    'email' => $mentor['email'],
+                    'password' => Hash::make('password'),
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
+
+            $profile = DB::table('mentor_profiles')
+                ->where('user_id', $userId)
+                ->first();
+
+            $profileData = [
                 'expertise' => $mentor['expertise'],
                 'bio' => $mentor['bio'],
                 'portfolio_url' => $mentor['portfolio_url'],
@@ -87,9 +107,19 @@ class MentorSeeder extends Seeder
                 'price_per_session' => $mentor['price_per_session'],
                 'avg_rating' => $mentor['avg_rating'],
                 'is_available' => $mentor['is_available'],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+                'updated_at' => $now,
+            ];
+
+            if ($profile) {
+                DB::table('mentor_profiles')
+                    ->where('user_id', $userId)
+                    ->update($profileData);
+            } else {
+                $profileData['user_id'] = $userId;
+                $profileData['created_at'] = $now;
+
+                DB::table('mentor_profiles')->insert($profileData);
+            }
         }
     }
 }
