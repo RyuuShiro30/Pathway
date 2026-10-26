@@ -1,26 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { Head, Link } from '@inertiajs/react'; // Tambahkan Link di sini
+import { Head, Link, router } from '@inertiajs/react';
 
-export default function Show({ course, materials = [] }) {
+export default function Show({ course, materials = [], dbProgress }) {
 
-    const [modules, setModules] = useState(
-        materials.length > 0
-            ? materials.map(m => ({ ...m, is_completed: false }))
-            : [
-                { id: 101, title: 'Pendahuluan', is_completed: true, content_body: '<p>Teks dummy.</p>' }
-            ]
-    );
+    // Gunakan data materials langsung dari server (yang sudah membawa status is_completed dari DB)
+    const [modules, setModules] = useState(materials);
+    const [activeModuleId, setActiveModuleId] = useState(materials[0]?.id);
 
-    const [activeModuleId, setActiveModuleId] = useState(modules[0]?.id);
+    // Sync state jika data materials dari props diperbarui oleh Inertia
+    useEffect(() => {
+        if (materials && materials.length > 0) {
+            setModules(materials);
+            if (!activeModuleId) {
+                setActiveModuleId(materials[0]?.id);
+            }
+        }
+    }, [materials]);
 
     // Kalkulasi
     const activeIndex = modules.findIndex((m) => m.id === activeModuleId);
-    const activeModule = modules[activeIndex];
-    const isFirst = activeIndex === 0;
+    const activeModule = modules[activeIndex] || modules[0];
+    const isFirst = activeIndex <= 0;
     const isLast = activeIndex === modules.length - 1;
 
+    // Menghitung persentase dari database atau dari state lokal
     const completedCount = modules.filter((m) => m.is_completed).length;
-    const progressPercentage = Math.round((completedCount / modules.length) * 100) || 0;
+    const calculatedPercentage = modules.length > 0 ? Math.round((completedCount / modules.length) * 100) : 0;
+    const progressPercentage = dbProgress !== undefined ? Math.round(dbProgress) : calculatedPercentage;
 
     useEffect(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -30,15 +36,19 @@ export default function Show({ course, materials = [] }) {
         if (!isFirst) setActiveModuleId(modules[activeIndex - 1].id);
     };
 
+    // FUNGSI UTAMA: Mengirim status ke database via router.post
     const handleCompleteAndNext = () => {
-        const updatedModules = [...modules];
-        if (!updatedModules[activeIndex].is_completed) {
-            updatedModules[activeIndex] = { ...updatedModules[activeIndex], is_completed: true };
-            setModules(updatedModules);
-        }
-        if (!isLast) {
-            setActiveModuleId(updatedModules[activeIndex + 1].id);
-        }
+        if (!activeModule) return;
+
+        router.post(`/courses/${course.slug}/materials/${activeModule.id}/complete`, {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                // Pindah ke materi selanjutnya jika belum di materi terakhir
+                if (!isLast) {
+                    setActiveModuleId(modules[activeIndex + 1].id);
+                }
+            }
+        });
     };
 
     const getYouTubeEmbedUrl = (url) => {
@@ -100,7 +110,7 @@ export default function Show({ course, materials = [] }) {
                         </div>
                     </div>
 
-                    {/* Widget Daftar Materi (Timeline Style) - Dibuat sticky agar ngikutin scroll */}
+                    {/* Widget Daftar Materi (Timeline Style) */}
                     <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-200 sticky top-32">
                         <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-8">Peta Modul</h3>
                         <div className="ml-1">
