@@ -33,9 +33,7 @@ export default function Register({ user, mentorProfile }) {
     const [existingCertificateState, setExistingCertificateState] =
         useState(existingCertificates);
 
-    const [photoPreview, setPhotoPreview] = useState(
-        user?.photo_path ? `/storage/${user.photo_path}` : null,
-    );
+    const [photoPreview, setPhotoPreview] = useState(user?.photo_path ?? null);
 
     const fileInputRef = useRef(null);
 
@@ -546,7 +544,9 @@ export default function Register({ user, mentorProfile }) {
                                                             className="flex items-center justify-between gap-3 rounded-xl border border-[#D7E4E9] bg-[#F8FBFC] px-3 py-3"
                                                         >
                                                             <a
-                                                                href={`/storage/${certificate.file_path}`}
+                                                                href={
+                                                                    certificate.file_path
+                                                                }
                                                                 target="_blank"
                                                                 rel="noreferrer"
                                                                 className="flex min-w-0 items-center gap-3"
