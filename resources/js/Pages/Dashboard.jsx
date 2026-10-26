@@ -9,6 +9,11 @@ export default function Dashboard() {
     const lastBooking = props.lastBooking || null;
     const myCourses = props.myCourses || [];
     const completedSessions = props.completedSessions || [];
+    
+    // Tangkap data angka statistik dari Controller
+    const courseSelesaiCount = props.courseSelesaiCount || 0;
+    const modulSelesaiCount = props.modulSelesaiCount || 0;
+    const sesiSelesaiCount = props.sesiSelesaiCount || 0;
 
     return (
         <div className="min-h-screen bg-slate-50 font-sans text-slate-800 antialiased">
@@ -28,7 +33,7 @@ export default function Dashboard() {
                                     Course Selesai
                                 </p>
                                 <p className="text-2xl font-bold text-slate-900">
-                                    {myCourses.filter(c => c.status === 'completed').length}
+                                    {courseSelesaiCount}
                                 </p>
                             </div>
 
@@ -36,7 +41,9 @@ export default function Dashboard() {
                                 <p className="text-xs text-slate-500 font-medium uppercase">
                                     Modul Selesai
                                 </p>
-                                <p className="text-2xl font-bold text-slate-900">0</p>
+                                <p className="text-2xl font-bold text-slate-900">
+                                    {modulSelesaiCount}
+                                </p>
                             </div>
 
                             <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
@@ -44,7 +51,7 @@ export default function Dashboard() {
                                     Sesi Bimbingan Selesai
                                 </p>
                                 <p className="text-2xl font-bold text-slate-900">
-                                    {completedSessions.length}
+                                    {sesiSelesaiCount}
                                 </p>
                             </div>
                         </div>
@@ -72,10 +79,7 @@ export default function Dashboard() {
                                                 </h3>
 
                                                 <p className="text-sm text-slate-500 mt-1">
-                                                    {enrollment.completed_modules_count ?? 0}
-                                                    {' / '}
-                                                    {enrollment.total_modules_count ?? 0}
-                                                    {' '}Bab Selesai
+                                                    Progres Kelas
                                                 </p>
 
                                                 <div className="w-full bg-slate-200 rounded-full h-2 mt-3">
@@ -93,7 +97,7 @@ export default function Dashboard() {
                                             </div>
 
                                             <Link
-                                                href={`/courses/${enrollment.course_id}`}
+                                                href={`/courses/${enrollment.course?.slug || enrollment.course_id}`}
                                                 className={`px-5 py-2 text-white text-sm font-semibold rounded-lg shadow transition whitespace-nowrap ${
                                                     isCompleted
                                                         ? 'bg-indigo-600 hover:bg-indigo-700'
@@ -173,10 +177,7 @@ export default function Dashboard() {
                                 <div className="space-y-4">
                                     {completedSessions.map(session => {
                                         const alreadyReviewed = Boolean(session.review);
-                                        const mentorProfileId =
-                                            session.mentor?.mentor_profile?.id ??
-                                            session.mentor?.mentorProfile?.id;
-
+                                        
                                         return (
                                             <div
                                                 key={session.id}
