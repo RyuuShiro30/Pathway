@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\MentorProfile;
 use App\Models\MentorSuspension;
+use App\Models\User;
+use App\Notifications\MentorSuspended;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -48,6 +50,10 @@ class MentorSuspensionService
             MentorProfile::query()
                 ->where('user_id', $mentorId)
                 ->update(['is_suspended' => true]);
+
+            User::query()
+                ->find($mentorId)
+                ?->notify(new MentorSuspended($reason));
 
             return $suspension;
         });

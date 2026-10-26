@@ -20,7 +20,7 @@ class User extends Authenticatable
 
     public function mentorProfile(): HasOne
     {
-        return $this->hasOne(MentorProfile::class);
+        return $this->hasOne(MentorProfile::class, 'user_id', 'id');
     }
 
     public function mentoringSessionsAsMentor()
@@ -32,16 +32,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(MentoringSession::class, 'student_id');
     }
+
     public function enrollments()
     {
         return $this->hasMany(UserEnrollment::class);
     }
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
     protected function casts(): array
     {
         return [

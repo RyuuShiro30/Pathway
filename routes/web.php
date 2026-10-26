@@ -3,16 +3,24 @@
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ForumController;
 use App\Http\Controllers\MentorDirectoryController;
 use App\Http\Controllers\MentoringSessionController;
 use App\Http\Controllers\MentorProfileController;
 use App\Http\Controllers\MentorRegistrationController;
 use App\Http\Controllers\NoShowReportController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReviewController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
+/*
+|--------------------------------------------------------------------------
+| Public Routes
+|--------------------------------------------------------------------------
+*/
 
 Route::get('/auth/google', [GoogleController::class, 'redirect'])
     ->name('google.login');
@@ -28,9 +36,12 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/courses', [CourseController::class, 'index'])->name('courses.index');
+// Katalog & Halaman Jendela Kelas
+Route::get('/courses', [CourseController::class, 'index'])
+    ->name('courses.index');
 
-Route::get('/courses/{slug}', [CourseController::class, 'show'])->name('courses.show');
+Route::get('/courses/{slug}', [CourseController::class, 'show'])
+    ->name('courses.show');
 
 // Direktori Mentor
 Route::get('/mentors', [MentorDirectoryController::class, 'index'])
@@ -39,8 +50,28 @@ Route::get('/mentors', [MentorDirectoryController::class, 'index'])
 Route::get('/mentors/{id}', [MentorDirectoryController::class, 'show'])
     ->name('mentors.show');
 
-// Route yang memerlukan autentikasi
+
+/*
+|--------------------------------------------------------------------------
+| Authenticated Routes
+|--------------------------------------------------------------------------
+*/
+
 Route::middleware('auth')->group(function () {
+
+    // Ruang Belajar Materi (Show.jsx)
+    Route::get('/courses/{course:slug}/learn', [CourseController::class, 'learn'])
+        ->name('courses.learn');
+
+    // Forum Diskusi Kelas
+    Route::get('/courses/{course:slug}/forums', [ForumController::class, 'index'])
+        ->name('forums.index');
+
+    Route::get('/courses/{course:slug}/forums/create', [ForumController::class, 'create'])
+        ->name('forums.create');
+
+    Route::post('/courses/{course:slug}/forums', [ForumController::class, 'store'])
+        ->name('forums.store');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])
@@ -74,10 +105,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/mentor/register', [MentorRegistrationController::class, 'store'])
         ->name('mentor.register.store');
 
-    Route::delete(
-        '/mentor/certificates/{certificate}',
-        [MentorRegistrationController::class, 'destroyCertificate']
-    )->name('mentor.certificate.destroy');
+    Route::delete('/mentor/certificates/{certificate}', [MentorRegistrationController::class, 'destroyCertificate'])
+        ->name('mentor.certificate.destroy');
 
     // Mentor Dashboard & Availability
     Route::get('/mentor/dashboard', [MentorProfileController::class, 'dashboard'])
@@ -98,6 +127,15 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/bookings', [MentoringSessionController::class, 'studentIndex'])
         ->name('student.bookings.index');
+
+    Route::get('/notifications', [NotificationController::class, 'index'])
+        ->name('notifications.index');
+
+    Route::patch('/notifications/read-all', [NotificationController::class, 'readAll'])
+        ->name('notifications.read-all');
+
+    Route::patch('/notifications/{id}/read', [NotificationController::class, 'read'])
+        ->name('notifications.read');
 
     Route::patch('/bookings/{id}/cancel', [MentoringSessionController::class, 'cancelBooking'])
         ->name('student.bookings.cancel');
@@ -131,7 +169,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/mentor/session/{id}/cancel', [MentoringSessionController::class, 'cancelSession'])
         ->name('mentor.session.cancel');
 
-    // Mentor Refund
+    // Mentor Refund & No Show
     Route::patch('/mentor/session/{id}/refund', [MentoringSessionController::class, 'completeRefund'])
         ->name('mentor.refund.complete');
 
@@ -140,8 +178,10 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/sessions/{id}/no-show', [NoShowReportController::class, 'store'])
         ->name('no-show.store');
+
     Route::patch('/no-show-reports/{id}/respond', [NoShowReportController::class, 'respond'])
         ->name('no-show.respond');
+
     Route::get('/no-show-reports/{id}/evidence/{type}', [NoShowReportController::class, 'evidence'])
         ->where('type', 'report|response')
         ->name('no-show.evidence');

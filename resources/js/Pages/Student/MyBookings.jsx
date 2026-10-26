@@ -219,6 +219,8 @@ function getSafeDiscordUrl(value) {
     }
 }
 
+import NotificationBell from '@/Components/NotificationBell';
+
 export default function MyBookings({ bookings = [], stats = {} }) {
     const { flash } = usePage().props;
     const [selectedStatus, setSelectedStatus] = useState('semua');
@@ -598,9 +600,9 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                             Pathway
                         </span>
                     </div>
-                    <span className="rounded-full border border-white/40 px-3 py-1 text-xs font-semibold">
+                    <div className="flex items-center gap-3"><NotificationBell /><span className="rounded-full border border-white/40 px-3 py-1 text-xs font-semibold">
                         Student
-                    </span>
+                    </span></div>
                 </div>
             </header>
 
