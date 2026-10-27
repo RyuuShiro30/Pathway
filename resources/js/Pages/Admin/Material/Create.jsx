@@ -1,65 +1,105 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import AdminLayout from '@/Layouts/AdminLayout';
 
-export default function Index({ courses }) {
+export default function Create({ course }) {
+    const { data, setData, post, processing, errors } = useForm({
+        section_name: '',
+        title: '',
+        content: '',
+        video_url: '',
+        sequence_order: '',
+    });
+
+    const submit = (e) => {
+        e.preventDefault();
+        post(`/admin/courses/${course.id}/materials`);
+    };
+
     return (
         <AdminLayout>
-            <Head title="Kelola Course | Admin Pathway" />
-            
-            <div className="p-8 max-w-7xl mx-auto">
-                <div className="flex items-center justify-between mb-8">
-                    <h1 className="text-3xl font-extrabold text-slate-900">Kelola Course</h1>
-                    
-                    <Link 
-                        href="/admin/courses/create" 
-                        className="px-5 py-2.5 bg-[#6594B1] hover:bg-[#6b9bc3] text-white font-bold rounded-xl shadow-sm transition"
-                    >
-                        + Tambah Course
-                    </Link>
-                </div>
+            <Head title={`Tambah Materi: ${course.title} | Admin`} />
 
-                <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-slate-100 border-b border-slate-200 text-sm font-semibold text-slate-600 uppercase tracking-wider">
-                                <th className="p-4 pl-6">Judul Course</th>
-                                <th className="p-4">Level</th>
-                                <th className="p-4">Status</th>
-                                <th className="p-4 text-right pr-6">Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {courses.length > 0 ? (
-                                courses.map((course) => (
-                                    <tr key={course.id} className="border-b border-slate-100 hover:bg-slate-50 transition">
-                                        <td className="p-4 pl-6 font-bold text-slate-800">{course.title}</td>
-                                        <td className="p-4 text-slate-600 capitalize">{course.level}</td>
-                                        <td className="p-4">
-                                            {course.is_published ? (
-                                                <span className="px-3 py-1 bg-emerald-100 text-emerald-700 text-xs font-bold rounded-full">Published</span>
-                                            ) : (
-                                                <span className="px-3 py-1 bg-amber-100 text-amber-700 text-xs font-bold rounded-full">Draft</span>
-                                            )}
-                                        </td>
-                                        <td className="p-4 pr-6 text-right space-x-3">
-                                            <Link 
-                                                href={`/admin/courses/${course.id}/materials`} 
-                                                className="text-sm font-semibold text-[#6594B1] hover:underline"
-                                            >
-                                                Kelola Materi
-                                            </Link>
-                                        </td>
-                                    </tr>
-                                ))
-                            ) : (
-                                <tr>
-                                    <td colSpan="4" className="p-8 text-center text-slate-500">Belum ada course. Silakan tambah course baru.</td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+            <div className="p-8 max-w-3xl mx-auto">
+                <Link
+                    href={`/admin/courses/${course.id}/materials`}
+                    className="text-sm font-medium text-slate-500 hover:text-slate-800 mb-2 inline-block"
+                >
+                    &larr; Kembali ke Daftar Materi
+                </Link>
+                <h1 className="text-3xl font-extrabold text-slate-900 mb-8">
+                    Tambah Materi: {course.title}
+                </h1>
+
+                <form
+                    onSubmit={submit}
+                    className="bg-white p-8 rounded-3xl shadow-sm border border-slate-200 space-y-5"
+                >
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Nama Bagian (Section)</label>
+                        <input
+                            type="text"
+                            value={data.section_name}
+                            onChange={(e) => setData('section_name', e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#6594B1] outline-none"
+                            placeholder="Contoh: Bab 1: Pendahuluan"
+                            required
+                        />
+                        {errors.section_name && <p className="text-red-500 text-xs mt-1">{errors.section_name}</p>}
+                    </div>
+                    
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Judul Materi</label>
+                        <input
+                            type="text"
+                            value={data.title}
+                            onChange={(e) => setData('title', e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#6594B1]"
+                        />
+                        {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Isi Materi</label>
+                        <textarea
+                            rows="6"
+                            value={data.content}
+                            onChange={(e) => setData('content', e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#6594B1]"
+                        />
+                        {errors.content && <p className="text-red-500 text-xs mt-1">{errors.content}</p>}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Video URL (opsional)</label>
+                        <input
+                            type="url"
+                            value={data.video_url}
+                            onChange={(e) => setData('video_url', e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#6594B1]"
+                        />
+                        {errors.video_url && <p className="text-red-500 text-xs mt-1">{errors.video_url}</p>}
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Urutan Modul</label>
+                        <input
+                            type="number"
+                            value={data.sequence_order}
+                            onChange={(e) => setData('sequence_order', e.target.value)}
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:ring-2 focus:ring-[#6594B1]"
+                        />
+                        {errors.sequence_order && <p className="text-red-500 text-xs mt-1">{errors.sequence_order}</p>}
+                    </div>
+
+                    <button
+                        type="submit"
+                        disabled={processing}
+                        className="w-full py-3 bg-[#6594B1] hover:bg-[#6b9bc3] text-white font-bold rounded-xl shadow-sm transition disabled:opacity-50"
+                    >
+                        {processing ? 'Menyimpan...' : 'Simpan Materi'}
+                    </button>
+                </form>
             </div>
         </AdminLayout>
     );
