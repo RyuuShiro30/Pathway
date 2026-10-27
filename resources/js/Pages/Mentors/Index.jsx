@@ -610,10 +610,20 @@ export default function Index({
                                 >
                                     {/* Mentor Header */}
                                     <div className="flex items-center gap-3.5">
-                                        <div className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-xl bg-[#E6EFF4] text-lg font-semibold text-[#6594B1] transition-transform duration-200 group-hover:scale-105">
-                                            {mentor.user.name
-                                                .charAt(0)
-                                                .toUpperCase()}
+                                        <div className="h-[52px] w-[52px] shrink-0 overflow-hidden rounded-xl bg-[#E6EFF4]">
+                                            {mentor.user?.photo_path ? (
+                                                <img
+                                                    src={mentor.user.photo_path}
+                                                    alt={`Foto ${mentor.user.name}`}
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-[#6594B1]">
+                                                    {mentor.user?.name
+                                                        ?.charAt(0)
+                                                        .toUpperCase() || "M"}
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="min-w-0 flex-1">
