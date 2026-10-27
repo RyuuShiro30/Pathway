@@ -1,6 +1,8 @@
-
 <?php
 
+use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\Admin\AdminCourseController;
+use App\Http\Controllers\Admin\AdminMaterialController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
@@ -62,7 +64,31 @@ Route::get('/journeys/{journey:slug}', [JourneyController::class, 'show'])
 
 /*
 |--------------------------------------------------------------------------
-| Authenticated Routes
+| Admin Guest Routes (Hanya bisa diakses jika BELUM login)
+|--------------------------------------------------------------------------
+*/
+Route::middleware('guest')->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/login', [AdminAuthController::class, 'create'])
+        ->name('login');
+        
+    Route::post('/login', [AdminAuthController::class, 'store'])
+        ->name('login.store');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Admin Protected Routes (Hanya bisa diakses oleh Admin)
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::resource('courses', AdminCourseController::class);
+    Route::resource('courses.materials', AdminMaterialController::class)->shallow();
+});
+
+
+/*
+|--------------------------------------------------------------------------
+| Authenticated Routes (Mahasiswa & Mentor)
 |--------------------------------------------------------------------------
 */
 
