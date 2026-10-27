@@ -32,6 +32,7 @@ class AdminMaterialController extends Controller
     public function store(Request $request, Course $course)
     {
         $request->validate([
+            'section_name' => 'required|string|max:255', 
             'title' => 'required|string|max:255',
             'content' => 'required|string',
             'video_url' => 'nullable|url',
@@ -39,6 +40,7 @@ class AdminMaterialController extends Controller
         ]);
 
         $course->courseMaterials()->create([
+            'section_name' => $request->input('section_name'), 
             'title' => $request->input('title'),
             'content' => $request->input('content'),
             'video_url' => $request->input('video_url'),
