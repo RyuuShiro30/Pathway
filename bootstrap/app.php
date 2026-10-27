@@ -1,4 +1,3 @@
-app.php
 <?php
 
 use App\Http\Middleware\IsAdmin;
