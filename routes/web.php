@@ -1,4 +1,3 @@
-route/web.php new
 <?php
 
 use App\Http\Controllers\Admin\AdminAuthController;
