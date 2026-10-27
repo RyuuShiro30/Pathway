@@ -11,6 +11,7 @@ class MentorCertificate extends Model
         'mentor_profile_id',
         'file_path',
         'file_name',
+        'cloudinary_public_id',
     ];
 
     public function mentorProfile(): BelongsTo

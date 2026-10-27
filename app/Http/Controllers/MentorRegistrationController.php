@@ -2,11 +2,10 @@
 
 namespace App\Http\Controllers;
 
-
 use App\Http\Requests\MentorRegistrationRequest;
 use App\Models\MentorCertificate;
-use Illuminate\Support\Facades\Storage;
 use App\Models\MentorProfile;
+use Cloudinary\Cloudinary;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -31,36 +30,46 @@ class MentorRegistrationController extends Controller
     {
         $user = $request->user();
 
-        // Cek apakah user sudah memiliki profil mentor.
         $mentorProfile = $user->mentorProfile;
 
-        // Menandai apakah ini pendaftaran baru.
         $isNewProfile = !$mentorProfile;
 
-        // Cek apakah pengajuan sebelumnya ditolak.
         $isResubmission = $mentorProfile?->verification_status === 'rejected';
 
-        // Update nama user.
         $user->update([
             'name' => $request->name,
         ]);
 
-        // Jika user mengupload foto baru, simpan ke Storage.
+        $cloudinary = new Cloudinary();
+
+        /*
+         * Upload foto profil ke Cloudinary.
+         */
         if ($request->hasFile('photo')) {
-            // Hapus foto lama jika ada.
-            if ($user->photo_path) {
-                \Illuminate\Support\Facades\Storage::disk('public')
-                    ->delete($user->photo_path);
+            // Hapus foto lama dari Cloudinary jika ada.
+            if ($user->cloudinary_public_id) {
+                $cloudinary->uploadApi()->destroy(
+                    $user->cloudinary_public_id,
+                    [
+                        'resource_type' => 'image',
+                    ]
+                );
             }
 
-            // Simpan foto baru.
-            $user->photo_path = $request->file('photo')
-                ->store('mentor-photos', 'public');
+            // Upload foto baru.
+            $uploadResult = $cloudinary->uploadApi()->upload(
+                $request->file('photo')->getRealPath(),
+                [
+                    'folder' => 'pathway/mentor-photos',
+                    'resource_type' => 'image',
+                ]
+            );
 
+            $user->photo_path = $uploadResult['secure_url'];
+            $user->cloudinary_public_id = $uploadResult['public_id'];
             $user->save();
         }
 
-        // Data mentor yang akan disimpan.
         $mentorData = [
             'expertise' => $request->expertise,
             'bio' => $request->bio,
@@ -73,37 +82,40 @@ class MentorRegistrationController extends Controller
         ];
 
         if ($mentorProfile) {
-            // Jika sebelumnya ditolak dan mengajukan ulang,
-            // status kembali menjadi pending.
             if ($isResubmission) {
                 $mentorData['verification_status'] = 'pending';
             }
 
-            // Update profil mentor.
             $mentorProfile->update($mentorData);
         } else {
-            // Jika belum pernah mendaftar,
-            // buat profil baru dengan status pending.
             $mentorData['user_id'] = $user->id;
             $mentorData['verification_status'] = 'pending';
 
             $mentorProfile = MentorProfile::create($mentorData);
         }
 
-        // Upload banyak sertifikat atau bukti pengalaman.
+        /*
+         * Upload sertifikat ke Cloudinary.
+         */
         if ($request->hasFile('certificates')) {
             foreach ($request->file('certificates') as $certificate) {
-                $path = $certificate->store('mentor-certificates', 'public');
+                $uploadResult = $cloudinary->uploadApi()->upload(
+                    $certificate->getRealPath(),
+                    [
+                        'folder' => 'pathway/mentor-certificates',
+                        'resource_type' => 'auto',
+                    ]
+                );
 
                 MentorCertificate::create([
                     'mentor_profile_id' => $mentorProfile->id,
-                    'file_path' => $path,
+                    'file_path' => $uploadResult['secure_url'],
                     'file_name' => $certificate->getClientOriginalName(),
+                    'cloudinary_public_id' => $uploadResult['public_id'],
                 ]);
             }
         }
 
-        // Pesan disesuaikan dengan kondisi pendaftaran.
         if ($isNewProfile) {
             $message = 'Pendaftaran mentor berhasil dikirim dan sedang menunggu verifikasi.';
         } elseif ($isResubmission) {
@@ -119,7 +131,7 @@ class MentorRegistrationController extends Controller
 
     /**
      * Menghapus sertifikat mentor.
-    */
+     */
     public function destroyCertificate(
         MentorCertificate $certificate
     ): RedirectResponse {
@@ -134,7 +146,21 @@ class MentorRegistrationController extends Controller
             abort(403);
         }
 
-        Storage::disk('public')->delete($certificate->file_path);
+        $cloudinary = new Cloudinary();
+
+        if ($certificate->cloudinary_public_id) {
+            $resourceType = str_contains(
+                $certificate->file_path,
+                '/image/upload/'
+            ) ? 'image' : 'raw';
+
+            $cloudinary->uploadApi()->destroy(
+                $certificate->cloudinary_public_id,
+                [
+                    'resource_type' => $resourceType,
+                ]
+            );
+        }
 
         $certificate->delete();
 

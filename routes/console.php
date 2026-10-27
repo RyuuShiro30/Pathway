@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('bookings:auto-cancel')->everyFiveMinutes();
 Schedule::command('no-show:finalize')->everyFiveMinutes();
+Schedule::command('mentors:check-suspensions')->everyFiveMinutes();

@@ -15,9 +15,16 @@ class Course extends Model
     {
         return $this->hasMany(UserEnrollment::class);
     }
+    
     public function courseMaterials()
     {
         // Urutkan otomatis berdasarkan kolom sequence_order
         return $this->hasMany(CourseMaterial::class)->orderBy('sequence_order', 'asc');
+    }
+
+    // TAMBAHKAN INI BRAY 👇
+    public function forums()
+    {
+        return $this->hasMany(Forum::class);
     }
 }

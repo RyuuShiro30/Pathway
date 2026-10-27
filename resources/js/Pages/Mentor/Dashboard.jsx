@@ -76,6 +76,8 @@ function timeToMinutes(value) {
     return match ? Number(match[1]) * 60 + Number(match[2]) : null;
 }
 
+import NotificationBell from '@/Components/NotificationBell';
+
 export default function Dashboard({
     mentorProfile,
     bookingRequests = [],
@@ -390,6 +392,7 @@ export default function Dashboard({
                             />
                         </label>
                         <div className="flex shrink-0 items-center gap-3">
+                            <NotificationBell />
                             <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/70 bg-[#E5ECDD] text-xs font-bold text-[#34443D]">
                                 {avatarInitials || 'M'}
                             </div>
