@@ -98,11 +98,7 @@ export default function Dashboard() {
 
                                             <Link
                                                 href={`/courses/${enrollment.course?.slug || enrollment.course_id}`}
-                                                className={`px-5 py-2 text-white text-sm font-semibold rounded-lg shadow transition whitespace-nowrap ${
-                                                    isCompleted
-                                                        ? 'bg-indigo-600 hover:bg-indigo-700'
-                                                        : 'bg-cyan-600 hover:bg-cyan-700'
-                                                }`}
+                                                className="px-5 py-2 text-white text-sm font-semibold rounded-lg shadow transition whitespace-nowrap bg-[#6594B1] hover:bg-[#527993]"
                                             >
                                                 {isCompleted ? 'Pelajari Ulang' : 'Lanjutkan'}
                                             </Link>
