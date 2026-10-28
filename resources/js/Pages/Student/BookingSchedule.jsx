@@ -586,39 +586,7 @@ export default function BookingSchedule({
                     </section>
                 )}
 
-                {scheduleError && !isErrorDismissed && (
-                    <section
-                        role="alert"
-                        aria-labelledby="schedule-error-heading"
-                        className="flex items-start justify-between gap-4 rounded-xl border border-[#E7C7C1] bg-[#FBEEEB] px-4 py-4 text-[#8E453D] shadow-sm"
-                    >
-                        <div className="flex items-start gap-3">
-                            <span
-                                aria-hidden="true"
-                                className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white/70 font-bold"
-                            >
-                                !
-                            </span>
-                            <div>
-                                <h2
-                                    id="schedule-error-heading"
-                                    className="font-bold"
-                                >
-                                    Perhatian Slot Waktu
-                                </h2>
-                                <p className="mt-1 text-sm">{scheduleError}</p>
-                            </div>
-                        </div>
-                        <button
-                            type="button"
-                            aria-label="Tutup pesan kesalahan"
-                            onClick={() => setIsErrorDismissed(true)}
-                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-lg font-semibold transition-colors hover:bg-white/70 focus:outline-none focus:ring-2 focus:ring-[#A34F45]"
-                        >
-                            ×
-                        </button>
-                    </section>
-                )}
+                
 
                 <section className="flex flex-wrap items-start justify-between gap-4">
                     <div className="space-y-3">

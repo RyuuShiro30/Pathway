@@ -7,6 +7,7 @@ use App\Models\MentorProfile;
 use App\Models\NoShowReport;
 use App\Models\User;
 use App\Notifications\RefundProofUploaded;
+use App\Notifications\SessionEvent;
 use App\Services\MentorSuspensionService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
@@ -146,6 +147,7 @@ class MentoringSessionController extends Controller
             }
 
             $session->update($cancellation);
+            $session->mentor?->notify(new SessionEvent('Student membatalkan pengajuan booking.', '/mentor/dashboard'));
         });
 
         return redirect()->route('student.bookings.index')
@@ -190,6 +192,7 @@ class MentoringSessionController extends Controller
                 'cancelled_by' => 'mentee',
                 'cancellation_reason' => $validated['cancellation_reason'],
             ]);
+            $session->mentor?->notify(new SessionEvent('Student membatalkan sesi yang sudah dikonfirmasi.', '/mentor/dashboard'));
         });
 
         return redirect()->route('student.bookings.index')
@@ -215,6 +218,8 @@ class MentoringSessionController extends Controller
             $session->update([
                 'refund_status' => $newRefundStatus,
             ]);
+
+            $session->mentor?->notify(new SessionEvent($newRefundStatus === 'selesai' ? 'Student mengonfirmasi sudah menerima refund.' : 'Student melaporkan belum menerima refund.', '/mentor/dashboard'));
         });
 
         $message = $validated['decision'] === 'sudah_terima'
@@ -486,6 +491,8 @@ class MentoringSessionController extends Controller
                     : 'menunggu_verifikasi',
             ]);
 
+            $session->mentor?->notify(new SessionEvent('Ada pengajuan booking baru dari student.', '/mentor/dashboard'));
+
             return redirect()
                 ->route('student.bookings.index')
                 ->with('success', 'Booking berhasil diajukan, menunggu konfirmasi mentor.');
@@ -751,6 +758,8 @@ class MentoringSessionController extends Controller
 
                 $session->update($cancellation);
 
+                $session->student?->notify(new SessionEvent('Booking Anda ditolak mentor.', '/bookings'));
+
                 return redirect()->route('mentor.dashboard')->with('success', 'Permintaan berhasil ditolak');
             }
 
@@ -764,6 +773,8 @@ class MentoringSessionController extends Controller
             ]);
 
             // TODO: kirim email ke mentee berisi link Discord (nanti ditambahkan)
+
+            $session->student?->notify(new SessionEvent('Booking Anda dikonfirmasi mentor. Link Discord ada di halaman booking.', '/bookings'));
 
             return redirect()->route('mentor.dashboard')->with('success', 'Booking berhasil dikonfirmasi');
         });
@@ -821,6 +832,8 @@ class MentoringSessionController extends Controller
 
             $session->update(['status' => 'berlangsung']);
 
+            $session->student?->notify(new SessionEvent('Sesi mentoring Anda sudah dimulai.', '/bookings'));
+
             return redirect()->back()->with('success', 'Sesi dimulai');
         });
     }
@@ -845,6 +858,8 @@ class MentoringSessionController extends Controller
             'proof_file' => $proofPath,
             'notes_from_mentor' => $request->notes_from_mentor,
         ]);
+
+        $session->student?->notify(new SessionEvent('Sesi mentoring Anda sudah selesai.', '/bookings'));
 
         return redirect()->route('mentor.dashboard')->with('success', 'Sesi berhasil diselesaikan');
     }
@@ -879,6 +894,7 @@ class MentoringSessionController extends Controller
             }
 
             $session->update($cancellation);
+            $session->student?->notify(new SessionEvent('Mentor membatalkan sesi Anda.', '/bookings'));
         });
 
         return redirect()->route('mentor.dashboard')->with('success', 'Sesi berhasil dibatalkan.');

@@ -4,6 +4,8 @@ namespace App\Console\Commands;
 
 use App\Models\MentoringSession;
 use App\Models\NoShowReport;
+use App\Models\User;
+use App\Notifications\SessionEvent;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -96,6 +98,9 @@ class FinalizeNoShowReports extends Command
                 'status' => 'berlaku',
                 'finalized_at' => $now,
             ]);
+
+            User::query()->find($session->student_id)?->notify(new SessionEvent('Laporan no-show berlaku. Sesi dibatalkan otomatis.', '/bookings'));
+            User::query()->find($session->mentor_id)?->notify(new SessionEvent('Laporan no-show berlaku. Sesi dibatalkan otomatis.', '/mentor/dashboard'));
 
             return true;
         });

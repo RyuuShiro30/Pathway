@@ -3,6 +3,8 @@
 namespace App\Console\Commands;
 
 use App\Models\MentoringSession;
+use App\Models\User;
+use App\Notifications\SessionEvent;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -87,6 +89,9 @@ class AutoCancelBookings extends Command
             }
 
             $session->update($cancellation);
+
+            User::query()->find($session->student_id)?->notify(new SessionEvent('Pengajuan booking dibatalkan otomatis karena tidak direspons mentor.', '/bookings'));
+            User::query()->find($session->mentor_id)?->notify(new SessionEvent('Pengajuan booking dibatalkan otomatis karena tidak Anda respons.', '/mentor/dashboard'));
 
             return true;
         });
