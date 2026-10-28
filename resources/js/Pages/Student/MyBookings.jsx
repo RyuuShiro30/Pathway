@@ -607,22 +607,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
             </header>
 
             <main className="mx-auto max-w-7xl space-y-6 px-4 py-7 sm:px-6 sm:py-9 lg:px-8">
-                {successMessage && !isSuccessDismissed && (
-                    <section
-                        role="status"
-                        className="flex items-start justify-between gap-4 rounded-xl border border-[#C9DEC9] bg-[#E8F2E8] px-4 py-3 text-sm font-medium text-[#477E50]"
-                    >
-                        <p>{successMessage}</p>
-                        <button
-                            type="button"
-                            aria-label="Tutup pesan sukses"
-                            onClick={() => setIsSuccessDismissed(true)}
-                            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-lg font-semibold transition-colors hover:bg-white/70 focus:outline-none focus:ring-2 focus:ring-[#65B175]"
-                        >
-                            ×
-                        </button>
-                    </section>
-                )}
+                
 
                 <section className="flex flex-wrap items-end justify-between gap-4">
                     <div className="space-y-2">

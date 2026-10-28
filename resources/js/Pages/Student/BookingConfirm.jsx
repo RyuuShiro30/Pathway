@@ -445,14 +445,7 @@ export default function BookingConfirm({
                             </section>
                         )}
 
-                        {pageErrors.message && (
-                            <p
-                                role="alert"
-                                className="rounded-xl border border-[#E7C7C1] bg-[#FBEEEB] px-4 py-3 text-sm font-medium text-[#A34F45]"
-                            >
-                                {pageErrors.message}
-                            </p>
-                        )}
+                        
 
                         <div className="flex items-start gap-3 rounded-xl border border-[#E8E5DD] bg-white p-4">
                             <input

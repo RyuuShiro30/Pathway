@@ -365,14 +365,7 @@ export default function SessionTracking({
 
                 <ErrorMessages messages={errorMessages} />
 
-                {flash?.success && (
-                    <div
-                        role="status"
-                        className="rounded-xl border border-[#C9DEC9] bg-[#E8F2E8] px-4 py-3 text-sm font-medium text-[#477E50]"
-                    >
-                        {flash.success}
-                    </div>
-                )}
+                
 
                 <div className="grid gap-5 lg:grid-cols-5 lg:items-start">
                     <div className="space-y-5 lg:col-span-3">

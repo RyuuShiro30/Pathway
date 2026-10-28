@@ -6,6 +6,7 @@ use App\Models\MentoringSession;
 use App\Models\NoShowReport;
 use App\Models\User;
 use App\Notifications\NoShowReported;
+use App\Notifications\SessionEvent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -127,6 +128,10 @@ class NoShowReportController extends Controller
                 'response_evidence_path' => $evidencePath,
                 'responded_at' => $now,
             ]);
+
+            $reportedSession = MentoringSession::query()->find($report->session_id);
+            $reporterUrl = $reportedSession && (int) $reportedSession->student_id === (int) $report->reporter_id ? '/bookings' : '/mentor/session/'.$report->session_id;
+            User::query()->find($report->reporter_id)?->notify(new SessionEvent('Laporan no-show Anda disanggah. Menunggu peninjauan admin.', $reporterUrl));
         });
 
         return redirect()->back()->with(

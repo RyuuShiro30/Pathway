@@ -169,14 +169,7 @@ export default function BookingRequestDetail({ session }) {
                     </div>
                 </div>
 
-                {backendError && (
-                    <div
-                        role="alert"
-                        className="rounded-xl border border-[#E7C7C1] bg-[#FBEEEB] px-4 py-3 text-sm font-medium text-[#A34F45]"
-                    >
-                        {backendError}
-                    </div>
-                )}
+                
 
                 <div className="grid gap-5 lg:grid-cols-5 lg:items-start">
                     <div className="space-y-5 lg:col-span-3">
