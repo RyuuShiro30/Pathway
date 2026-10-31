@@ -1,5 +1,5 @@
 import React from "react";
-import { Head, Link } from "@inertiajs/react";
+import { Head } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 
 export default function Dashboard({ statistics, reviewQueue, monitoring }) {
@@ -9,7 +9,7 @@ export default function Dashboard({ statistics, reviewQueue, monitoring }) {
 
             <div className="min-h-screen bg-slate-50 p-8">
                 <div className="mx-auto max-w-7xl">
-                    {/* Header */}
+                    {/* ==================== HEADER ==================== */}
                     <div className="mb-6">
                         <h1 className="text-2xl font-bold text-slate-900">
                             Dashboard
@@ -20,7 +20,7 @@ export default function Dashboard({ statistics, reviewQueue, monitoring }) {
                         </p>
                     </div>
 
-                    {/* Welcome */}
+                    {/* ==================== WELCOME ==================== */}
                     <div className="mb-7 rounded-2xl bg-[#6594B1] p-6 text-white shadow-sm">
                         <p className="text-sm text-white/80">Admin Panel</p>
 
@@ -34,7 +34,7 @@ export default function Dashboard({ statistics, reviewQueue, monitoring }) {
                         </p>
                     </div>
 
-                    {/* Statistik Utama */}
+                    {/* ==================== STATISTIK UTAMA ==================== */}
                     <section className="mb-7">
                         <SectionTitle
                             title="Statistik Utama"
@@ -69,7 +69,7 @@ export default function Dashboard({ statistics, reviewQueue, monitoring }) {
                         </div>
                     </section>
 
-                    {/* Antrean */}
+                    {/* ==================== ANTREAN PERLU DITINJAU ==================== */}
                     <section className="mb-7">
                         <SectionTitle
                             title="Antrean Perlu Ditinjau"
@@ -82,7 +82,6 @@ export default function Dashboard({ statistics, reviewQueue, monitoring }) {
                                 description="Menunggu proses verifikasi"
                                 value={reviewQueue.pending_mentors}
                                 icon={<MentorIcon />}
-                                href={null}
                             />
 
                             <ReviewCard
@@ -90,7 +89,6 @@ export default function Dashboard({ statistics, reviewQueue, monitoring }) {
                                 description="Laporan yang perlu ditinjau"
                                 value={reviewQueue.refund_reports}
                                 icon={<ReceiptIcon />}
-                                href={null}
                             />
 
                             <ReviewCard
@@ -98,12 +96,11 @@ export default function Dashboard({ statistics, reviewQueue, monitoring }) {
                                 description="Sanggahan yang perlu ditinjau"
                                 value={reviewQueue.no_show_disputes}
                                 icon={<WarningIcon />}
-                                href={null}
                             />
                         </div>
                     </section>
 
-                    {/* Monitoring */}
+                    {/* ==================== MONITORING ==================== */}
                     <section>
                         <SectionTitle
                             title="Monitoring"
@@ -147,7 +144,9 @@ export default function Dashboard({ statistics, reviewQueue, monitoring }) {
     );
 }
 
-/* Section Title */
+/* =========================================================
+   SECTION TITLE
+   ========================================================= */
 
 function SectionTitle({ title, description, label }) {
     return (
@@ -167,7 +166,9 @@ function SectionTitle({ title, description, label }) {
     );
 }
 
-/* Statistik Card */
+/* =========================================================
+   STATISTIK CARD
+   ========================================================= */
 
 function StatCard({ title, value, icon }) {
     return (
@@ -191,9 +192,11 @@ function StatCard({ title, value, icon }) {
     );
 }
 
-/* Antrean Card */
+/* =========================================================
+   ANTREAN CARD
+   ========================================================= */
 
-function ReviewCard({ title, description, value, icon, href }) {
+function ReviewCard({ title, description, value, icon }) {
     return (
         <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
             <div className="flex items-start justify-between gap-3">
@@ -244,7 +247,9 @@ function ReviewCard({ title, description, value, icon, href }) {
     );
 }
 
-/* Monitoring Card */
+/* =========================================================
+   MONITORING CARD
+   ========================================================= */
 
 function MonitorCard({ title, value, icon, iconStyle }) {
     return (
@@ -262,7 +267,9 @@ function MonitorCard({ title, value, icon, iconStyle }) {
     );
 }
 
-/* Icons */
+/* =========================================================
+   ICONS
+   ========================================================= */
 
 function UsersIcon() {
     return (
@@ -278,7 +285,9 @@ function UsersIcon() {
                 strokeLinejoin="round"
                 d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"
             />
+
             <circle cx="9" cy="7" r="4" />
+
             <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -298,6 +307,7 @@ function MentorIcon() {
             className="h-5 w-5"
         >
             <circle cx="12" cy="8" r="4" />
+
             <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -321,6 +331,7 @@ function BookIcon() {
                 strokeLinejoin="round"
                 d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"
             />
+
             <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -340,6 +351,7 @@ function CalendarIcon() {
             className="h-5 w-5"
         >
             <rect x="3" y="4" width="18" height="17" rx="2" />
+
             <path strokeLinecap="round" d="M16 2v4M8 2v4M3 10h18" />
         </svg>
     );
@@ -359,6 +371,7 @@ function ReceiptIcon() {
                 strokeLinejoin="round"
                 d="M6 2h12v20l-3-2-3 2-3-2-3 2V2Z"
             />
+
             <path strokeLinecap="round" d="M9 7h6M9 11h6M9 15h4" />
         </svg>
     );
@@ -378,6 +391,7 @@ function WarningIcon() {
                 strokeLinejoin="round"
                 d="M12 3 2.5 20h19L12 3Z"
             />
+
             <path strokeLinecap="round" d="M12 9v4M12 17h.01" />
         </svg>
     );
@@ -397,6 +411,7 @@ function ShieldIcon() {
                 strokeLinejoin="round"
                 d="M12 3 20 6v5c0 5-3.4 8.5-8 10-4.6-1.5-8-5-8-10V6l8-3Z"
             />
+
             <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -434,19 +449,8 @@ function PointIcon() {
             className="h-5 w-5"
         >
             <circle cx="12" cy="12" r="8" />
-            <path strokeLinecap="round" d="M12 8v8M9.5 10h4a2 2 0 0 1 0 4h-4" />
-        </svg>
-    );
-}
 
-function ArrowRightIcon() {
-    return (
-        <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-            <path
-                fillRule="evenodd"
-                d="M7.21 14.77a.75.75 0 0 1 .02-1.06L10.94 10 7.23 6.29a.75.75 0 1 1 1.06-1.06l4.24 4.24a.75.75 0 0 1 0 1.06l-4.24 4.24a.75.75 0 0 1-1.06-.02Z"
-                clipRule="evenodd"
-            />
+            <path strokeLinecap="round" d="M12 8v8M9.5 10h4a2 2 0 0 1 0 4h-4" />
         </svg>
     );
 }
