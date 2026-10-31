@@ -21,13 +21,12 @@ class AdminAuthController extends Controller
             'password' => ['required'],
         ]);
 
-        if ($credentials['email'] !== 'pathway@admin.com') {
-            return back()->withErrors([
-                'email' => 'Akses ditolak. Bukan akun admin.',
-            ]);
-        }
-
-        if (Auth::attempt($credentials)) {
+        // Login hanya diperbolehkan untuk akun dengan role admin
+        if (Auth::attempt([
+            'email' => $credentials['email'],
+            'password' => $credentials['password'],
+            'role' => 'admin',
+        ])) {
             $request->session()->regenerate();
 
             return redirect()->route('admin.courses.index');

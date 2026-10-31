@@ -19,8 +19,8 @@ class IsAdmin
         }
 
         // Sudah login tapi bukan admin: tolak tanpa logout
-        if (Auth::user()->email !== $adminEmail) {
-            abort(403, 'Akses ditolak. Halaman ini hanya untuk admin.');
+        if (Auth::user()->role !== 'admin') {
+            abort(404);
         }
 
         return $next($request);
