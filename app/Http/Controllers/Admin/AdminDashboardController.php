@@ -40,8 +40,6 @@ class AdminDashboardController extends Controller
                 'status',
                 'disanggah'
             )->count(),
-
-            'suspended_mentors' => MentorSuspension::active()->count(),
         ];
 
         // Monitoring
@@ -55,8 +53,6 @@ class AdminDashboardController extends Controller
                 'is_suspended',
                 true
             )->count(),
-
-            'total_sessions' => MentoringSession::count(),
 
             'average_rating' => round(
                 MentorProfile::whereNotNull('avg_rating')
