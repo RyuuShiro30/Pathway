@@ -31,6 +31,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             MentorProfileSeeder::class,
             MentoringSessionSeeder::class,
+            MentoringWorkflowSeeder::class,
             MenteeBankAccountSeeder::class,
             CourseSeeder::class,
             CourseMaterialSeeder::class,
