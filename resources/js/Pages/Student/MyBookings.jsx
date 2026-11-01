@@ -961,7 +961,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                         <select
                             value={sortOrder}
                             onChange={(e) => setSortOrder(e.target.value)}
-                            className="h-9 rounded-xl border border-slate-200 bg-white px-3 py-1 text-xs text-slate-700 focus:border-[#527D98] focus:outline-none focus:ring-1 focus:ring-[#527D98]"
+                            className="h-9 appearance-none rounded-xl border border-slate-200 bg-white pl-3 pr-8 text-xs text-slate-700 focus:border-[#527D98] focus:outline-none focus:ring-1 focus:ring-[#527D98]"
                         >
                             <option value="terdekat">Jadwal Terdekat</option>
                             <option value="terbaru">Terbaru</option>
