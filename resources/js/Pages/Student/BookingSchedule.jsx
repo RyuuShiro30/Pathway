@@ -387,7 +387,7 @@ export default function BookingSchedule({
     busy_sessions: busySessions = [],
     booking_window: bookingWindow,
 }) {
-    const { auth, errors = {}, flash } = usePage().props;
+    const { auth } = usePage().props;
     const availabilitySchedule = Array.isArray(
         mentor?.availability_schedule,
     )
@@ -428,11 +428,6 @@ export default function BookingSchedule({
     );
     const [selectedIds, setSelectedIds] = useState([]);
     const [activeFilter, setActiveFilter] = useState('semua');
-    const [isErrorDismissed, setIsErrorDismissed] = useState(false);
-    const [isSuccessDismissed, setIsSuccessDismissed] = useState(false);
-    const scheduleError = getErrorMessage(errors.schedule_time);
-    const successMessage =
-        typeof flash?.success === 'string' ? flash.success : '';
     const allSegments = selectedDate ? slotsByDate[selectedDate] ?? [] : [];
     const selectedSegments = allSegments
         .filter((segment) => selectedIds.includes(segment.id))
@@ -490,14 +485,6 @@ export default function BookingSchedule({
 
         return () => window.clearInterval(intervalId);
     }, []);
-
-    useEffect(() => {
-        setIsErrorDismissed(false);
-    }, [scheduleError]);
-
-    useEffect(() => {
-        setIsSuccessDismissed(false);
-    }, [successMessage]);
 
     function selectDate(date) {
         setSelectedDate(date);
@@ -679,46 +666,6 @@ export default function BookingSchedule({
                 </nav>
 
                 {/* NOTIFICATIONS: SUCCESS & ERROR BANNERS */}
-                {successMessage && !isSuccessDismissed && (
-                    <div
-                        role="status"
-                        className="flex items-center justify-between gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-xs sm:text-sm font-medium text-emerald-800 shadow-sm"
-                    >
-                        <div className="flex items-center gap-2.5">
-                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 font-bold text-xs">
-                                ✓
-                            </span>
-                            <p>{successMessage}</p>
-                        </div>
-                        <button
-                            type="button"
-                            aria-label="Tutup pesan sukses"
-                            onClick={() => setIsSuccessDismissed(true)}
-                            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-base font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors focus:outline-none"
-                        >
-                            ×
-                        </button>
-                    </div>
-                )}
-
-                {scheduleError && !isErrorDismissed && (
-                    <AlertBanner
-                        variant="danger"
-                        title="Perhatian"
-                        description={scheduleError}
-                        action={
-                            <button
-                                type="button"
-                                aria-label="Tutup pesan kesalahan"
-                                onClick={() => setIsErrorDismissed(true)}
-                                className="inline-flex h-7 w-7 items-center justify-center rounded-lg text-base font-semibold text-rose-700 hover:bg-rose-100 transition-colors focus:outline-none"
-                            >
-                                ×
-                            </button>
-                        }
-                    />
-                )}
-
                 {/* PAGE HEADER */}
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="space-y-2">
