@@ -1,34 +1,29 @@
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import {
-    Badge,
-    Button,
-    Card,
-    SectionHeader,
-} from '@/Components/ui';
+import { Head, Link, useForm, usePage } from "@inertiajs/react";
+import { Badge, Button, Card, SectionHeader } from "@/Components/ui";
 
-const sessionDateTimeFormatter = new Intl.DateTimeFormat('id-ID', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Asia/Jakarta',
+const sessionDateTimeFormatter = new Intl.DateTimeFormat("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Jakarta",
 });
 
-const rupiahFormatter = new Intl.NumberFormat('id-ID', {
+const rupiahFormatter = new Intl.NumberFormat("id-ID", {
     maximumFractionDigits: 0,
 });
 
 function formatSessionDateTime(value) {
     if (!value) {
-        return 'Waktu tidak tersedia';
+        return "Waktu tidak tersedia";
     }
 
     const date = new Date(value);
 
     return Number.isNaN(date.getTime())
-        ? 'Waktu tidak tersedia'
+        ? "Waktu tidak tersedia"
         : `${sessionDateTimeFormatter.format(date)} WIB`;
 }
 
@@ -38,60 +33,98 @@ function formatRupiah(value) {
 
 function formatStatus(status) {
     const labels = {
-        diajukan: 'Menunggu Verifikasi Mentor',
-        dikonfirmasi: 'Dikonfirmasi',
-        berlangsung: 'Berlangsung',
-        selesai: 'Selesai',
-        dibatalkan: 'Dibatalkan',
+        diajukan: "Menunggu Verifikasi Mentor",
+        dikonfirmasi: "Dikonfirmasi",
+        berlangsung: "Berlangsung",
+        selesai: "Selesai",
+        dibatalkan: "Dibatalkan",
     };
 
-    return labels[status] ?? status ?? 'Status tidak tersedia';
+    return labels[status] ?? status ?? "Status tidak tersedia";
 }
 
 export default function BookingRequestDetail({ session }) {
     const { auth, errors: pageErrors, flash } = usePage().props;
-    const form = useForm({ action: 'terima' });
-    const mentorName = auth?.user?.name ?? 'Mentor';
+    const form = useForm({ action: "terima" });
+    const rescheduleForm = useForm({
+        action: "terima",
+        rejection_reason: "",
+    });
+    const mentorName = auth?.user?.name ?? "Mentor";
     const mentorInitials =
         mentorName
             .split(/\s+/)
             .filter(Boolean)
             .slice(0, 2)
             .map((part) => part[0])
-            .join('')
-            .toUpperCase() || 'M';
+            .join("")
+            .toUpperCase() || "M";
     const totalPrice = Number(session.price_snapshot ?? 0);
     const dpAmount = totalPrice * 0.5;
     const proofPath = session.payment_dp_proof
-        ? String(session.payment_dp_proof).replace(/^\/+/, '')
+        ? String(session.payment_dp_proof).replace(/^\/+/, "")
         : null;
     const proofUrl = proofPath
         ? `/storage/${proofPath
-              .split('/')
+              .split("/")
               .map((segment) => encodeURIComponent(segment))
-              .join('/')}`
+              .join("/")}`
         : null;
     const backendError =
         flash?.error ??
         pageErrors?.message ??
         Object.values(form.errors).find(Boolean);
-    const isPending = session.status === 'diajukan';
+    const isPending = session.status === "diajukan";
+    const rescheduleRequests =
+        session.reschedule_requests ?? session.rescheduleRequests ?? [];
+
+    const latestRescheduleRequest = rescheduleRequests[0] ?? null;
 
     function respondToBooking(action) {
-    if (
-        action === 'tolak' &&
-        !window.confirm(
-            'Apakah Anda yakin ingin menolak permintaan booking ini?',
-        )
-    ) {
-        return;
-    }
+        if (
+            action === "tolak" &&
+            !window.confirm(
+                "Apakah Anda yakin ingin menolak permintaan booking ini?",
+            )
+        ) {
+            return;
+        }
 
-    form.transform(() => ({ action }));
-    form.patch(route('mentor.booking.respond', session.id), {
-        preserveScroll: true,
-    });
-}
+        form.transform(() => ({ action }));
+        form.patch(route("mentor.booking.respond", session.id), {
+            preserveScroll: true,
+        });
+
+        function respondToReschedule(requestId, action) {
+            if (
+                action === "tolak" &&
+                !window.confirm(
+                    "Apakah Anda yakin ingin menolak pengajuan reschedule ini?",
+                )
+            ) {
+                return;
+            }
+
+            let rejectionReason = "";
+
+            if (action === "tolak") {
+                rejectionReason =
+                    window.prompt("Alasan penolakan (opsional):") ?? "";
+            }
+
+            rescheduleForm.transform(() => ({
+                action,
+                rejection_reason: rejectionReason,
+            }));
+
+            rescheduleForm.patch(
+                route("mentor.booking.reschedule.respond", requestId),
+                {
+                    preserveScroll: true,
+                },
+            );
+        }
+    }
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] text-slate-800 antialiased selection:bg-[#527D98]/20 selection:text-[#527D98]">
@@ -118,7 +151,7 @@ export default function BookingRequestDetail({ session }) {
                         className="order-4 flex w-full items-center gap-1.5 overflow-x-auto whitespace-nowrap text-sm font-medium xl:order-none xl:w-auto"
                     >
                         <Link
-                            href={route('mentor.dashboard')}
+                            href={route("mentor.dashboard")}
                             className="rounded-full px-4 py-1.5 text-white/80 transition hover:bg-white/10 hover:text-white"
                         >
                             Overview
@@ -140,7 +173,9 @@ export default function BookingRequestDetail({ session }) {
                                 <p className="max-w-[130px] truncate text-xs font-semibold leading-tight text-white">
                                     {mentorName}
                                 </p>
-                                <p className="truncate text-[10px] text-white/75">Mentor</p>
+                                <p className="truncate text-[10px] text-white/75">
+                                    Mentor
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -152,7 +187,7 @@ export default function BookingRequestDetail({ session }) {
                 <div className="space-y-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <Link
-                            href={route('mentor.dashboard')}
+                            href={route("mentor.dashboard")}
                             className="inline-flex min-h-8 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
                         >
                             <svg
@@ -179,13 +214,13 @@ export default function BookingRequestDetail({ session }) {
                         </h1>
                         <Badge
                             variant={
-                                session.status === 'diajukan'
-                                    ? 'warning'
-                                    : session.status === 'dikonfirmasi'
-                                      ? 'success'
-                                      : session.status === 'dibatalkan'
-                                        ? 'danger'
-                                        : 'default'
+                                session.status === "diajukan"
+                                    ? "warning"
+                                    : session.status === "dikonfirmasi"
+                                      ? "success"
+                                      : session.status === "dibatalkan"
+                                        ? "danger"
+                                        : "default"
                             }
                             size="md"
                         >
@@ -217,7 +252,11 @@ export default function BookingRequestDetail({ session }) {
 
                 <div className="grid gap-5 lg:grid-cols-5 lg:items-start">
                     <div className="space-y-5 lg:col-span-3">
-                        <Card as="section" aria-labelledby="student-heading" className="p-5 sm:p-6">
+                        <Card
+                            as="section"
+                            aria-labelledby="student-heading"
+                            className="p-5 sm:p-6"
+                        >
                             <SectionHeader
                                 title="Informasi Student"
                                 icon={
@@ -235,15 +274,13 @@ export default function BookingRequestDetail({ session }) {
                                 }
                             />
                             <div className="flex items-center gap-4">
-                                <div
-                                    className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-sky-200 bg-sky-100 text-lg font-bold text-sky-700"
-                                >
-                                    {(session.student?.name ?? 'S')
+                                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-sky-200 bg-sky-100 text-lg font-bold text-sky-700">
+                                    {(session.student?.name ?? "S")
                                         .trim()
                                         .split(/\s+/)
                                         .slice(0, 2)
                                         .map((part) => part[0])
-                                        .join('')
+                                        .join("")
                                         .toUpperCase()}
                                 </div>
                                 <div className="min-w-0">
@@ -252,20 +289,25 @@ export default function BookingRequestDetail({ session }) {
                                             id="student-heading"
                                             className="break-words text-base font-bold text-slate-900"
                                         >
-                                            {session.student?.name ?? 'Student'}
+                                            {session.student?.name ?? "Student"}
                                         </h2>
                                         <Badge variant="success" size="xs">
                                             Mentee Terverifikasi
                                         </Badge>
                                     </div>
                                     <p className="mt-1 break-all text-sm text-slate-500">
-                                        {session.student?.email ?? 'Email tidak tersedia'}
+                                        {session.student?.email ??
+                                            "Email tidak tersedia"}
                                     </p>
                                 </div>
                             </div>
                         </Card>
 
-                        <Card as="section" aria-labelledby="payment-heading" className="p-5 sm:p-6">
+                        <Card
+                            as="section"
+                            aria-labelledby="payment-heading"
+                            className="p-5 sm:p-6"
+                        >
                             {session.is_free_session ? (
                                 <div className="flex items-center justify-between gap-4">
                                     <div>
@@ -279,7 +321,9 @@ export default function BookingRequestDetail({ session }) {
                                             Sesi ini tidak dikenakan biaya.
                                         </p>
                                     </div>
-                                    <Badge variant="success" size="md">Gratis</Badge>
+                                    <Badge variant="success" size="md">
+                                        Gratis
+                                    </Badge>
                                 </div>
                             ) : (
                                 <>
@@ -294,22 +338,30 @@ export default function BookingRequestDetail({ session }) {
                                                 stroke="currentColor"
                                                 strokeWidth="1.8"
                                             >
-                                                <rect x="2" y="5" width="20" height="14" rx="2" />
+                                                <rect
+                                                    x="2"
+                                                    y="5"
+                                                    width="20"
+                                                    height="14"
+                                                    rx="2"
+                                                />
                                                 <path d="M2 10h20" />
                                             </svg>
                                         }
                                         badge={
                                             <Badge
                                                 variant={
-                                                    session.payment_dp_status === 'terverifikasi'
-                                                        ? 'success'
-                                                        : 'warningBold'
+                                                    session.payment_dp_status ===
+                                                    "terverifikasi"
+                                                        ? "success"
+                                                        : "warningBold"
                                                 }
                                                 size="xs"
                                             >
-                                                {session.payment_dp_status === 'terverifikasi'
-                                                    ? 'Terverifikasi'
-                                                    : 'Perlu Verifikasi'}
+                                                {session.payment_dp_status ===
+                                                "terverifikasi"
+                                                    ? "Terverifikasi"
+                                                    : "Perlu Verifikasi"}
                                             </Badge>
                                         }
                                     />
@@ -323,21 +375,30 @@ export default function BookingRequestDetail({ session }) {
                                                     <span className="font-medium text-slate-700">
                                                         {formatRupiah(
                                                             session.price_per_hour_snapshot ??
-                                                                (totalPrice /
-                                                                    (session.duration_hours || 1)),
-                                                        )}{' '}
+                                                                totalPrice /
+                                                                    (session.duration_hours ||
+                                                                        1),
+                                                        )}{" "}
                                                         / jam
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center justify-between text-xs text-slate-500">
                                                     <span>Durasi Sesi</span>
                                                     <span className="font-medium text-slate-700">
-                                                        {session.duration_hours ?? '-'} Jam
+                                                        {session.duration_hours ??
+                                                            "-"}{" "}
+                                                        Jam
                                                     </span>
                                                 </div>
                                                 <div className="flex items-center justify-between border-t border-slate-200 pt-2 text-sm font-bold text-slate-900">
-                                                    <span>Total Biaya Sesi</span>
-                                                    <span>{formatRupiah(totalPrice)}</span>
+                                                    <span>
+                                                        Total Biaya Sesi
+                                                    </span>
+                                                    <span>
+                                                        {formatRupiah(
+                                                            totalPrice,
+                                                        )}
+                                                    </span>
                                                 </div>
                                             </div>
 
@@ -349,12 +410,15 @@ export default function BookingRequestDetail({ session }) {
                                                     {formatRupiah(dpAmount)}
                                                 </p>
                                                 <p className="mt-1 text-[11px] text-emerald-600">
-                                                    Telah ditransfer ke rekening Bank Mandiri pribadi Anda.
+                                                    Telah ditransfer ke rekening
+                                                    Bank Mandiri pribadi Anda.
                                                 </p>
                                             </div>
 
                                             <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs">
-                                                <span className="text-slate-500">Sisa Pelunasan:</span>
+                                                <span className="text-slate-500">
+                                                    Sisa Pelunasan:
+                                                </span>
                                                 <span className="font-bold text-slate-800">
                                                     {formatRupiah(dpAmount)}
                                                 </span>
@@ -380,17 +444,30 @@ export default function BookingRequestDetail({ session }) {
                                                         className="h-52 w-full object-contain transition-transform group-hover:scale-[1.02]"
                                                     />
                                                     <div className="flex items-center justify-center gap-1.5 border-t border-slate-100 py-2 text-xs font-semibold text-[#527D98]">
-                                                        <svg aria-hidden="true" className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                        <svg
+                                                            aria-hidden="true"
+                                                            className="h-3.5 w-3.5"
+                                                            viewBox="0 0 24 24"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            strokeWidth="2"
+                                                        >
                                                             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
                                                             <polyline points="15 3 21 3 21 9" />
-                                                            <line x1="10" y1="14" x2="21" y2="3" />
+                                                            <line
+                                                                x1="10"
+                                                                y1="14"
+                                                                x2="21"
+                                                                y2="3"
+                                                            />
                                                         </svg>
                                                         Lihat Penuh
                                                     </div>
                                                 </a>
                                             ) : (
                                                 <div className="flex h-52 items-center justify-center rounded-xl border border-dashed border-slate-300 bg-slate-50 px-5 text-center text-sm text-slate-400">
-                                                    Bukti pembayaran belum tersedia.
+                                                    Bukti pembayaran belum
+                                                    tersedia.
                                                 </div>
                                             )}
                                         </div>
@@ -401,7 +478,11 @@ export default function BookingRequestDetail({ session }) {
                     </div>
 
                     <div className="space-y-5 lg:col-span-2">
-                        <Card as="section" aria-labelledby="session-heading" className="p-5 sm:p-6">
+                        <Card
+                            as="section"
+                            aria-labelledby="session-heading"
+                            className="p-5 sm:p-6"
+                        >
                             <SectionHeader
                                 title="Jadwal & Waktu Sesi"
                                 icon={
@@ -413,7 +494,13 @@ export default function BookingRequestDetail({ session }) {
                                         stroke="currentColor"
                                         strokeWidth="1.8"
                                     >
-                                        <rect x="3" y="5" width="18" height="16" rx="2" />
+                                        <rect
+                                            x="3"
+                                            y="5"
+                                            width="18"
+                                            height="16"
+                                            rx="2"
+                                        />
                                         <path d="M16 3v4M8 3v4M3 10h18" />
                                     </svg>
                                 }
@@ -426,7 +513,9 @@ export default function BookingRequestDetail({ session }) {
                                         Tanggal Sesi
                                     </p>
                                     <p className="mt-1 text-sm font-bold capitalize text-slate-900">
-                                        {formatSessionDateTime(session.schedule_time)}
+                                        {formatSessionDateTime(
+                                            session.schedule_time,
+                                        )}
                                     </p>
                                 </div>
 
@@ -437,7 +526,9 @@ export default function BookingRequestDetail({ session }) {
                                             Waktu Selesai
                                         </p>
                                         <p className="mt-1 text-sm font-bold capitalize text-slate-900">
-                                            {formatSessionDateTime(session.end_time)}
+                                            {formatSessionDateTime(
+                                                session.end_time,
+                                            )}
                                         </p>
                                     </div>
                                     <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4">
@@ -445,7 +536,7 @@ export default function BookingRequestDetail({ session }) {
                                             Durasi Total
                                         </p>
                                         <p className="mt-1 text-sm font-bold text-emerald-800">
-                                            {session.duration_hours ?? '-'} Jam
+                                            {session.duration_hours ?? "-"} Jam
                                         </p>
                                     </div>
                                 </div>
@@ -456,16 +547,186 @@ export default function BookingRequestDetail({ session }) {
                                         Tipe Sesi &amp; Platform
                                     </p>
                                     <Badge
-                                        variant={session.is_free_session ? 'success' : 'primary'}
+                                        variant={
+                                            session.is_free_session
+                                                ? "success"
+                                                : "primary"
+                                        }
                                         size="sm"
                                     >
-                                        {session.is_free_session ? 'Gratis' : 'Berbayar'}
+                                        {session.is_free_session
+                                            ? "Gratis"
+                                            : "Berbayar"}
                                     </Badge>
                                 </div>
                             </div>
                         </Card>
 
-                        <Card as="section" aria-labelledby="notes-heading" className="p-5 sm:p-6">
+                        {latestRescheduleRequest && (
+                            <Card
+                                as="section"
+                                aria-labelledby="reschedule-heading"
+                                className="p-5 sm:p-6"
+                            >
+                                <SectionHeader
+                                    title="Pengajuan Reschedule"
+                                    icon={
+                                        <svg
+                                            aria-hidden="true"
+                                            className="h-5 w-5 text-[#527D98]"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="1.8"
+                                        >
+                                            <path d="M3 12a9 9 0 0 1 15.36-6.36L21 8" />
+                                            <path d="M21 3v5h-5" />
+                                            <path d="M21 12a9 9 0 0 1-15.36 6.36L3 16" />
+                                            <path d="M3 21v-5h5" />
+                                        </svg>
+                                    }
+                                />
+
+                                <div className="space-y-3">
+                                    <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                            Jadwal Lama
+                                        </p>
+                                        <p className="mt-1 text-sm font-bold capitalize text-slate-900">
+                                            {formatSessionDateTime(
+                                                latestRescheduleRequest.old_schedule_time,
+                                            )}
+                                        </p>
+                                    </div>
+
+                                    <div className="rounded-xl border border-sky-100 bg-sky-50/60 p-4">
+                                        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                            Jadwal Baru
+                                        </p>
+                                        <p className="mt-1 text-sm font-bold capitalize text-slate-900">
+                                            {formatSessionDateTime(
+                                                latestRescheduleRequest.new_schedule_time,
+                                            )}
+                                        </p>
+                                    </div>
+
+                                    <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
+                                        <p className="text-xs font-semibold text-slate-500">
+                                            Batas Respons
+                                        </p>
+                                        <p className="text-xs font-bold text-slate-700">
+                                            {formatSessionDateTime(
+                                                latestRescheduleRequest.respond_deadline,
+                                            )}
+                                        </p>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs font-semibold text-slate-500">
+                                            Status
+                                        </p>
+
+                                        <Badge
+                                            variant={
+                                                latestRescheduleRequest.status ===
+                                                "menunggu_respons"
+                                                    ? "warning"
+                                                    : latestRescheduleRequest.status ===
+                                                        "diterima"
+                                                      ? "success"
+                                                      : "danger"
+                                            }
+                                            size="sm"
+                                        >
+                                            {latestRescheduleRequest.status ===
+                                            "menunggu_respons"
+                                                ? "Menunggu Respons"
+                                                : latestRescheduleRequest.status ===
+                                                    "diterima"
+                                                  ? "Diterima"
+                                                  : latestRescheduleRequest.status ===
+                                                      "ditolak"
+                                                    ? "Ditolak"
+                                                    : "Kedaluwarsa"}
+                                        </Badge>
+                                    </div>
+
+                                    {latestRescheduleRequest.rejection_reason && (
+                                        <div className="rounded-xl border border-red-100 bg-red-50/60 p-4">
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-red-500">
+                                                Alasan Penolakan
+                                            </p>
+                                            <p className="mt-1 text-sm text-red-700">
+                                                {
+                                                    latestRescheduleRequest.rejection_reason
+                                                }
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    {latestRescheduleRequest.status ===
+                                        "menunggu_respons" && (
+                                        <>
+                                            {rescheduleForm.errors
+                                                .reschedule && (
+                                                <p className="text-sm font-medium text-red-600">
+                                                    {
+                                                        rescheduleForm.errors
+                                                            .reschedule
+                                                    }
+                                                </p>
+                                            )}
+
+                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                <Button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        respondToReschedule(
+                                                            latestRescheduleRequest.id,
+                                                            "terima",
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        rescheduleForm.processing
+                                                    }
+                                                    variant="primary"
+                                                    size="md"
+                                                    className="min-h-11 rounded-xl bg-[#65B175] text-sm font-bold hover:bg-[#559C65] focus:ring-[#65B175] disabled:cursor-not-allowed disabled:opacity-60"
+                                                >
+                                                    {rescheduleForm.processing
+                                                        ? "Memproses..."
+                                                        : "Terima Reschedule"}
+                                                </Button>
+
+                                                <Button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        respondToReschedule(
+                                                            latestRescheduleRequest.id,
+                                                            "tolak",
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        rescheduleForm.processing
+                                                    }
+                                                    variant="danger"
+                                                    size="md"
+                                                    className="min-h-11 rounded-xl border-0 bg-[#FBECEE] text-sm font-bold text-[#C23B46] shadow-none hover:bg-[#F6DDE1] focus:ring-[#C23B46] disabled:cursor-not-allowed disabled:opacity-60"
+                                                >
+                                                    Tolak Reschedule
+                                                </Button>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </Card>
+                        )}
+
+                        <Card
+                            as="section"
+                            aria-labelledby="notes-heading"
+                            className="p-5 sm:p-6"
+                        >
                             <SectionHeader
                                 title="Topik & Kebutuhan"
                                 icon={
@@ -484,18 +745,22 @@ export default function BookingRequestDetail({ session }) {
                             />
                             <blockquote className="whitespace-pre-line rounded-xl border border-sky-100 bg-sky-50/40 p-4 text-sm leading-6 text-slate-700 italic">
                                 {session.notes_from_student?.trim() ||
-                                    'Tidak ada catatan dari student.'}
+                                    "Tidak ada catatan dari student."}
                             </blockquote>
                         </Card>
                     </div>
                 </div>
 
-                <Card as="section" aria-label="Tindakan permintaan booking" className="overflow-hidden">
+                <Card
+                    as="section"
+                    aria-label="Tindakan permintaan booking"
+                    className="overflow-hidden"
+                >
                     {/* Sticky action bar bergaya Figma */}
                     <div className="grid gap-3 p-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:p-6">
                         <Button
                             type="button"
-                            onClick={() => respondToBooking('terima')}
+                            onClick={() => respondToBooking("terima")}
                             disabled={form.processing || !isPending}
                             variant="primary"
                             size="md"
@@ -512,11 +777,13 @@ export default function BookingRequestDetail({ session }) {
                                 <circle cx="12" cy="12" r="9" />
                                 <path d="m8 12 2.5 2.5L16 9" />
                             </svg>
-                            {form.processing ? 'Memproses...' : 'Verifikasi & Terima Permintaan'}
+                            {form.processing
+                                ? "Memproses..."
+                                : "Verifikasi & Terima Permintaan"}
                         </Button>
                         <Button
                             type="button"
-                            onClick={() => respondToBooking('tolak')}
+                            onClick={() => respondToBooking("tolak")}
                             disabled={form.processing || !isPending}
                             variant="danger"
                             size="md"
@@ -539,7 +806,9 @@ export default function BookingRequestDetail({ session }) {
 
                     <div className="border-t border-slate-100 bg-slate-50/60 px-5 py-3 sm:px-6">
                         <p className="text-xs leading-5 text-slate-500">
-                            Dengan menerima permintaan, sesi akan dikonfirmasi sesuai jadwal di atas. Jika status booking sudah berubah, tindakan tidak dapat dilakukan.
+                            Dengan menerima permintaan, sesi akan dikonfirmasi
+                            sesuai jadwal di atas. Jika status booking sudah
+                            berubah, tindakan tidak dapat dilakukan.
                         </p>
                     </div>
                 </Card>

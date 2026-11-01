@@ -185,6 +185,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/bookings', [MentoringSessionController::class, 'studentIndex'])
         ->name('student.bookings.index');
 
+    Route::post('/bookings/{id}/reschedule', [MentoringSessionController::class, 'requestReschedule'])
+    ->name('student.bookings.reschedule.store');
+
     Route::get('/notifications', [NotificationController::class, 'index'])
         ->name('notifications.index');
 
@@ -213,6 +216,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/mentor/booking/{id}/respond', [MentoringSessionController::class, 'respond'])
         ->name('mentor.booking.respond');
 
+    Route::patch('/mentor/booking/{id}/reschedule/respond', [MentoringSessionController::class, 'respondReschedule'])
+    ->name('mentor.booking.reschedule.respond');
+    
     // Mentor Session Tracking
     Route::get('/mentor/session/{id}', [MentoringSessionController::class, 'tracking'])
         ->name('mentor.session.tracking');
