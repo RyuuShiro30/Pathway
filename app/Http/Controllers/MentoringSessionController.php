@@ -633,16 +633,21 @@ class MentoringSessionController extends Controller
     }
 
     private function hasBookingConflict(
-        int $mentorId,
-        Carbon $bookingStart,
-        Carbon $bookingEnd,
-        bool $lockForUpdate = false,
+    int $mentorId,
+    Carbon $bookingStart,
+    Carbon $bookingEnd,
+    bool $lockForUpdate = false,
+    ?int $excludeSessionId = null,
     ): bool {
         $query = MentoringSession::query()
             ->where('mentor_id', $mentorId)
             ->whereIn('status', ['diajukan', 'dikonfirmasi', 'berlangsung'])
             ->where('schedule_time', '<', $bookingEnd)
             ->where('end_time', '>', $bookingStart);
+
+        if ($excludeSessionId !== null) {
+            $query->where('id', '!=', $excludeSessionId);
+        }
 
         if ($lockForUpdate) {
             $query->lockForUpdate();

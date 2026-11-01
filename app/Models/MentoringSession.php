@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class MentoringSession extends Model
 {
@@ -59,6 +60,11 @@ class MentoringSession extends Model
     public function noShowReport(): HasOne
     {
         return $this->hasOne(NoShowReport::class, 'session_id');
+    }
+
+    public function rescheduleRequests(): HasMany
+    {
+        return $this->hasMany(RescheduleRequest::class, 'session_id');
     }
 
     public function canReportNoShow(): bool
