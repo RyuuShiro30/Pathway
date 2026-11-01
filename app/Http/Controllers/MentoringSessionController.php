@@ -917,6 +917,116 @@ class MentoringSessionController extends Controller
         });
     }
 
+    //Mentor menerima atau menolak pengajuan reschedule student.
+    public function respondReschedule(Request $request, int $id): RedirectResponse
+    {
+        $validated = $request->validate([
+            'action' => ['required', 'in:terima,tolak'],
+            'rejection_reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        DB::transaction(function () use ($id, $validated): void {
+            $reschedule = RescheduleRequest::query()
+                ->whereKey($id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $session = MentoringSession::query()
+                ->whereKey($reschedule->session_id)
+                ->where('mentor_id', Auth::id())
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // Request yang sudah diproses tidak boleh diproses lagi.
+            if ($reschedule->status !== 'menunggu_respons') {
+                throw ValidationException::withMessages([
+                    'reschedule' => 'Pengajuan reschedule sudah diproses.',
+                ]);
+            }
+
+            // Setelah 24 jam, jadwal lama tetap berlaku.
+            if (now()->gte($reschedule->respond_deadline)) {
+                $reschedule->update([
+                    'status' => 'kedaluwarsa',
+                    'responded_at' => now(),
+                ]);
+
+                throw ValidationException::withMessages([
+                    'reschedule' => 'Batas waktu respons reschedule sudah berakhir.',
+                ]);
+            }
+
+            // Jika ditolak, jadwal lama tidak berubah.
+            if ($validated['action'] === 'tolak') {
+                $reschedule->update([
+                    'status' => 'ditolak',
+                    'responded_at' => now(),
+                    'rejection_reason' => $validated['rejection_reason'] ?? null,
+                ]);
+
+                return;
+            }
+
+            // Pastikan jadwal pengganti masih tersedia.
+            if ($this->hasBookingConflict(
+                $session->mentor_id,
+                $reschedule->new_schedule_time,
+                $reschedule->new_end_time,
+                lockForUpdate: true,
+                excludeSessionId: $session->id,
+            )) {
+                throw ValidationException::withMessages([
+                    'reschedule' => 'Jadwal pengganti sudah tidak tersedia.',
+                ]);
+            }
+
+            // Terima: hanya jadwal yang berubah.
+            // Discord link tetap menggunakan link sesi sebelumnya.
+            $session->update([
+                'schedule_time' => $reschedule->new_schedule_time,
+                'end_time' => $reschedule->new_end_time,
+            ]);
+
+            $reschedule->update([
+                'status' => 'diterima',
+                'responded_at' => now(),
+            ]);
+        });
+
+        $reschedule = RescheduleRequest::with('session.student')
+            ->find($id);
+
+        if ($reschedule?->status === 'diterima') {
+            $reschedule->session->student?->notify(
+                new SessionEvent(
+                    'Pengajuan reschedule mentoring Anda diterima oleh mentor.',
+                    '/bookings'
+                )
+            );
+
+            return redirect()
+                ->route('mentor.requests')
+                ->with('success', 'Pengajuan reschedule berhasil diterima.');
+        }
+
+        if ($reschedule?->status === 'ditolak') {
+            $reschedule->session->student?->notify(
+                new SessionEvent(
+                    'Pengajuan reschedule mentoring Anda ditolak oleh mentor.',
+                    '/bookings'
+                )
+            );
+
+            return redirect()
+                ->route('mentor.requests')
+                ->with('success', 'Pengajuan reschedule ditolak. Jadwal lama tetap berlaku.');
+        }
+
+        return redirect()
+            ->route('mentor.requests')
+            ->with('error', 'Pengajuan reschedule sudah tidak dapat diproses.');
+    }
+
     // GET - halaman session tracking untuk 1 sesi yang sudah dikonfirmasi
     public function tracking($id)
     {

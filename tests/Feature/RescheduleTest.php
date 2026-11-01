@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\MentoringSession;
+use App\Models\RescheduleRequest;
 use App\Models\MentorProfile;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -499,5 +501,293 @@ class RescheduleTest extends TestCase
         $this->assertDatabaseMissing('mentoring_reschedule_requests', [
             'session_id' => $session->id,
         ]);
+    }
+
+    // Mentor dapat menerima reschedule dari student
+    public function test_mentor_can_accept_student_reschedule(): void
+    {
+        $student = User::factory()->create([
+            'role' => 'student',
+        ]);
+
+        $mentor = User::factory()->create([
+            'role' => 'mentor',
+        ]);
+
+        $availability = [
+            [
+                'day' => 'senin',
+                'start' => '09:00',
+                'end' => '11:00',
+                'type' => 'berbayar',
+                'price' => 50000,
+            ],
+        ];
+
+        $this->createMentorProfile($mentor, $availability);
+
+        $oldSchedule = Carbon::parse('2026-11-06 09:00:00');
+        $oldEnd = $oldSchedule->copy()->addHours(1);
+
+        $newSchedule = Carbon::parse('2026-11-10 09:00:00');
+        $newEnd = $newSchedule->copy()->addHours(1);
+
+        $session = MentoringSession::create([
+            'student_id' => $student->id,
+            'mentor_id' => $mentor->id,
+            'status' => 'dikonfirmasi',
+            'schedule_time' => $oldSchedule,
+            'end_time' => $oldEnd,
+            'duration_hours' => 1,
+            'is_free_session' => false,
+            'price_snapshot' => 50000,
+            'discord_link' => 'https://discord.gg/test',
+        ]);
+
+        $reschedule = RescheduleRequest::create([
+            'session_id' => $session->id,
+            'requested_by' => 'student',
+            'request_type' => 'student_reschedule',
+            'old_schedule_time' => $oldSchedule,
+            'old_end_time' => $oldEnd,
+            'new_schedule_time' => $newSchedule,
+            'new_end_time' => $newEnd,
+            'status' => 'menunggu_respons',
+            'respond_deadline' => now()->addHours(24),
+        ]);
+
+        $response = $this
+            ->actingAs($mentor)
+            ->patch(route('mentor.booking.reschedule.respond', $reschedule->id), [
+                'action' => 'terima',
+            ]);
+
+        $response->assertRedirect(route('mentor.requests'));
+
+        $session->refresh();
+        $reschedule->refresh();
+
+        $this->assertEquals(
+            $newSchedule->toDateTimeString(),
+            $session->schedule_time->toDateTimeString()
+        );
+
+        $this->assertEquals(
+            $newEnd->toDateTimeString(),
+            $session->end_time->toDateTimeString()
+        );
+
+        $this->assertEquals('https://discord.gg/test', $session->discord_link);
+
+        $this->assertEquals('diterima', $reschedule->status);
+        $this->assertNotNull($reschedule->responded_at);
+    }
+
+    // Mentor dapat menolak reschedule dari student
+    public function test_mentor_can_reject_student_reschedule(): void
+    {
+        $student = User::factory()->create([
+            'role' => 'student',
+        ]);
+
+        $mentor = User::factory()->create([
+            'role' => 'mentor',
+        ]);
+
+        $oldSchedule = Carbon::parse('2026-11-06 09:00:00');
+        $oldEnd = $oldSchedule->copy()->addHours(1);
+
+        $newSchedule = Carbon::parse('2026-11-10 09:00:00');
+        $newEnd = $newSchedule->copy()->addHours(1);
+
+        $session = MentoringSession::create([
+            'student_id' => $student->id,
+            'mentor_id' => $mentor->id,
+            'status' => 'dikonfirmasi',
+            'schedule_time' => $oldSchedule,
+            'end_time' => $oldEnd,
+            'duration_hours' => 1,
+            'is_free_session' => false,
+            'price_snapshot' => 50000,
+            'discord_link' => 'https://discord.gg/test',
+        ]);
+
+        $reschedule = RescheduleRequest::create([
+            'session_id' => $session->id,
+            'requested_by' => 'student',
+            'request_type' => 'student_reschedule',
+            'old_schedule_time' => $oldSchedule,
+            'old_end_time' => $oldEnd,
+            'new_schedule_time' => $newSchedule,
+            'new_end_time' => $newEnd,
+            'status' => 'menunggu_respons',
+            'respond_deadline' => now()->addHours(24),
+        ]);
+
+        $response = $this
+            ->actingAs($mentor)
+            ->patch(route('mentor.booking.reschedule.respond', $reschedule->id), [
+                'action' => 'tolak',
+                'rejection_reason' => 'Jadwal baru tidak sesuai dengan ketersediaan mentor.',
+            ]);
+
+        $response->assertRedirect(route('mentor.requests'));
+
+        $session->refresh();
+        $reschedule->refresh();
+
+        $this->assertEquals(
+            $oldSchedule->toDateTimeString(),
+            $session->schedule_time->toDateTimeString()
+        );
+
+        $this->assertEquals(
+            $oldEnd->toDateTimeString(),
+            $session->end_time->toDateTimeString()
+        );
+
+        $this->assertEquals('ditolak', $reschedule->status);
+
+        $this->assertEquals(
+            'Jadwal baru tidak sesuai dengan ketersediaan mentor.',
+            $reschedule->rejection_reason
+        );
+
+        $this->assertNotNull($reschedule->responded_at);
+    }
+
+    // Mentor tidak dapat menerima reschedule jika jadwal baru bentrok dengan sesi lain
+    public function test_mentor_cannot_accept_reschedule_when_new_schedule_is_busy(): void
+    {
+        $student = User::factory()->create([
+            'role' => 'student',
+        ]);
+
+        $mentor = User::factory()->create([
+            'role' => 'mentor',
+        ]);
+
+        $oldSchedule = Carbon::parse('2026-11-06 09:00:00');
+        $oldEnd = $oldSchedule->copy()->addHours(1);
+
+        $newSchedule = Carbon::parse('2026-11-10 09:00:00');
+        $newEnd = $newSchedule->copy()->addHours(1);
+
+        $session = MentoringSession::create([
+            'student_id' => $student->id,
+            'mentor_id' => $mentor->id,
+            'status' => 'dikonfirmasi',
+            'schedule_time' => $oldSchedule,
+            'end_time' => $oldEnd,
+            'duration_hours' => 1,
+            'is_free_session' => false,
+            'price_snapshot' => 50000,
+            'discord_link' => 'https://discord.gg/test',
+        ]);
+
+        // Ada sesi lain yang mengambil jadwal pengganti.
+        MentoringSession::create([
+            'student_id' => User::factory()->create([
+                'role' => 'student',
+            ])->id,
+            'mentor_id' => $mentor->id,
+            'status' => 'dikonfirmasi',
+            'schedule_time' => $newSchedule,
+            'end_time' => $newEnd,
+            'duration_hours' => 1,
+            'is_free_session' => false,
+            'price_snapshot' => 50000,
+            'discord_link' => 'https://discord.gg/test',
+        ]);
+
+        $reschedule = RescheduleRequest::create([
+            'session_id' => $session->id,
+            'requested_by' => 'student',
+            'request_type' => 'student_reschedule',
+            'old_schedule_time' => $oldSchedule,
+            'old_end_time' => $oldEnd,
+            'new_schedule_time' => $newSchedule,
+            'new_end_time' => $newEnd,
+            'status' => 'menunggu_respons',
+            'respond_deadline' => now()->addHours(24),
+        ]);
+
+        $response = $this
+            ->actingAs($mentor)
+            ->patch(route('mentor.booking.reschedule.respond', $reschedule->id), [
+                'action' => 'terima',
+            ]);
+
+        $response->assertSessionHasErrors('reschedule');
+
+        $session->refresh();
+        $reschedule->refresh();
+
+        $this->assertEquals(
+            $oldSchedule->toDateTimeString(),
+            $session->schedule_time->toDateTimeString()
+        );
+
+        $this->assertEquals('menunggu_respons', $reschedule->status);
+    }
+
+    // Mentor tidak dapat menerima reschedule jika sudah melewati deadline 24
+    public function test_mentor_cannot_respond_after_reschedule_deadline(): void
+    {
+        $student = User::factory()->create([
+            'role' => 'student',
+        ]);
+
+        $mentor = User::factory()->create([
+            'role' => 'mentor',
+        ]);
+
+        $oldSchedule = Carbon::parse('2026-11-06 09:00:00');
+        $oldEnd = $oldSchedule->copy()->addHours(1);
+
+        $newSchedule = Carbon::parse('2026-11-10 09:00:00');
+        $newEnd = $newSchedule->copy()->addHours(1);
+
+        $session = MentoringSession::create([
+            'student_id' => $student->id,
+            'mentor_id' => $mentor->id,
+            'status' => 'dikonfirmasi',
+            'schedule_time' => $oldSchedule,
+            'end_time' => $oldEnd,
+            'duration_hours' => 1,
+            'is_free_session' => false,
+            'price_snapshot' => 50000,
+            'discord_link' => 'https://discord.gg/test',
+        ]);
+
+        $reschedule = RescheduleRequest::create([
+            'session_id' => $session->id,
+            'requested_by' => 'student',
+            'request_type' => 'student_reschedule',
+            'old_schedule_time' => $oldSchedule,
+            'old_end_time' => $oldEnd,
+            'new_schedule_time' => $newSchedule,
+            'new_end_time' => $newEnd,
+            'status' => 'menunggu_respons',
+            'respond_deadline' => now()->subMinute(),
+        ]);
+
+        $response = $this
+            ->actingAs($mentor)
+            ->patch(route('mentor.booking.reschedule.respond', $reschedule->id), [
+                'action' => 'terima',
+            ]);
+
+        $response->assertSessionHasErrors('reschedule');
+
+        $session->refresh();
+        $reschedule->refresh();
+
+        $this->assertEquals(
+            $oldSchedule->toDateTimeString(),
+            $session->schedule_time->toDateTimeString()
+        );
+
+        $this->assertEquals('menunggu_respons', $reschedule->status);
     }
 }
