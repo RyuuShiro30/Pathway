@@ -29,7 +29,7 @@ class AdminAuthController extends Controller
         ])) {
             $request->session()->regenerate();
 
-            return redirect()->route('admin.courses.index');
+            return redirect()->route('admin.dashboard');
         }
 
         return back()->withErrors([
