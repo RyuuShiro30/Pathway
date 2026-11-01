@@ -116,6 +116,47 @@ class MentoringSessionController extends Controller
         ]);
     }
 
+    // Reschedule student
+    public function requestReschedule(Request $request, int $id): RedirectResponse
+    {
+        // Ambil session milik student
+        $session = MentoringSession::query()
+            ->where('student_id', Auth::id())
+            ->whereKey($id)
+            ->firstOrFail();
+
+        // Hanya session yang sudah dikonfirmasi
+        if ($session->status !== 'dikonfirmasi') {
+            throw ValidationException::withMessages([
+                'session' => 'Hanya sesi yang sudah dikonfirmasi yang dapat di-reschedule.',
+            ]);
+        }
+
+        // Cek batas waktu reschedule
+        if (now()->addHours(6)->gte($session->schedule_time)) {
+            throw ValidationException::withMessages([
+                'session' => 'Reschedule hanya dapat dilakukan lebih dari 6 jam sebelum sesi.',
+            ]);
+        }
+
+        // Cek apakah session sudah pernah di-reschedule
+        if ($session->rescheduleRequests()->where('status', 'diterima')->exists()) {
+            throw ValidationException::withMessages([
+                'session' => 'Sesi ini sudah pernah di-reschedule.',
+            ]);
+        }
+
+        // Validasi data jadwal baru
+        $validated = $request->validate([
+            'schedule_time' => ['required', 'date'],
+            'duration_hours' => ['required', 'integer', 'min:1', 'max:2'],
+        ]);
+
+        return redirect()
+            ->route('student.bookings.index')
+            ->with('success', 'Pengajuan reschedule berhasil dibuat.');
+    }
+
     public function cancelBooking(Request $request, int $id): RedirectResponse
     {
         $reason = $request->input('cancellation_reason');
