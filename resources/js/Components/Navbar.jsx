@@ -4,14 +4,15 @@ import { usePage, Link } from "@inertiajs/react";
 const MENU = [
     { key: "dashboard", label: "Dashboard", href: "/dashboard" },
     { key: "courses", label: "Course", href: "/courses" },
+    { key: "jadwal", label: "Jadwal Saya", href: "/bookings" },
     { key: "mentor", label: "Mentor", href: "/mentors" },
-    { key: "jadwal", label: "Jadwal Saya", href: "#" },
-    { key: "forum", label: "Forum", href: "#" },
     { key: "sharing", label: "Sharing Journey", href: "/journeys" },
     { key: "jadi-mentor", label: "Jadi Mentor", href: "/mentor/become" },
 ];
 
-export default function Navbar({ active = "dashboard" }) {
+export default function Navbar({ active }) {
+    // 1. Ambil 'url' dari hook usePage() untuk mengetahui path saat ini
+    const { url } = usePage();
     const { auth } = usePage().props;
     const user = auth?.user;
 
@@ -35,18 +36,19 @@ export default function Navbar({ active = "dashboard" }) {
             {/* Menu navigasi */}
             <div className="hidden items-center space-x-1 text-sm text-slate-200 lg:flex">
                 {MENU.map((item) => {
-                    const isActive = item.key === active;
+                    // 2. Cocokkan: aktif jika props 'active' dipanggil secara manual, 
+                    // ATAU jika URL browser saat ini berawalan dengan href dari menu
+                    const isActive = active === item.key || url.startsWith(item.href);
 
                     return (
                         <Link
                             key={item.key}
                             href={item.href}
                             aria-current={isActive ? "page" : undefined}
-                            className={`rounded-full px-4 py-2 transition ${
-                                isActive
-                                    ? "bg-[#95d56b] font-bold text-slate-900 shadow-sm"
-                                    : "font-medium hover:bg-white/10"
-                            }`}
+                            className={`rounded-full px-4 py-2 transition ${isActive
+                                ? "bg-[#95d56b] font-bold text-slate-900 shadow-sm"
+                                : "font-medium hover:bg-white/10"
+                                }`}
                         >
                             {item.label}
                         </Link>

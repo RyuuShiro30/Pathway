@@ -8,7 +8,7 @@ import {
     EmptyState,
     themeTokens,
 } from '@/Components/ui';
-import NotificationBell from '@/Components/NotificationBell';
+import Navbar from '@/Components/Navbar';
 
 const dateFormatter = new Intl.DateTimeFormat('id-ID', {
     weekday: 'long',
@@ -101,6 +101,7 @@ function isScheduleOverdue(booking) {
         scheduleTime.getTime() < Date.now()
     );
 }
+
 function formatNoShowDeadline(value) {
     const date = new Date(value);
 
@@ -117,6 +118,7 @@ function formatNoShowDeadline(value) {
         timeZone: 'Asia/Jakarta',
     }).format(date)} WIB`;
 }
+
 function isScheduleUpcoming(booking) {
     if (!booking.schedule_time) {
         return false;
@@ -321,28 +323,31 @@ export default function MyBookings({ bookings = [], stats = {} }) {
     const [refundDecision, setRefundDecision] = useState(null);
     const [isRefundSubmitting, setIsRefundSubmitting] = useState(false);
     const [refundDecisionError, setRefundDecisionError] = useState('');
-    const [isCancellationModalOpen, setIsCancellationModalOpen] =
-        useState(false);
-    const [selectedConfirmedBooking, setSelectedConfirmedBooking] =
-        useState(null);
-    const [isConfirmedCancellationModalOpen, setIsConfirmedCancellationModalOpen] =
-        useState(false);
+    const [isCancellationModalOpen, setIsCancellationModalOpen] = useState(false);
+    const [selectedConfirmedBooking, setSelectedConfirmedBooking] = useState(null);
+    const [isConfirmedCancellationModalOpen, setIsConfirmedCancellationModalOpen] = useState(false);
+
     const cancellationReasonRef = useRef(null);
     const confirmedCancellationReasonRef = useRef(null);
     const refundBackButtonRef = useRef(null);
+
     const cancelForm = useForm({
         cancellation_reason: '',
     });
+
     const confirmedCancelForm = useForm({
         cancellation_reason: '',
         acknowledge_dp_forfeit: false,
     });
+
     const [noShowReportBooking, setNoShowReportBooking] = useState(null);
     const [noShowRespondBooking, setNoShowRespondBooking] = useState(null);
+
     const noShowReportForm = useForm({
         evidence: null,
         reporter_note: '',
     });
+
     const noShowRespondForm = useForm({
         response_note: '',
         response_evidence: null,
@@ -613,7 +618,8 @@ export default function MyBookings({ bookings = [], stats = {} }) {
             },
         );
     }
-        useEffect(() => {
+
+    useEffect(() => {
         if (!noShowReportBooking && !noShowRespondBooking) {
             return;
         }
@@ -641,6 +647,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
         noShowReportForm.processing,
         noShowRespondForm.processing,
     ]);
+
     function openNoShowReportModal(booking) {
         noShowReportForm.reset();
         noShowReportForm.clearErrors();
@@ -711,6 +718,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
             },
         );
     }
+
     function openRefundConfirmation(booking, decision) {
         setSelectedRefundBooking(booking);
         setRefundDecision(decision);
@@ -768,80 +776,15 @@ export default function MyBookings({ bookings = [], stats = {} }) {
             {/* Design Tokens */}
             <style>{`
                 :root {
-                    --student-primary: ${themeTokens.colors.primary};
-                    --student-header-bg: ${themeTokens.colors.headerBg};
+                    --student-primary: ${themeTokens?.colors?.primary || '#527D98'};
+                    --student-header-bg: ${themeTokens?.colors?.headerBg || '#ffffff'};
                 }
             `}</style>
 
-            {/* TOP NAVIGATION BAR */}
-            <header className="sticky top-0 z-40 bg-[#548299] text-white shadow-md">
-                <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 sm:px-6 lg:px-8">
-                    <div className="flex shrink-0 items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-xl font-extrabold text-white shadow-inner">
-                            P
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xl font-black tracking-tight">
-                                Pathway
-                            </span>
-                            <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-white">
-                                STUDENT
-                            </span>
-                        </div>
-                    </div>
-
-                    <nav
-                        aria-label="Navigasi student"
-                        className="order-4 flex w-full items-center gap-1.5 overflow-x-auto whitespace-nowrap text-sm font-medium xl:order-none xl:w-auto"
-                    >
-                        <span className="rounded-full px-4 py-1.5 text-white/80 transition hover:bg-white/10 hover:text-white cursor-pointer">
-                            Dashboard
-                        </span>
-                        <span className="rounded-full px-4 py-1.5 text-white/80 transition hover:bg-white/10 hover:text-white cursor-pointer">
-                            Cari Mentor
-                        </span>
-                        <span
-                            aria-current="page"
-                            className="rounded-full bg-[#3E637A] px-4 py-1.5 font-semibold text-white shadow-sm"
-                        >
-                            Booking Mentoring
-                        </span>
-                        <span className="rounded-full px-4 py-1.5 text-white/80 transition hover:bg-white/10 hover:text-white cursor-pointer">
-                            Materi &amp; Modul
-                        </span>
-                    </nav>
-
-                    <div className="flex shrink-0 items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 hover:bg-white/10 hover:text-white transition cursor-pointer">
-                            <NotificationBell />
-                        </div>
-                        <div className="flex items-center gap-2.5 rounded-full bg-white/10 py-1 pl-1 pr-3">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/25 text-xs font-bold text-white shadow-sm">
-                                {studentInitials}
-                            </div>
-                            <div className="hidden text-left sm:block">
-                                <p className="max-w-[130px] truncate text-xs font-semibold leading-tight text-white">
-                                    {studentName}
-                                </p>
-                                <p className="text-[10px] text-white/70">
-                                    Student Pathway
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            {/* Render Navbar di sini */}
+            <Navbar />
 
             <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-
-                {/* BREADCRUMB */}
-                <nav aria-label="Breadcrumb" className="text-xs font-medium text-slate-400">
-                    <ol className="flex flex-wrap items-center gap-1.5">
-                        <li className="hover:text-slate-600 cursor-pointer">Area Student</li>
-                        <li aria-hidden="true">›</li>
-                        <li className="font-semibold text-slate-700">Booking Mentoring</li>
-                    </ol>
-                </nav>
 
                 {/* PAGE HEADER */}
                 <section className="flex flex-wrap items-end justify-between gap-4">
@@ -913,19 +856,17 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                     type="button"
                                     aria-pressed={isSelected}
                                     onClick={() => setSelectedStatus(filter.value)}
-                                    className={`inline-flex min-h-9 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#527D98] focus:ring-offset-1 ${
-                                        isSelected
+                                    className={`inline-flex min-h-9 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#527D98] focus:ring-offset-1 ${isSelected
                                             ? 'bg-[#527D98] text-white shadow-xs'
                                             : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-                                    }`}
+                                        }`}
                                 >
                                     {filter.label}
                                     <span
-                                        className={`rounded-full px-1.5 py-0.5 text-[11px] font-bold ${
-                                            isSelected
+                                        className={`rounded-full px-1.5 py-0.5 text-[11px] font-bold ${isSelected
                                                 ? 'bg-white/20 text-white'
                                                 : pillColor
-                                        }`}
+                                            }`}
                                     >
                                         {count}
                                     </span>
@@ -1002,28 +943,28 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                 : null;
                             const refundProofUrl =
                                 booking.status === 'dibatalkan' &&
-                                booking.refund_status === 'menunggu_konfirmasi'
+                                    booking.refund_status === 'menunggu_konfirmasi'
                                     ? getPublicStorageUrl(
-                                          booking.refund_proof_path,
-                                      )
+                                        booking.refund_proof_path,
+                                    )
                                     : null;
 
                             const isNoShowReporter =
                                 booking.no_show_report &&
                                 booking.no_show_report.is_reporter &&
                                 booking.no_show_report.status ===
-                                    'menunggu_respons';
+                                'menunggu_respons';
 
                             const isNoShowRespondent =
                                 booking.no_show_report &&
                                 !booking.no_show_report.is_reporter &&
                                 booking.no_show_report.status ===
-                                    'menunggu_respons';
+                                'menunggu_respons';
 
                             const isAwaitingRefundConfirmation =
                                 booking.status === 'dibatalkan' &&
                                 booking.refund_status ===
-                                    'menunggu_konfirmasi';
+                                'menunggu_konfirmasi';
 
                             return (
                                 <div
@@ -1052,17 +993,16 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                                             'Mentor'}
                                                     </h2>
                                                     <span
-                                                        className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold ${
-                                                            booking.is_free_session
+                                                        className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold ${booking.is_free_session
                                                                 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                                                 : 'bg-slate-100 text-slate-700 border border-slate-200'
-                                                        }`}
+                                                            }`}
                                                     >
                                                         {booking.is_free_session
                                                             ? 'Gratis'
                                                             : formatRupiah(
-                                                                  booking.price_snapshot,
-                                                              )}
+                                                                booking.price_snapshot,
+                                                            )}
                                                     </span>
                                                     {discordUrl && (
                                                         <span className="inline-flex rounded-md bg-indigo-50 border border-indigo-100 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
@@ -1107,48 +1047,47 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                         {/* Right: Status Badge & Actions */}
                                         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                                             <span
-                                                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-                                                    booking.status ===
-                                                    'berlangsung'
+                                                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${booking.status ===
+                                                        'berlangsung'
                                                         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                                         : isScheduleOverdue(
-                                                                booking,
-                                                            )
-                                                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                                          : booking.status ===
-                                                                  'dibatalkan' &&
-                                                              [
-                                                                  'menunggu',
-                                                                  'menunggu_konfirmasi',
-                                                              ].includes(
-                                                                  booking.refund_status,
-                                                              )
+                                                            booking,
+                                                        )
                                                             ? 'bg-amber-50 text-amber-700 border border-amber-200'
                                                             : booking.status ===
+                                                                'dibatalkan' &&
+                                                                [
+                                                                    'menunggu',
+                                                                    'menunggu_konfirmasi',
+                                                                ].includes(
+                                                                    booking.refund_status,
+                                                                )
+                                                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                                                : booking.status ===
                                                                     'dibatalkan' &&
-                                                                booking.refund_status ===
+                                                                    booking.refund_status ===
                                                                     'selesai'
-                                                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                              : booking.status ===
-                                                                      'dibatalkan' &&
-                                                                  booking.refund_status ===
-                                                                      'dilaporkan'
-                                                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                                                : isNoShowReporter
-                                                                  ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                                                                  : isNoShowRespondent
-                                                                    ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                                                    : statusStyles[
-                                                                          booking
-                                                                              .status
-                                                                      ] ??
-                                                                      'bg-slate-100 text-slate-700 border border-slate-200'
-                                                }`}
+                                                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                                    : booking.status ===
+                                                                        'dibatalkan' &&
+                                                                        booking.refund_status ===
+                                                                        'dilaporkan'
+                                                                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                                                        : isNoShowReporter
+                                                                            ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                                                            : isNoShowRespondent
+                                                                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                                                                : statusStyles[
+                                                                                booking
+                                                                                    .status
+                                                                                ] ??
+                                                                                'bg-slate-100 text-slate-700 border border-slate-200'
+                                                    }`}
                                             >
                                                 {booking.status ===
                                                     'berlangsung' && (
-                                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                                                )}
+                                                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                                                    )}
                                                 {getStatusLabel(booking)}
                                             </span>
 
@@ -1246,7 +1185,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
 
                                             {booking.status === 'selesai' &&
                                                 (booking.has_reviewed ||
-                                                booking.review ? (
+                                                    booking.review ? (
                                                     <span className="inline-flex min-h-8 items-center justify-center rounded-xl bg-slate-100 border border-slate-200 px-3.5 py-1.5 text-xs font-semibold text-slate-500">
                                                         Sudah Diulas
                                                     </span>
@@ -1458,7 +1397,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
 
                                     {booking.status === 'dibatalkan' &&
                                         booking.refund_status ===
-                                            'dilaporkan' && (
+                                        'dilaporkan' && (
                                             <div className="border-t border-rose-200/80 bg-rose-50 px-4 sm:px-5 py-2 text-xs text-rose-700">
                                                 <span className="font-semibold">
                                                     Laporan Tercatat:
@@ -1516,11 +1455,10 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                         key={page}
                                         type="button"
                                         onClick={() => setCurrentPage(page)}
-                                        className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition ${
-                                            isActive
+                                        className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition ${isActive
                                                 ? 'bg-[#527D98] text-white shadow-xs'
                                                 : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
-                                        }`}
+                                            }`}
                                     >
                                         {page}
                                     </button>
@@ -1766,16 +1704,16 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                 </p>
                                 {confirmedCancelForm.errors
                                     .cancellation_reason && (
-                                    <p className="mt-2 text-sm font-medium text-rose-600">
-                                        {
-                                            confirmedCancelForm.errors
-                                                .cancellation_reason
-                                        }
-                                    </p>
-                                )}
+                                        <p className="mt-2 text-sm font-medium text-rose-600">
+                                            {
+                                                confirmedCancelForm.errors
+                                                    .cancellation_reason
+                                            }
+                                        </p>
+                                    )}
 
                                 {selectedConfirmedBooking.is_free_session ===
-                                false ? (
+                                    false ? (
                                     <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs leading-5 text-rose-700">
                                         <p>
                                             DP yang sudah Anda bayarkan tidak
@@ -1812,17 +1750,17 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                             </label>
                                             {confirmedCancelForm.errors
                                                 .acknowledge_dp_forfeit && (
-                                                <p
-                                                    role="alert"
-                                                    className="mt-2 font-medium text-rose-600"
-                                                >
-                                                    {
-                                                        confirmedCancelForm
-                                                            .errors
-                                                            .acknowledge_dp_forfeit
-                                                    }
-                                                </p>
-                                            )}
+                                                    <p
+                                                        role="alert"
+                                                        className="mt-2 font-medium text-rose-600"
+                                                    >
+                                                        {
+                                                            confirmedCancelForm
+                                                                .errors
+                                                                .acknowledge_dp_forfeit
+                                                        }
+                                                    </p>
+                                                )}
                                         </div>
                                     </div>
                                 ) : (
@@ -2251,17 +2189,16 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                 type="button"
                                 onClick={submitRefundConfirmation}
                                 disabled={isRefundSubmitting}
-                                className={`inline-flex min-h-10 items-center justify-center rounded-xl px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
-                                    refundDecision === 'sudah_terima'
+                                className={`inline-flex min-h-10 items-center justify-center rounded-xl px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${refundDecision === 'sudah_terima'
                                         ? 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500'
                                         : 'bg-rose-600 hover:bg-rose-700 focus:ring-rose-500'
-                                }`}
+                                    }`}
                             >
                                 {isRefundSubmitting
                                     ? 'Mengirim...'
                                     : refundDecision === 'sudah_terima'
-                                      ? 'Ya, Sudah Terima'
-                                      : 'Ya, Laporkan'}
+                                        ? 'Ya, Sudah Terima'
+                                        : 'Ya, Laporkan'}
                             </button>
                         </div>
                     </section>
