@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Notifications\RefundProofUploaded;
 use App\Notifications\SessionEvent;
 use App\Services\MentorSuspensionService;
+use App\Models\RescheduleRequest;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -125,7 +126,7 @@ class MentoringSessionController extends Controller
             ->whereKey($id)
             ->firstOrFail();
 
-        // Hanya session yang sudah dikonfirmasi
+        // Cek status session
         if ($session->status !== 'dikonfirmasi') {
             throw ValidationException::withMessages([
                 'session' => 'Hanya sesi yang sudah dikonfirmasi yang dapat di-reschedule.',
@@ -152,6 +153,87 @@ class MentoringSessionController extends Controller
             'duration_hours' => ['required', 'integer', 'min:1', 'max:2'],
         ]);
 
+        $newScheduleTime = Carbon::parse($validated['schedule_time']);
+        $newEndTime = $newScheduleTime->copy()->addHours(
+            (int) $validated['duration_hours']
+        );
+
+        // Jadwal baru harus berada di masa mendatang
+        if ($newScheduleTime->lte(now())) {
+            throw ValidationException::withMessages([
+                'schedule_time' => 'Jadwal reschedule harus berada di waktu mendatang.',
+            ]);
+        }
+
+        // Jadwal baru maksimal 10 hari dari sekarang
+        if ($newScheduleTime->gt(now()->addDays(10))) {
+            throw ValidationException::withMessages([
+                'schedule_time' => 'Jadwal reschedule harus tersedia dalam 10 hari ke depan.',
+            ]);
+        }
+
+        // Ambil availability mentor
+        $mentorProfile = MentorProfile::query()
+            ->where('user_id', $session->mentor_id)
+            ->first();
+
+        if (! $mentorProfile) {
+            throw ValidationException::withMessages([
+                'schedule_time' => 'Data jadwal mentor tidak ditemukan.',
+            ]);
+        }
+
+        // Pastikan jadwal baru tersedia pada availability mentor
+        $booking = $this->resolveBookingDetails(
+            $mentorProfile,
+            $newScheduleTime,
+            (int) $validated['duration_hours']
+        );
+
+        if ($booking === null) {
+            throw ValidationException::withMessages([
+                'schedule_time' => 'Jadwal tersebut tidak tersedia pada jadwal mentor.',
+            ]);
+        }
+
+        // Gunakan waktu hasil validasi dari availability mentor
+        $newScheduleTime = $booking['schedule_time'];
+        $newEndTime = $booking['end_time'];
+
+        // Tipe dan harga sesi pengganti harus sama dengan sesi awal
+        if (
+            $booking['is_free_session'] !== $session->is_free_session
+            || $booking['total_price'] != $session->price_snapshot
+        ) {
+            throw ValidationException::withMessages([
+                'schedule_time' => 'Tipe dan harga sesi pengganti harus sama dengan sesi awal.',
+            ]);
+        }
+
+        // Cek bentrok dengan session lain milik mentor
+        if ($this->hasBookingConflict(
+            $session->mentor_id,
+            $newScheduleTime,
+            $newEndTime,
+            excludeSessionId: $session->id,
+        )) {
+            throw ValidationException::withMessages([
+                'schedule_time' => 'Jadwal tersebut tidak tersedia.',
+            ]);
+        }
+
+        // Simpan request reschedule
+        $session->rescheduleRequests()->create([
+            'requested_by' => 'student',
+            'request_type' => 'student_reschedule',
+            'old_schedule_time' => $session->schedule_time,
+            'old_end_time' => $session->end_time,
+            'new_schedule_time' => $newScheduleTime,
+            'new_end_time' => $newEndTime,
+            'status' => 'menunggu_respons',
+            'respond_deadline' => now()->addHours(24),
+        ]);
+
         return redirect()
             ->route('student.bookings.index')
             ->with('success', 'Pengajuan reschedule berhasil dibuat.');
@@ -161,7 +243,9 @@ class MentoringSessionController extends Controller
     {
         $reason = $request->input('cancellation_reason');
         $request->merge([
-            'cancellation_reason' => is_string($reason) ? trim($reason) : $reason,
+            'cancellation_reason' => is_string($reason)
+                ? trim($reason)
+                : $reason,
         ]);
 
         $validated = $request->validate([
@@ -188,10 +272,17 @@ class MentoringSessionController extends Controller
             }
 
             $session->update($cancellation);
-            $session->mentor?->notify(new SessionEvent('Student membatalkan pengajuan booking.', '/mentor/dashboard'));
+
+            $session->mentor?->notify(
+                new SessionEvent(
+                    'Student membatalkan pengajuan booking.',
+                    '/mentor/dashboard'
+                )
+            );
         });
 
-        return redirect()->route('student.bookings.index')
+        return redirect()
+            ->route('student.bookings.index')
             ->with('success', 'Pengajuan berhasil dibatalkan.');
     }
 
