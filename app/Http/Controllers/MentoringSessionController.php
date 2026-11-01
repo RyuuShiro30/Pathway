@@ -838,10 +838,15 @@ class MentoringSessionController extends Controller
         return response()->json($requests);
     }
 
-    // GET - tampilkan halaman detail satu permintaan booking
+    // GET - tampilkan halaman detail satu permintaan booking beserta pengajuan reschedule
     public function show($id)
     {
-        $session = MentoringSession::with('student')
+        $session = MentoringSession::with([
+            'student',
+            'rescheduleRequests' => function ($query) {
+                $query->latest();
+            },
+        ])
             ->where('mentor_id', Auth::id())
             ->findOrFail($id);
 
