@@ -309,14 +309,13 @@ function getSafeDiscordUrl(value) {
 }
 
 export default function MyBookings({ bookings = [], stats = {} }) {
-    const { auth, flash } = usePage().props;
+    const { auth } = usePage().props;
     const studentName = auth?.user?.name || 'Student';
     const studentInitials = getInitials(studentName);
     const [selectedStatus, setSelectedStatus] = useState('semua');
     const [searchQuery, setSearchQuery] = useState('');
     const [sortOrder, setSortOrder] = useState('terdekat');
     const [currentPage, setCurrentPage] = useState(1);
-    const [isSuccessDismissed, setIsSuccessDismissed] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [selectedRefundBooking, setSelectedRefundBooking] = useState(null);
     const [refundDecision, setRefundDecision] = useState(null);
@@ -348,8 +347,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
         response_note: '',
         response_evidence: null,
     });
-    const successMessage =
-        typeof flash?.success === 'string' ? flash.success : '';
+
     const safeBookings = Array.isArray(bookings) ? bookings : [];
 
     const tabCounts = useMemo(
@@ -455,9 +453,6 @@ export default function MyBookings({ bookings = [], stats = {} }) {
         setCurrentPage(1);
     }, [selectedStatus, searchQuery, sortOrder]);
 
-    useEffect(() => {
-        setIsSuccessDismissed(false);
-    }, [successMessage]);
 
     useEffect(() => {
         if (!isCancellationModalOpen) {
@@ -847,29 +842,6 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                         <li className="font-semibold text-slate-700">Booking Mentoring</li>
                     </ol>
                 </nav>
-
-                {/* SUCCESS BANNER */}
-                {successMessage && !isSuccessDismissed && (
-                    <div
-                        role="status"
-                        className="flex items-center justify-between gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-xs sm:text-sm font-medium text-emerald-800 shadow-sm"
-                    >
-                        <div className="flex items-center gap-2.5">
-                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 font-bold text-xs">
-                                ✓
-                            </span>
-                            <p>{successMessage}</p>
-                        </div>
-                        <button
-                            type="button"
-                            aria-label="Tutup pesan sukses"
-                            onClick={() => setIsSuccessDismissed(true)}
-                            className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-base font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors focus:outline-none"
-                        >
-                            ×
-                        </button>
-                    </div>
-                )}
 
                 {/* PAGE HEADER */}
                 <section className="flex flex-wrap items-end justify-between gap-4">
