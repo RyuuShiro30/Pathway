@@ -40,6 +40,9 @@ class MentoringSessionController extends Controller
             ->with([
                 'mentor:id,name',
                 'mentor.mentorProfile:user_id,expertise',
+                'rescheduleRequests' => function ($query) {
+                    $query->latest();
+                },
             ])
             ->with('noShowReport')
             ->select([
@@ -92,6 +95,43 @@ class MentoringSessionController extends Controller
                         : null,
                     'can_report_no_show' => $session->canReportNoShow(),
                     'no_show_report' => $session->noShowReportPayloadFor((int) Auth::id()),
+
+                    'reschedule_requests' => $session->rescheduleRequests
+                        ->map(static function (RescheduleRequest $request): array {
+                            return [
+                                'id' => $request->id,
+                                'requested_by' => $request->requested_by,
+                                'request_type' => $request->request_type,
+                                'old_schedule_time' => $request->old_schedule_time
+                                    ->copy()
+                                    ->setTimezone('UTC')
+                                    ->toISOString(),
+                                'old_end_time' => $request->old_end_time
+                                    ->copy()
+                                    ->setTimezone('UTC')
+                                    ->toISOString(),
+                                'new_schedule_time' => $request->new_schedule_time
+                                    ->copy()
+                                    ->setTimezone('UTC')
+                                    ->toISOString(),
+                                'new_end_time' => $request->new_end_time
+                                    ->copy()
+                                    ->setTimezone('UTC')
+                                    ->toISOString(),
+                                'status' => $request->status,
+                                'respond_deadline' => $request->respond_deadline
+                                    ->copy()
+                                    ->setTimezone('UTC')
+                                    ->toISOString(),
+                                'responded_at' => $request->responded_at?->copy()
+                                    ->setTimezone('UTC')
+                                    ->toISOString(),
+                                'rejection_reason' => $request->rejection_reason,
+                            ];
+                        })
+                        ->values()
+                        ->all(),
+
                     'mentor' => [
                         'id' => $session->mentor->id,
                         'name' => $session->mentor->name,
@@ -140,6 +180,13 @@ class MentoringSessionController extends Controller
             ]);
         }
 
+        // Cek apakah masih ada pengajuan reschedule yang menunggu respons mentor
+        if ($session->rescheduleRequests()->where('status', 'menunggu_respons')->exists()) {
+            throw ValidationException::withMessages([
+                'session' => 'Pengajuan reschedule sebelumnya masih menunggu respons mentor.',
+            ]);
+        }
+
         // Cek apakah session sudah pernah di-reschedule
         if ($session->rescheduleRequests()->where('status', 'diterima')->exists()) {
             throw ValidationException::withMessages([
@@ -153,7 +200,10 @@ class MentoringSessionController extends Controller
             'duration_hours' => ['required', 'integer', 'min:1', 'max:2'],
         ]);
 
-        $newScheduleTime = Carbon::parse($validated['schedule_time']);
+        $newScheduleTime = Carbon::parse(
+            $validated['schedule_time'],
+            'Asia/Jakarta'
+        );
         $newEndTime = $newScheduleTime->copy()->addHours(
             (int) $validated['duration_hours']
         );

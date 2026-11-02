@@ -1,5 +1,5 @@
-import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Head, router, useForm, usePage } from "@inertiajs/react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
     AlertBanner,
     Badge,
@@ -7,90 +7,134 @@ import {
     Card,
     EmptyState,
     themeTokens,
-} from '@/Components/ui';
-import NotificationBell from '@/Components/NotificationBell';
+} from "@/Components/ui";
+import NotificationBell from "@/Components/NotificationBell";
 
-const dateFormatter = new Intl.DateTimeFormat('id-ID', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    timeZone: 'Asia/Jakarta',
+const dateFormatter = new Intl.DateTimeFormat("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Asia/Jakarta",
 });
 
-const timeFormatter = new Intl.DateTimeFormat('id-ID', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-    timeZone: 'Asia/Jakarta',
+const timeFormatter = new Intl.DateTimeFormat("id-ID", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone: "Asia/Jakarta",
 });
 
-const rupiahFormatter = new Intl.NumberFormat('id-ID', {
+const rupiahFormatter = new Intl.NumberFormat("id-ID", {
     maximumFractionDigits: 0,
 });
 
 const statusFilters = [
-    { value: 'semua', label: 'Semua', countKey: 'semua' },
-    { value: 'mendatang', label: 'Mendatang', countKey: 'mendatang' },
-    { value: 'menunggu', label: 'Menunggu', countKey: 'menunggu' },
-    { value: 'perlu_respon', label: 'Perlu Respon', countKey: 'perlu_respon' },
-    { value: 'selesai', label: 'Selesai', countKey: 'selesai' },
-    { value: 'dibatalkan', label: 'Dibatalkan / Refund', countKey: 'dibatalkan' },
+    { value: "semua", label: "Semua", countKey: "semua" },
+    { value: "mendatang", label: "Mendatang", countKey: "mendatang" },
+    { value: "menunggu", label: "Menunggu", countKey: "menunggu" },
+    { value: "perlu_respon", label: "Perlu Respon", countKey: "perlu_respon" },
+    { value: "selesai", label: "Selesai", countKey: "selesai" },
+    {
+        value: "dibatalkan",
+        label: "Dibatalkan / Refund",
+        countKey: "dibatalkan",
+    },
 ];
 
 const statusStyles = {
-    diajukan: 'bg-amber-50 text-amber-700 border border-amber-200/80',
-    dikonfirmasi: 'bg-sky-50 text-sky-700 border border-sky-200/80',
-    berlangsung: 'bg-emerald-50 text-emerald-700 border border-emerald-200/80',
-    selesai: 'bg-slate-100 text-slate-700 border border-slate-200/80',
-    dibatalkan: 'bg-rose-50 text-rose-700 border border-rose-200/80',
+    diajukan: "bg-amber-50 text-amber-700 border border-amber-200/80",
+    dikonfirmasi: "bg-sky-50 text-sky-700 border border-sky-200/80",
+    berlangsung: "bg-emerald-50 text-emerald-700 border border-emerald-200/80",
+    selesai: "bg-slate-100 text-slate-700 border border-slate-200/80",
+    dibatalkan: "bg-rose-50 text-rose-700 border border-rose-200/80",
 };
 
 const statsCards = [
     {
-        key: 'total',
-        label: 'Total Booking',
-        accent: 'bg-slate-100 text-slate-700',
+        key: "total",
+        label: "Total Booking",
+        accent: "bg-slate-100 text-slate-700",
         icon: (
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            <svg
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                />
             </svg>
         ),
     },
     {
-        key: 'menunggu_konfirmasi',
-        label: 'Menunggu Respon',
-        accent: 'bg-amber-50 text-amber-600',
+        key: "menunggu_konfirmasi",
+        label: "Menunggu Respon",
+        accent: "bg-amber-50 text-amber-600",
         icon: (
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
             </svg>
         ),
     },
     {
-        key: 'siap_datang',
-        label: 'Sesi Mendatang',
-        accent: 'bg-emerald-50 text-emerald-600',
+        key: "siap_datang",
+        label: "Sesi Mendatang",
+        accent: "bg-emerald-50 text-emerald-600",
         icon: (
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
             </svg>
         ),
     },
     {
-        key: 'jam_mentoring',
-        label: 'Sesi Selesai',
-        accent: 'bg-sky-50 text-sky-600',
+        key: "jam_mentoring",
+        label: "Sesi Selesai",
+        accent: "bg-sky-50 text-sky-600",
         icon: (
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+            <svg
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+            >
+                <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M5 13l4 4L19 7"
+                />
             </svg>
         ),
     },
 ];
 
 function isScheduleOverdue(booking) {
-    if (booking.status !== 'diajukan' || !booking.schedule_time) {
+    if (booking.status !== "diajukan" || !booking.schedule_time) {
         return false;
     }
 
@@ -105,16 +149,16 @@ function formatNoShowDeadline(value) {
     const date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
-        return 'batas waktu tidak tersedia';
+        return "batas waktu tidak tersedia";
     }
 
-    return `${new Intl.DateTimeFormat('id-ID', {
-        day: 'numeric',
-        month: 'long',
-        hour: '2-digit',
-        minute: '2-digit',
-        hourCycle: 'h23',
-        timeZone: 'Asia/Jakarta',
+    return `${new Intl.DateTimeFormat("id-ID", {
+        day: "numeric",
+        month: "long",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+        timeZone: "Asia/Jakarta",
     }).format(date)} WIB`;
 }
 function isScheduleUpcoming(booking) {
@@ -133,39 +177,42 @@ function isScheduleUpcoming(booking) {
 function getStatusLabel(booking) {
     if (
         booking.no_show_report &&
-        booking.no_show_report.status === 'menunggu_respons'
+        booking.no_show_report.status === "menunggu_respons"
     ) {
         return booking.no_show_report.is_reporter
-            ? 'No-Show Diproses'
-            : 'Klarifikasi Diperlukan';
+            ? "No-Show Diproses"
+            : "Klarifikasi Diperlukan";
     }
 
     if (
-        booking.status === 'dibatalkan' &&
-        booking.refund_status === 'menunggu_konfirmasi'
+        booking.status === "dibatalkan" &&
+        booking.refund_status === "menunggu_konfirmasi"
     ) {
-        return 'Konfirmasi Refund';
+        return "Konfirmasi Refund";
     }
 
     if (isScheduleOverdue(booking)) {
-        return 'Jadwal Terlewat';
+        return "Jadwal Terlewat";
     }
 
     if (
-        booking.status === 'diajukan' &&
-        booking.payment_dp_status === 'menunggu_verifikasi'
+        booking.status === "diajukan" &&
+        booking.payment_dp_status === "menunggu_verifikasi"
     ) {
-        return 'Menunggu Verifikasi DP';
+        return "Menunggu Verifikasi DP";
     }
 
-    if (booking.status === 'dibatalkan' && booking.refund_status === 'menunggu') {
-        return 'Menunggu Refund';
+    if (
+        booking.status === "dibatalkan" &&
+        booking.refund_status === "menunggu"
+    ) {
+        return "Menunggu Refund";
     }
 
-    if (booking.status === 'dibatalkan') {
+    if (booking.status === "dibatalkan") {
         const refundLabels = {
-            selesai: 'Refund Selesai',
-            dilaporkan: 'Dilaporkan Belum Diterima',
+            selesai: "Refund Selesai",
+            dilaporkan: "Dilaporkan Belum Diterima",
         };
 
         if (refundLabels[booking.refund_status]) {
@@ -174,86 +221,95 @@ function getStatusLabel(booking) {
     }
 
     const labels = {
-        diajukan: 'Diajukan',
-        dikonfirmasi: 'Dikonfirmasi',
-        berlangsung: 'Sedang Berlangsung',
-        selesai: 'Selesai',
-        dibatalkan: 'Dibatalkan',
+        diajukan: "Diajukan",
+        dikonfirmasi: "Dikonfirmasi",
+        berlangsung: "Sedang Berlangsung",
+        selesai: "Selesai",
+        dibatalkan: "Dibatalkan",
     };
 
-    return labels[booking.status] ?? 'Status tidak tersedia';
+    return labels[booking.status] ?? "Status tidak tersedia";
 }
 
 function getCardBorderClass(booking) {
-    if (booking.status === 'berlangsung') {
-        return 'border border-emerald-400';
+    if (booking.status === "berlangsung") {
+        return "border border-emerald-400";
     }
 
     if (
         booking.no_show_report &&
-        booking.no_show_report.status === 'menunggu_respons'
+        booking.no_show_report.status === "menunggu_respons"
     ) {
         return booking.no_show_report.is_reporter
-            ? 'border border-amber-300'
-            : 'border border-rose-300';
+            ? "border border-amber-300"
+            : "border border-rose-300";
     }
 
     if (
-        booking.status === 'dibatalkan' &&
-        booking.refund_status === 'menunggu_konfirmasi'
+        booking.status === "dibatalkan" &&
+        booking.refund_status === "menunggu_konfirmasi"
     ) {
-        return 'border border-amber-300';
+        return "border border-amber-300";
     }
 
-    return 'border border-slate-200/90';
+    return "border border-slate-200/90";
 }
 
 function getAvatarStyle(booking) {
-    if (booking.status === 'berlangsung') {
-        return 'bg-[#486B88] text-white';
+    if (booking.status === "berlangsung") {
+        return "bg-[#486B88] text-white";
     }
 
     if (
         booking.no_show_report &&
-        booking.no_show_report.status === 'menunggu_respons'
+        booking.no_show_report.status === "menunggu_respons"
     ) {
         return booking.no_show_report.is_reporter
-            ? 'bg-amber-100 text-amber-800'
-            : 'bg-rose-100 text-rose-700';
+            ? "bg-amber-100 text-amber-800"
+            : "bg-rose-100 text-rose-700";
     }
 
-    if (booking.status === 'selesai') {
-        return 'bg-emerald-100 text-emerald-800';
+    if (booking.status === "selesai") {
+        return "bg-emerald-100 text-emerald-800";
     }
 
-    if (booking.status === 'dikonfirmasi') {
-        return 'bg-sky-100 text-sky-700';
+    if (booking.status === "dikonfirmasi") {
+        return "bg-sky-100 text-sky-700";
     }
 
-    return 'bg-slate-100 text-slate-700';
+    return "bg-slate-100 text-slate-700";
 }
 
 function getInitials(name) {
     return (
-        String(name ?? 'Mentor')
+        String(name ?? "Mentor")
             .trim()
             .split(/\s+/)
             .filter(Boolean)
             .slice(0, 2)
             .map((part) => part[0])
-            .join('')
-            .toUpperCase() || 'M'
+            .join("")
+            .toUpperCase() || "M"
     );
 }
 
 function formatBookingDateTime(value) {
     if (!value) {
-        return 'Waktu tidak tersedia';
+        return "Waktu tidak tersedia";
     }
 
     const date = new Date(value);
 
-    return Number.isNaN(date.getTime()) ? 'Waktu tidak tersedia' : dateFormatter.format(date);
+    return Number.isNaN(date.getTime())
+        ? "Waktu tidak tersedia"
+        : dateFormatter.format(date);
+}
+
+function getLatestRescheduleRequest(booking) {
+    const requests =
+        booking.reschedule_requests ?? booking.rescheduleRequests ?? [];
+
+    return requests[0] ?? null;
 }
 
 function getPublicStorageUrl(path) {
@@ -268,23 +324,23 @@ function getPublicStorageUrl(path) {
     }
 
     return `/storage/${value
-        .replace(/^\/+/, '')
-        .replace(/^storage\//, '')
-        .split('/')
+        .replace(/^\/+/, "")
+        .replace(/^storage\//, "")
+        .split("/")
         .map((segment) => encodeURIComponent(segment))
-        .join('/')}`;
+        .join("/")}`;
 }
 
 function formatBookingTimeRange(booking) {
     if (!booking.schedule_time || !booking.end_time) {
-        return 'Waktu tidak tersedia';
+        return "Waktu tidak tersedia";
     }
 
     const start = new Date(booking.schedule_time);
     const end = new Date(booking.end_time);
 
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-        return 'Waktu tidak tersedia';
+        return "Waktu tidak tersedia";
     }
 
     return `${timeFormatter.format(start)} - ${timeFormatter.format(end)} WIB`;
@@ -295,14 +351,14 @@ function formatRupiah(value) {
 }
 
 function getSafeDiscordUrl(value) {
-    if (typeof value !== 'string' || !value.startsWith('https://')) {
+    if (typeof value !== "string" || !value.startsWith("https://")) {
         return null;
     }
 
     try {
         const url = new URL(value);
 
-        return url.protocol === 'https:' ? url.href : null;
+        return url.protocol === "https:" ? url.href : null;
     } catch {
         return null;
     }
@@ -310,41 +366,53 @@ function getSafeDiscordUrl(value) {
 
 export default function MyBookings({ bookings = [], stats = {} }) {
     const { auth } = usePage().props;
-    const studentName = auth?.user?.name || 'Student';
+    const studentName = auth?.user?.name || "Student";
     const studentInitials = getInitials(studentName);
-    const [selectedStatus, setSelectedStatus] = useState('semua');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [sortOrder, setSortOrder] = useState('terdekat');
+    const [selectedStatus, setSelectedStatus] = useState("semua");
+    const [searchQuery, setSearchQuery] = useState("");
+    const [sortOrder, setSortOrder] = useState("terdekat");
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [selectedRefundBooking, setSelectedRefundBooking] = useState(null);
     const [refundDecision, setRefundDecision] = useState(null);
     const [isRefundSubmitting, setIsRefundSubmitting] = useState(false);
-    const [refundDecisionError, setRefundDecisionError] = useState('');
+    const [refundDecisionError, setRefundDecisionError] = useState("");
     const [isCancellationModalOpen, setIsCancellationModalOpen] =
         useState(false);
     const [selectedConfirmedBooking, setSelectedConfirmedBooking] =
         useState(null);
-    const [isConfirmedCancellationModalOpen, setIsConfirmedCancellationModalOpen] =
-        useState(false);
+    const [
+        isConfirmedCancellationModalOpen,
+        setIsConfirmedCancellationModalOpen,
+    ] = useState(false);
+
+    const [selectedRescheduleBooking, setSelectedRescheduleBooking] =
+        useState(null);
+    const [isRescheduleModalOpen, setIsRescheduleModalOpen] = useState(false);
+
+    const rescheduleForm = useForm({
+        schedule_time: "",
+        duration_hours: 1,
+    });
+
     const cancellationReasonRef = useRef(null);
     const confirmedCancellationReasonRef = useRef(null);
     const refundBackButtonRef = useRef(null);
     const cancelForm = useForm({
-        cancellation_reason: '',
+        cancellation_reason: "",
     });
     const confirmedCancelForm = useForm({
-        cancellation_reason: '',
+        cancellation_reason: "",
         acknowledge_dp_forfeit: false,
     });
     const [noShowReportBooking, setNoShowReportBooking] = useState(null);
     const [noShowRespondBooking, setNoShowRespondBooking] = useState(null);
     const noShowReportForm = useForm({
         evidence: null,
-        reporter_note: '',
+        reporter_note: "",
     });
     const noShowRespondForm = useForm({
-        response_note: '',
+        response_note: "",
         response_evidence: null,
     });
 
@@ -354,20 +422,21 @@ export default function MyBookings({ bookings = [], stats = {} }) {
         () => ({
             semua: safeBookings.length,
             mendatang: safeBookings.filter((b) =>
-                ['dikonfirmasi', 'berlangsung'].includes(b.status),
+                ["dikonfirmasi", "berlangsung"].includes(b.status),
             ).length,
-            menunggu: safeBookings.filter((b) => b.status === 'diajukan').length,
+            menunggu: safeBookings.filter((b) => b.status === "diajukan")
+                .length,
             perlu_respon: safeBookings.filter(
                 (b) =>
                     (b.no_show_report &&
-                        b.no_show_report.status === 'menunggu_respons' &&
+                        b.no_show_report.status === "menunggu_respons" &&
                         (!b.no_show_report.is_reporter ||
                             b.no_show_report.can_respond)) ||
-                    (b.status === 'dibatalkan' &&
-                        b.refund_status === 'menunggu_konfirmasi'),
+                    (b.status === "dibatalkan" &&
+                        b.refund_status === "menunggu_konfirmasi"),
             ).length,
-            selesai: safeBookings.filter((b) => b.status === 'selesai').length,
-            dibatalkan: safeBookings.filter((b) => b.status === 'dibatalkan')
+            selesai: safeBookings.filter((b) => b.status === "selesai").length,
+            dibatalkan: safeBookings.filter((b) => b.status === "dibatalkan")
                 .length,
         }),
         [safeBookings],
@@ -376,40 +445,40 @@ export default function MyBookings({ bookings = [], stats = {} }) {
     const filteredAndSortedBookings = useMemo(() => {
         let result = safeBookings;
 
-        if (selectedStatus === 'mendatang') {
+        if (selectedStatus === "mendatang") {
             result = result.filter((b) =>
-                ['dikonfirmasi', 'berlangsung'].includes(b.status),
+                ["dikonfirmasi", "berlangsung"].includes(b.status),
             );
-        } else if (selectedStatus === 'menunggu') {
-            result = result.filter((b) => b.status === 'diajukan');
-        } else if (selectedStatus === 'perlu_respon') {
+        } else if (selectedStatus === "menunggu") {
+            result = result.filter((b) => b.status === "diajukan");
+        } else if (selectedStatus === "perlu_respon") {
             result = result.filter(
                 (b) =>
                     (b.no_show_report &&
-                        b.no_show_report.status === 'menunggu_respons' &&
+                        b.no_show_report.status === "menunggu_respons" &&
                         (!b.no_show_report.is_reporter ||
                             b.no_show_report.can_respond)) ||
-                    (b.status === 'dibatalkan' &&
-                        b.refund_status === 'menunggu_konfirmasi'),
+                    (b.status === "dibatalkan" &&
+                        b.refund_status === "menunggu_konfirmasi"),
             );
-        } else if (selectedStatus === 'selesai') {
-            result = result.filter((b) => b.status === 'selesai');
-        } else if (selectedStatus === 'dibatalkan') {
-            result = result.filter((b) => b.status === 'dibatalkan');
+        } else if (selectedStatus === "selesai") {
+            result = result.filter((b) => b.status === "selesai");
+        } else if (selectedStatus === "dibatalkan") {
+            result = result.filter((b) => b.status === "dibatalkan");
         }
 
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase().trim();
             result = result.filter((b) => {
-                const mentorName = String(b.mentor?.name ?? '').toLowerCase();
+                const mentorName = String(b.mentor?.name ?? "").toLowerCase();
                 const expertise = String(
-                    b.mentor?.expertise ?? '',
+                    b.mentor?.expertise ?? "",
                 ).toLowerCase();
                 const studentNotes = String(
-                    b.notes_from_student ?? '',
+                    b.notes_from_student ?? "",
                 ).toLowerCase();
                 const reason = String(
-                    b.cancellation_reason ?? '',
+                    b.cancellation_reason ?? "",
                 ).toLowerCase();
 
                 return (
@@ -425,7 +494,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
             const timeA = new Date(a.schedule_time || 0).getTime();
             const timeB = new Date(b.schedule_time || 0).getTime();
 
-            if (sortOrder === 'terbaru') {
+            if (sortOrder === "terbaru") {
                 return timeB - timeA;
             }
 
@@ -453,7 +522,6 @@ export default function MyBookings({ bookings = [], stats = {} }) {
         setCurrentPage(1);
     }, [selectedStatus, searchQuery, sortOrder]);
 
-
     useEffect(() => {
         if (!isCancellationModalOpen) {
             return;
@@ -468,16 +536,16 @@ export default function MyBookings({ bookings = [], stats = {} }) {
         }
 
         function handleKeyDown(event) {
-            if (event.key === 'Escape' && !cancelForm.processing) {
+            if (event.key === "Escape" && !cancelForm.processing) {
                 setIsCancellationModalOpen(false);
                 setSelectedBooking(null);
             }
         }
 
-        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener("keydown", handleKeyDown);
 
         return () => {
-            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener("keydown", handleKeyDown);
         };
     }, [isCancellationModalOpen, cancelForm.processing]);
 
@@ -495,23 +563,17 @@ export default function MyBookings({ bookings = [], stats = {} }) {
         }
 
         function handleKeyDown(event) {
-            if (
-                event.key === 'Escape' &&
-                !confirmedCancelForm.processing
-            ) {
+            if (event.key === "Escape" && !confirmedCancelForm.processing) {
                 closeConfirmedCancellationModal();
             }
         }
 
-        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener("keydown", handleKeyDown);
 
         return () => {
-            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener("keydown", handleKeyDown);
         };
-    }, [
-        isConfirmedCancellationModalOpen,
-        confirmedCancelForm.processing,
-    ]);
+    }, [isConfirmedCancellationModalOpen, confirmedCancelForm.processing]);
 
     useEffect(() => {
         if (!selectedRefundBooking || !refundDecision) {
@@ -527,15 +589,15 @@ export default function MyBookings({ bookings = [], stats = {} }) {
         }
 
         function handleKeyDown(event) {
-            if (event.key === 'Escape' && !isRefundSubmitting) {
+            if (event.key === "Escape" && !isRefundSubmitting) {
                 closeRefundConfirmation();
             }
         }
 
-        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener("keydown", handleKeyDown);
 
         return () => {
-            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener("keydown", handleKeyDown);
         };
     }, [selectedRefundBooking, refundDecision, isRefundSubmitting]);
 
@@ -562,17 +624,14 @@ export default function MyBookings({ bookings = [], stats = {} }) {
             return;
         }
 
-        cancelForm.patch(
-            route('student.bookings.cancel', selectedBooking.id),
-            {
-                preserveScroll: true,
-                onSuccess: () => {
-                    setIsCancellationModalOpen(false);
-                    setSelectedBooking(null);
-                    cancelForm.reset();
-                },
+        cancelForm.patch(route("student.bookings.cancel", selectedBooking.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsCancellationModalOpen(false);
+                setSelectedBooking(null);
+                cancelForm.reset();
             },
-        );
+        });
     }
 
     function openConfirmedCancellationModal(booking) {
@@ -591,6 +650,48 @@ export default function MyBookings({ bookings = [], stats = {} }) {
         setSelectedConfirmedBooking(null);
     }
 
+    function openRescheduleModal(booking) {
+        rescheduleForm.reset();
+        rescheduleForm.clearErrors();
+
+        setSelectedRescheduleBooking(booking);
+        setIsRescheduleModalOpen(true);
+    }
+
+    function closeRescheduleModal() {
+        if (rescheduleForm.processing) {
+            return;
+        }
+
+        setIsRescheduleModalOpen(false);
+        setSelectedRescheduleBooking(null);
+        rescheduleForm.reset();
+        rescheduleForm.clearErrors();
+    }
+
+    function submitReschedule(event) {
+        event.preventDefault();
+
+        if (!selectedRescheduleBooking) {
+            return;
+        }
+
+        rescheduleForm.post(
+            route(
+                "student.bookings.reschedule.store",
+                selectedRescheduleBooking.id,
+            ),
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsRescheduleModalOpen(false);
+                    setSelectedRescheduleBooking(null);
+                    rescheduleForm.reset();
+                },
+            },
+        );
+    }
+
     function submitConfirmedCancellation(event) {
         event.preventDefault();
 
@@ -600,7 +701,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
 
         confirmedCancelForm.patch(
             route(
-                'student.bookings.cancel-confirmed',
+                "student.bookings.cancel-confirmed",
                 selectedConfirmedBooking.id,
             ),
             {
@@ -613,13 +714,13 @@ export default function MyBookings({ bookings = [], stats = {} }) {
             },
         );
     }
-        useEffect(() => {
+    useEffect(() => {
         if (!noShowReportBooking && !noShowRespondBooking) {
             return;
         }
 
         function handleKeyDown(event) {
-            if (event.key !== 'Escape') {
+            if (event.key !== "Escape") {
                 return;
             }
 
@@ -630,10 +731,10 @@ export default function MyBookings({ bookings = [], stats = {} }) {
             }
         }
 
-        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener("keydown", handleKeyDown);
 
         return () => {
-            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener("keydown", handleKeyDown);
         };
     }, [
         noShowReportBooking,
@@ -662,17 +763,14 @@ export default function MyBookings({ bookings = [], stats = {} }) {
             return;
         }
 
-        noShowReportForm.post(
-            route('no-show.store', noShowReportBooking.id),
-            {
-                forceFormData: true,
-                preserveScroll: true,
-                onSuccess: () => {
-                    setNoShowReportBooking(null);
-                    noShowReportForm.reset();
-                },
+        noShowReportForm.post(route("no-show.store", noShowReportBooking.id), {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                setNoShowReportBooking(null);
+                noShowReportForm.reset();
             },
-        );
+        });
     }
 
     function openNoShowRespondModal(booking) {
@@ -697,10 +795,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
         }
 
         noShowRespondForm.patch(
-            route(
-                'no-show.respond',
-                noShowRespondBooking.no_show_report.id,
-            ),
+            route("no-show.respond", noShowRespondBooking.no_show_report.id),
             {
                 forceFormData: true,
                 preserveScroll: true,
@@ -714,7 +809,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
     function openRefundConfirmation(booking, decision) {
         setSelectedRefundBooking(booking);
         setRefundDecision(decision);
-        setRefundDecisionError('');
+        setRefundDecisionError("");
     }
 
     function closeRefundConfirmation() {
@@ -724,24 +819,17 @@ export default function MyBookings({ bookings = [], stats = {} }) {
 
         setSelectedRefundBooking(null);
         setRefundDecision(null);
-        setRefundDecisionError('');
+        setRefundDecisionError("");
     }
 
     function submitRefundConfirmation() {
-        if (
-            !selectedRefundBooking ||
-            !refundDecision ||
-            isRefundSubmitting
-        ) {
+        if (!selectedRefundBooking || !refundDecision || isRefundSubmitting) {
             return;
         }
 
-        setRefundDecisionError('');
+        setRefundDecisionError("");
         router.patch(
-            route(
-                'student.bookings.refund.confirm',
-                selectedRefundBooking.id,
-            ),
+            route("student.bookings.refund.confirm", selectedRefundBooking.id),
             { decision: refundDecision },
             {
                 preserveScroll: true,
@@ -750,11 +838,11 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                 onSuccess: () => {
                     setSelectedRefundBooking(null);
                     setRefundDecision(null);
-                    setRefundDecisionError('');
+                    setRefundDecisionError("");
                 },
                 onError: (errors) => {
                     setRefundDecisionError(
-                        errors.decision ?? 'Terjadi kesalahan, coba lagi.',
+                        errors.decision ?? "Terjadi kesalahan, coba lagi.",
                     );
                 },
             },
@@ -764,7 +852,6 @@ export default function MyBookings({ bookings = [], stats = {} }) {
     return (
         <div className="min-h-screen bg-[#F8FAFC] text-slate-800 antialiased selection:bg-[#527D98]/20 selection:text-[#527D98]">
             <Head title="Daftar Booking Mentoring" />
-
             {/* Design Tokens */}
             <style>{`
                 :root {
@@ -772,7 +859,6 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                     --student-header-bg: ${themeTokens.colors.headerBg};
                 }
             `}</style>
-
             {/* TOP NAVIGATION BAR */}
             <header className="sticky top-0 z-40 bg-[#548299] text-white shadow-md">
                 <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 sm:px-6 lg:px-8">
@@ -831,15 +917,20 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                     </div>
                 </div>
             </header>
-
             <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-
                 {/* BREADCRUMB */}
-                <nav aria-label="Breadcrumb" className="text-xs font-medium text-slate-400">
+                <nav
+                    aria-label="Breadcrumb"
+                    className="text-xs font-medium text-slate-400"
+                >
                     <ol className="flex flex-wrap items-center gap-1.5">
-                        <li className="hover:text-slate-600 cursor-pointer">Area Student</li>
+                        <li className="hover:text-slate-600 cursor-pointer">
+                            Area Student
+                        </li>
                         <li aria-hidden="true">›</li>
-                        <li className="font-semibold text-slate-700">Booking Mentoring</li>
+                        <li className="font-semibold text-slate-700">
+                            Booking Mentoring
+                        </li>
                     </ol>
                 </nav>
 
@@ -850,11 +941,12 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                             Daftar Booking Mentoring
                         </h1>
                         <p className="text-sm text-slate-500">
-                            Kelola jadwal temu, status verifikasi sesi, dan riwayat mentoring Anda.
+                            Kelola jadwal temu, status verifikasi sesi, dan
+                            riwayat mentoring Anda.
                         </p>
                     </div>
                     <a
-                        href={route('mentors.index')}
+                        href={route("mentors.index")}
                         className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#527D98] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#3E637A] focus:outline-none focus:ring-2 focus:ring-[#527D98] focus:ring-offset-2"
                     >
                         + Cari &amp; Jadwalkan Mentor
@@ -899,31 +991,35 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                             const isSelected = selectedStatus === filter.value;
                             const pillColor =
                                 {
-                                    mendatang: 'bg-emerald-100 text-emerald-800',
-                                    menunggu: 'bg-amber-100 text-amber-800',
-                                    perlu_respon: 'bg-rose-100 text-rose-800',
-                                    selesai: 'bg-slate-100 text-slate-600',
-                                    dibatalkan: 'bg-slate-100 text-slate-600',
-                                    semua: 'bg-slate-100 text-slate-600',
-                                }[filter.countKey] ?? 'bg-slate-100 text-slate-600';
+                                    mendatang:
+                                        "bg-emerald-100 text-emerald-800",
+                                    menunggu: "bg-amber-100 text-amber-800",
+                                    perlu_respon: "bg-rose-100 text-rose-800",
+                                    selesai: "bg-slate-100 text-slate-600",
+                                    dibatalkan: "bg-slate-100 text-slate-600",
+                                    semua: "bg-slate-100 text-slate-600",
+                                }[filter.countKey] ??
+                                "bg-slate-100 text-slate-600";
 
                             return (
                                 <button
                                     key={filter.value}
                                     type="button"
                                     aria-pressed={isSelected}
-                                    onClick={() => setSelectedStatus(filter.value)}
+                                    onClick={() =>
+                                        setSelectedStatus(filter.value)
+                                    }
                                     className={`inline-flex min-h-9 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#527D98] focus:ring-offset-1 ${
                                         isSelected
-                                            ? 'bg-[#527D98] text-white shadow-xs'
-                                            : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                                            ? "bg-[#527D98] text-white shadow-xs"
+                                            : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                                     }`}
                                 >
                                     {filter.label}
                                     <span
                                         className={`rounded-full px-1.5 py-0.5 text-[11px] font-bold ${
                                             isSelected
-                                                ? 'bg-white/20 text-white'
+                                                ? "bg-white/20 text-white"
                                                 : pillColor
                                         }`}
                                     >
@@ -979,13 +1075,13 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                         </span>
                         <h2 className="mt-4 text-lg font-bold text-slate-800">
                             {safeBookings.length === 0
-                                ? 'Belum ada booking mentoring'
-                                : 'Tidak ada booking yang sesuai'}
+                                ? "Belum ada booking mentoring"
+                                : "Tidak ada booking yang sesuai"}
                         </h2>
                         <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
                             {safeBookings.length === 0
-                                ? 'Booking mentoring yang Anda ajukan akan tampil di sini.'
-                                : 'Pilih filter status lain atau ubah kata kunci pencarian Anda.'}
+                                ? "Booking mentoring yang Anda ajukan akan tampil di sini."
+                                : "Pilih filter status lain atau ubah kata kunci pencarian Anda."}
                         </p>
                     </Card>
                 ) : (
@@ -994,15 +1090,20 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                         className="space-y-3.5"
                     >
                         {paginatedBookings.map((booking) => {
+                            const latestRescheduleRequest =
+                                getLatestRescheduleRequest(booking);
+                            const isReschedulePending =
+                                latestRescheduleRequest?.status ===
+                                "menunggu_respons";
                             const discordUrl = [
-                                'dikonfirmasi',
-                                'berlangsung',
+                                "dikonfirmasi",
+                                "berlangsung",
                             ].includes(booking.status)
                                 ? getSafeDiscordUrl(booking.discord_link)
                                 : null;
                             const refundProofUrl =
-                                booking.status === 'dibatalkan' &&
-                                booking.refund_status === 'menunggu_konfirmasi'
+                                booking.status === "dibatalkan" &&
+                                booking.refund_status === "menunggu_konfirmasi"
                                     ? getPublicStorageUrl(
                                           booking.refund_proof_path,
                                       )
@@ -1012,18 +1113,17 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                 booking.no_show_report &&
                                 booking.no_show_report.is_reporter &&
                                 booking.no_show_report.status ===
-                                    'menunggu_respons';
+                                    "menunggu_respons";
 
                             const isNoShowRespondent =
                                 booking.no_show_report &&
                                 !booking.no_show_report.is_reporter &&
                                 booking.no_show_report.status ===
-                                    'menunggu_respons';
+                                    "menunggu_respons";
 
                             const isAwaitingRefundConfirmation =
-                                booking.status === 'dibatalkan' &&
-                                booking.refund_status ===
-                                    'menunggu_konfirmasi';
+                                booking.status === "dibatalkan" &&
+                                booking.refund_status === "menunggu_konfirmasi";
 
                             return (
                                 <div
@@ -1049,17 +1149,17 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                                 <div className="flex flex-wrap items-center gap-2">
                                                     <h2 className="truncate text-sm font-bold text-slate-900">
                                                         {booking.mentor?.name ??
-                                                            'Mentor'}
+                                                            "Mentor"}
                                                     </h2>
                                                     <span
                                                         className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold ${
                                                             booking.is_free_session
-                                                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                                : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                                                : "bg-slate-100 text-slate-700 border border-slate-200"
                                                         }`}
                                                     >
                                                         {booking.is_free_session
-                                                            ? 'Gratis'
+                                                            ? "Gratis"
                                                             : formatRupiah(
                                                                   booking.price_snapshot,
                                                               )}
@@ -1071,37 +1171,97 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                                     )}
                                                 </div>
                                                 <p className="mt-0.5 text-xs text-slate-500 truncate">
-                                                    {booking.mentor?.expertise ||
+                                                    {booking.mentor
+                                                        ?.expertise ||
                                                         booking.notes_from_student ||
-                                                        'Sesi Mentoring'}
+                                                        "Sesi Mentoring"}
                                                 </p>
                                             </div>
                                         </div>
 
                                         {/* Center: Schedule Date & Time */}
-                                        <div className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                                            <svg
-                                                className="h-4 w-4 shrink-0 text-slate-400"
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                            >
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    strokeWidth="2"
-                                                    d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                                                />
-                                            </svg>
-                                            <span>
-                                                {formatBookingDateTime(
-                                                    booking.schedule_time,
-                                                )}{' '}
-                                                •{' '}
-                                                {formatBookingTimeRange(
-                                                    booking,
-                                                )}
-                                            </span>
+                                        <div className="flex min-w-0 items-center gap-3">
+                                            <div className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-slate-600">
+                                                <svg
+                                                    className="h-4 w-4 shrink-0 text-slate-400"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke="currentColor"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth="2"
+                                                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2v12a2 2 0 002 2z"
+                                                    />
+                                                </svg>
+
+                                                <span>
+                                                    {formatBookingDateTime(
+                                                        booking.schedule_time,
+                                                    )}{" "}
+                                                    •{" "}
+                                                    {formatBookingTimeRange(
+                                                        booking,
+                                                    )}
+                                                </span>
+                                            </div>
+
+                                            {latestRescheduleRequest && (
+                                                <div className="w-72 rounded-xl border border-sky-100 bg-sky-50 px-3.5 py-2.5">
+                                                    <p className="text-xs font-bold text-sky-800">
+                                                        Pengajuan Reschedule
+                                                    </p>
+
+                                                    <div className="mt-1 space-y-0.5 text-[11px] text-sky-700">
+                                                        <p>
+                                                            <span className="font-semibold">
+                                                                Jadwal baru:
+                                                            </span>{" "}
+                                                            {formatBookingDateTime(
+                                                                latestRescheduleRequest.new_schedule_time,
+                                                            )}{" "}
+                                                            •{" "}
+                                                            {formatBookingTimeRange(
+                                                                {
+                                                                    schedule_time:
+                                                                        latestRescheduleRequest.new_schedule_time,
+                                                                    end_time:
+                                                                        latestRescheduleRequest.new_end_time,
+                                                                },
+                                                            )}
+                                                        </p>
+
+                                                        <p>
+                                                            <span className="font-semibold">
+                                                                Status:
+                                                            </span>{" "}
+                                                            {latestRescheduleRequest.status ===
+                                                            "menunggu_respons"
+                                                                ? "Menunggu Respons Mentor"
+                                                                : latestRescheduleRequest.status ===
+                                                                    "diterima"
+                                                                  ? "Diterima"
+                                                                  : latestRescheduleRequest.status ===
+                                                                      "ditolak"
+                                                                    ? "Ditolak"
+                                                                    : "Kedaluwarsa"}
+                                                        </p>
+
+                                                        {latestRescheduleRequest.status ===
+                                                            "menunggu_respons" && (
+                                                            <p>
+                                                                <span className="font-semibold">
+                                                                    Batas:
+                                                                </span>{" "}
+                                                                {formatBookingDateTime(
+                                                                    latestRescheduleRequest.respond_deadline,
+                                                                )}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
 
                                         {/* Right: Status Badge & Actions */}
@@ -1109,44 +1269,44 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                             <span
                                                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
                                                     booking.status ===
-                                                    'berlangsung'
-                                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                    "berlangsung"
+                                                        ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                                         : isScheduleOverdue(
                                                                 booking,
                                                             )
-                                                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                                          ? "bg-amber-50 text-amber-700 border border-amber-200"
                                                           : booking.status ===
-                                                                  'dibatalkan' &&
+                                                                  "dibatalkan" &&
                                                               [
-                                                                  'menunggu',
-                                                                  'menunggu_konfirmasi',
+                                                                  "menunggu",
+                                                                  "menunggu_konfirmasi",
                                                               ].includes(
                                                                   booking.refund_status,
                                                               )
-                                                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                                            ? "bg-amber-50 text-amber-700 border border-amber-200"
                                                             : booking.status ===
-                                                                    'dibatalkan' &&
+                                                                    "dibatalkan" &&
                                                                 booking.refund_status ===
-                                                                    'selesai'
-                                                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                                    "selesai"
+                                                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                                                               : booking.status ===
-                                                                      'dibatalkan' &&
+                                                                      "dibatalkan" &&
                                                                   booking.refund_status ===
-                                                                      'dilaporkan'
-                                                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                                                      "dilaporkan"
+                                                                ? "bg-rose-50 text-rose-700 border border-rose-200"
                                                                 : isNoShowReporter
-                                                                  ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                                                  ? "bg-amber-50 text-amber-800 border border-amber-200"
                                                                   : isNoShowRespondent
-                                                                    ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                                                    : statusStyles[
+                                                                    ? "bg-rose-50 text-rose-700 border border-rose-200"
+                                                                    : (statusStyles[
                                                                           booking
                                                                               .status
                                                                       ] ??
-                                                                      'bg-slate-100 text-slate-700 border border-slate-200'
+                                                                      "bg-slate-100 text-slate-700 border border-slate-200")
                                                 }`}
                                             >
                                                 {booking.status ===
-                                                    'berlangsung' && (
+                                                    "berlangsung" && (
                                                     <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
                                                 )}
                                                 {getStatusLabel(booking)}
@@ -1167,12 +1327,12 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                             {isNoShowReporter && (
                                                 <a
                                                     href={route(
-                                                        'no-show.evidence',
+                                                        "no-show.evidence",
                                                         [
                                                             booking
                                                                 .no_show_report
                                                                 .id,
-                                                            'report',
+                                                            "report",
                                                         ],
                                                     )}
                                                     target="_blank"
@@ -1198,24 +1358,41 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                             )}
 
                                             {booking.status ===
-                                                'dikonfirmasi' &&
-                                                isScheduleUpcoming(
-                                                    booking,
-                                                ) && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            openConfirmedCancellationModal(
-                                                                booking,
-                                                            )
-                                                        }
-                                                        className="inline-flex min-h-8 items-center justify-center rounded-xl border border-rose-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-400"
-                                                    >
-                                                        Batalkan
-                                                    </button>
+                                                "dikonfirmasi" &&
+                                                isScheduleUpcoming(booking) && (
+                                                    <>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                openRescheduleModal(
+                                                                    booking,
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                isReschedulePending
+                                                            }
+                                                            className="inline-flex min-h-8 items-center justify-center rounded-xl border border-sky-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-sky-600 transition-colors hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
+                                                        >
+                                                            {isReschedulePending
+                                                                ? "Menunggu Respons Mentor"
+                                                                : "Reschedule"}
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                openConfirmedCancellationModal(
+                                                                    booking,
+                                                                )
+                                                            }
+                                                            className="inline-flex min-h-8 items-center justify-center rounded-xl border border-rose-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-400"
+                                                        >
+                                                            Batalkan
+                                                        </button>
+                                                    </>
                                                 )}
 
-                                            {booking.status === 'diajukan' && (
+                                            {booking.status === "diajukan" && (
                                                 <button
                                                     type="button"
                                                     onClick={() =>
@@ -1240,11 +1417,12 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                                         }
                                                         className="inline-flex min-h-8 items-center justify-center rounded-xl border border-rose-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-400"
                                                     >
-                                                        Laporkan Mentor Tidak Hadir
+                                                        Laporkan Mentor Tidak
+                                                        Hadir
                                                     </button>
                                                 )}
 
-                                            {booking.status === 'selesai' &&
+                                            {booking.status === "selesai" &&
                                                 (booking.has_reviewed ||
                                                 booking.review ? (
                                                     <span className="inline-flex min-h-8 items-center justify-center rounded-xl bg-slate-100 border border-slate-200 px-3.5 py-1.5 text-xs font-semibold text-slate-500">
@@ -1253,7 +1431,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                                 ) : (
                                                     <a
                                                         href={route(
-                                                            'reviews.create',
+                                                            "reviews.create",
                                                             booking.id,
                                                         )}
                                                         className="inline-flex min-h-8 items-center justify-center rounded-xl border border-sky-200 bg-sky-50 px-3.5 py-1.5 text-xs font-semibold text-[#527D98] transition-colors hover:bg-sky-100 focus:outline-none focus:ring-2 focus:ring-[#527D98]"
@@ -1274,7 +1452,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                                 <span>
                                                     Laporan no-show terkirim.
                                                     Menunggu klarifikasi mentor
-                                                    hingga{' '}
+                                                    hingga{" "}
                                                     <strong className="font-semibold">
                                                         {formatNoShowDeadline(
                                                             booking
@@ -1286,7 +1464,8 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                                 </span>
                                             </div>
                                             <span className="text-amber-800/80 shrink-0 text-xs">
-                                                Refund otomatis jika tanpa respon
+                                                Refund otomatis jika tanpa
+                                                respon
                                             </span>
                                         </div>
                                     )}
@@ -1300,7 +1479,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                                 <span>
                                                     Mentor melaporkan
                                                     ketidakhadiran Anda. Batas
-                                                    tanggapan:{' '}
+                                                    tanggapan:{" "}
                                                     <strong className="font-semibold">
                                                         {formatNoShowDeadline(
                                                             booking
@@ -1325,12 +1504,12 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                             ) : (
                                                 <a
                                                     href={route(
-                                                        'no-show.evidence',
+                                                        "no-show.evidence",
                                                         [
                                                             booking
                                                                 .no_show_report
                                                                 .id,
-                                                            'report',
+                                                            "report",
                                                         ],
                                                     )}
                                                     target="_blank"
@@ -1344,27 +1523,27 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                     )}
 
                                     {booking.no_show_report &&
-                                        ['disanggah', 'berlaku'].includes(
+                                        ["disanggah", "berlaku"].includes(
                                             booking.no_show_report.status,
                                         ) && (
                                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-amber-200/80 bg-[#FFFBEB] px-4 sm:px-5 py-2 text-xs text-amber-900">
                                                 <div>
                                                     {booking.no_show_report
                                                         .status ===
-                                                        'disanggah' &&
-                                                        'Laporan disanggah. Menunggu keputusan admin.'}
+                                                        "disanggah" &&
+                                                        "Laporan disanggah. Menunggu keputusan admin."}
                                                     {booking.no_show_report
-                                                        .status === 'berlaku' &&
-                                                        'Laporan berlaku dan sanksi sudah dijalankan.'}
+                                                        .status === "berlaku" &&
+                                                        "Laporan berlaku dan sanksi sudah dijalankan."}
                                                 </div>
                                                 <a
                                                     href={route(
-                                                        'no-show.evidence',
+                                                        "no-show.evidence",
                                                         [
                                                             booking
                                                                 .no_show_report
                                                                 .id,
-                                                            'report',
+                                                            "report",
                                                         ],
                                                     )}
                                                     target="_blank"
@@ -1380,7 +1559,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-amber-200/80 bg-[#FFFBEB] px-4 sm:px-5 py-2 text-xs text-amber-900">
                                             <div className="flex items-center gap-1.5 flex-wrap">
                                                 <span>
-                                                    Mentor sudah mengunggah{' '}
+                                                    Mentor sudah mengunggah{" "}
                                                     <strong>
                                                         bukti transfer refund DP
                                                     </strong>
@@ -1403,7 +1582,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                                     onClick={() =>
                                                         openRefundConfirmation(
                                                             booking,
-                                                            'sudah_terima',
+                                                            "sudah_terima",
                                                         )
                                                     }
                                                     disabled={
@@ -1418,7 +1597,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                                     onClick={() =>
                                                         openRefundConfirmation(
                                                             booking,
-                                                            'belum_terima',
+                                                            "belum_terima",
                                                         )
                                                     }
                                                     disabled={
@@ -1432,7 +1611,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                         </div>
                                     )}
 
-                                    {booking.status === 'diajukan' &&
+                                    {booking.status === "diajukan" &&
                                         isScheduleOverdue(booking) && (
                                             <div className="border-t border-amber-200/80 bg-[#FFFBEB] px-4 sm:px-5 py-2 text-xs text-amber-900">
                                                 Jadwal sesi sudah lewat dan
@@ -1441,28 +1620,28 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                                 membatalkannya.
                                                 {booking.is_free_session ===
                                                     false &&
-                                                    ' DP akan dikembalikan oleh mentor.'}
+                                                    " DP akan dikembalikan oleh mentor."}
                                             </div>
                                         )}
 
-                                    {booking.status === 'dibatalkan' &&
+                                    {booking.status === "dibatalkan" &&
                                         booking.cancellation_reason &&
                                         !isAwaitingRefundConfirmation && (
                                             <div className="border-t border-slate-200/80 bg-slate-50 px-4 sm:px-5 py-2 text-xs text-slate-600">
                                                 <span className="font-semibold text-slate-700">
                                                     Alasan pembatalan:
-                                                </span>{' '}
+                                                </span>{" "}
                                                 {booking.cancellation_reason}
                                             </div>
                                         )}
 
-                                    {booking.status === 'dibatalkan' &&
+                                    {booking.status === "dibatalkan" &&
                                         booking.refund_status ===
-                                            'dilaporkan' && (
+                                            "dilaporkan" && (
                                             <div className="border-t border-rose-200/80 bg-rose-50 px-4 sm:px-5 py-2 text-xs text-rose-700">
                                                 <span className="font-semibold">
                                                     Laporan Tercatat:
-                                                </span>{' '}
+                                                </span>{" "}
                                                 Anda melaporkan belum menerima
                                                 refund.
                                             </div>
@@ -1477,17 +1656,17 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                 {filteredAndSortedBookings.length > 0 && (
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
                         <p className="text-xs text-slate-500">
-                            Menampilkan{' '}
+                            Menampilkan{" "}
                             <span className="font-semibold text-slate-700">
                                 {filteredAndSortedBookings.length === 0
                                     ? 0
-                                    : startIndex + 1}{' '}
+                                    : startIndex + 1}{" "}
                                 - {endIndex}
-                            </span>{' '}
-                            dari{' '}
+                            </span>{" "}
+                            dari{" "}
                             <span className="font-semibold text-slate-700">
                                 {filteredAndSortedBookings.length}
-                            </span>{' '}
+                            </span>{" "}
                             sesi booking
                         </p>
 
@@ -1518,8 +1697,8 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                         onClick={() => setCurrentPage(page)}
                                         className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition ${
                                             isActive
-                                                ? 'bg-[#527D98] text-white shadow-xs'
-                                                : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                                ? "bg-[#527D98] text-white shadow-xs"
+                                                : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                                         }`}
                                     >
                                         {page}
@@ -1543,7 +1722,6 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                     </div>
                 )}
             </main>
-
             {isCancellationModalOpen && selectedBooking && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 backdrop-blur-sm p-4"
@@ -1571,13 +1749,16 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                     Batalkan Pengajuan?
                                 </h2>
                                 <p className="mt-1 text-sm leading-6 text-slate-500">
-                                    Anda akan membatalkan pengajuan bersama{' '}
-                                    <span className="font-semibold text-slate-700">{selectedBooking.mentor?.name ?? 'Mentor'}</span>{' '}
-                                    pada{' '}
+                                    Anda akan membatalkan pengajuan bersama{" "}
+                                    <span className="font-semibold text-slate-700">
+                                        {selectedBooking.mentor?.name ??
+                                            "Mentor"}
+                                    </span>{" "}
+                                    pada{" "}
                                     {formatBookingDateTime(
                                         selectedBooking.schedule_time,
                                     )}
-                                    , pukul{' '}
+                                    , pukul{" "}
                                     {formatBookingTimeRange(selectedBooking)}.
                                 </p>
                             </div>
@@ -1618,7 +1799,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                 value={cancelForm.data.cancellation_reason}
                                 onChange={(event) =>
                                     cancelForm.setData(
-                                        'cancellation_reason',
+                                        "cancellation_reason",
                                         event.target.value,
                                     )
                                 }
@@ -1654,8 +1835,200 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                     className="inline-flex min-h-10 items-center justify-center rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     {cancelForm.processing
-                                        ? 'Membatalkan...'
-                                        : 'Ya, Batalkan Pengajuan'}
+                                        ? "Membatalkan..."
+                                        : "Ya, Batalkan Pengajuan"}
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+                </div>
+            )}
+            {/* Modal Batalkan Sesi */}
+            {isConfirmedCancellationModalOpen && selectedConfirmedBooking && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 backdrop-blur-sm p-4"
+                    onMouseDown={(event) => {
+                        if (
+                            event.target === event.currentTarget &&
+                            !confirmedCancelForm.processing
+                        ) {
+                            closeConfirmedCancellationModal();
+                        }
+                    }}
+                >
+                    <section
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="cancel-confirmed-booking-heading"
+                        className="w-full max-w-lg rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xl"
+                    >
+                        <div className="flex items-start justify-between gap-4">
+                            <div>
+                                <h2
+                                    id="cancel-confirmed-booking-heading"
+                                    className="text-lg font-bold text-slate-900"
+                                >
+                                    Batalkan Sesi?
+                                </h2>
+                                <p className="mt-1 text-sm leading-6 text-slate-500">
+                                    Anda akan membatalkan sesi bersama{" "}
+                                    <span className="font-semibold text-slate-700">
+                                        {selectedConfirmedBooking.mentor
+                                            ?.name ?? "Mentor"}
+                                    </span>{" "}
+                                    pada{" "}
+                                    {formatBookingDateTime(
+                                        selectedConfirmedBooking.schedule_time,
+                                    )}
+                                    , pukul{" "}
+                                    {formatBookingTimeRange(
+                                        selectedConfirmedBooking,
+                                    )}
+                                    .
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closeConfirmedCancellationModal}
+                                disabled={confirmedCancelForm.processing}
+                                aria-label="Tutup dialog pembatalan sesi"
+                                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#527D98] disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                                <svg
+                                    aria-hidden="true"
+                                    className="h-5 w-5"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                >
+                                    <path d="m6 6 12 12M18 6 6 18" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <form
+                            onSubmit={submitConfirmedCancellation}
+                            className="mt-5"
+                        >
+                            <label
+                                htmlFor="confirmed_cancellation_reason"
+                                className="block text-sm font-semibold text-slate-800"
+                            >
+                                Alasan Pembatalan
+                            </label>
+                            <textarea
+                                ref={confirmedCancellationReasonRef}
+                                id="confirmed_cancellation_reason"
+                                name="cancellation_reason"
+                                rows="4"
+                                required
+                                maxLength={500}
+                                value={
+                                    confirmedCancelForm.data.cancellation_reason
+                                }
+                                onChange={(event) =>
+                                    confirmedCancelForm.setData(
+                                        "cancellation_reason",
+                                        event.target.value,
+                                    )
+                                }
+                                className="mt-2 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-800 placeholder:text-slate-400 focus:border-[#527D98] focus:outline-none focus:ring-2 focus:ring-[#527D98]/20"
+                                placeholder="Tuliskan alasan pembatalan sesi..."
+                            />
+                            <p className="mt-1 text-right text-xs text-slate-400">
+                                {
+                                    confirmedCancelForm.data.cancellation_reason
+                                        .length
+                                }
+                                /500
+                            </p>
+                            {confirmedCancelForm.errors.cancellation_reason && (
+                                <p className="mt-2 text-sm font-medium text-rose-600">
+                                    {
+                                        confirmedCancelForm.errors
+                                            .cancellation_reason
+                                    }
+                                </p>
+                            )}
+
+                            {selectedConfirmedBooking.is_free_session ===
+                            false ? (
+                                <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs leading-5 text-rose-700">
+                                    <p>
+                                        DP yang sudah Anda bayarkan tidak akan
+                                        dikembalikan jika Anda membatalkan sesi
+                                        yang sudah dikonfirmasi.
+                                    </p>
+                                    <div className="mt-3">
+                                        <label
+                                            htmlFor="acknowledge_dp_forfeit"
+                                            className="flex items-start gap-2 font-semibold text-rose-800 cursor-pointer"
+                                        >
+                                            <input
+                                                id="acknowledge_dp_forfeit"
+                                                name="acknowledge_dp_forfeit"
+                                                type="checkbox"
+                                                checked={
+                                                    confirmedCancelForm.data
+                                                        .acknowledge_dp_forfeit
+                                                }
+                                                onChange={(event) => {
+                                                    confirmedCancelForm.setData(
+                                                        "acknowledge_dp_forfeit",
+                                                        event.target.checked,
+                                                    );
+                                                    confirmedCancelForm.clearErrors(
+                                                        "acknowledge_dp_forfeit",
+                                                    );
+                                                }}
+                                                className="mt-0.5 h-4 w-4 shrink-0 rounded border-rose-300 text-rose-600 focus:ring-rose-500"
+                                            />
+                                            Saya mengerti DP tidak dikembalikan
+                                        </label>
+                                        {confirmedCancelForm.errors
+                                            .acknowledge_dp_forfeit && (
+                                            <p
+                                                role="alert"
+                                                className="mt-2 font-medium text-rose-600"
+                                            >
+                                                {
+                                                    confirmedCancelForm.errors
+                                                        .acknowledge_dp_forfeit
+                                                }
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs leading-5 text-[#527D98]">
+                                    Sesi ini gratis, tidak ada DP yang hangus.
+                                </p>
+                            )}
+
+                            <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                                <button
+                                    type="button"
+                                    onClick={closeConfirmedCancellationModal}
+                                    disabled={confirmedCancelForm.processing}
+                                    className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#527D98] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    Kembali
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={
+                                        confirmedCancelForm.processing ||
+                                        (selectedConfirmedBooking.is_free_session ===
+                                            false &&
+                                            !confirmedCancelForm.data
+                                                .acknowledge_dp_forfeit)
+                                    }
+                                    className="inline-flex min-h-10 items-center justify-center rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                                >
+                                    {confirmedCancelForm.processing
+                                        ? "Membatalkan..."
+                                        : "Ya, Batalkan Sesi"}
                                 </button>
                             </div>
                         </form>
@@ -1663,204 +2036,141 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                 </div>
             )}
 
-            {isConfirmedCancellationModalOpen &&
-                selectedConfirmedBooking && (
-                    <div
-                        className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 backdrop-blur-sm p-4"
-                        onMouseDown={(event) => {
-                            if (
-                                event.target === event.currentTarget &&
-                                !confirmedCancelForm.processing
-                            ) {
-                                closeConfirmedCancellationModal();
-                            }
-                        }}
-                    >
-                        <section
-                            role="dialog"
-                            aria-modal="true"
-                            aria-labelledby="cancel-confirmed-booking-heading"
-                            className="w-full max-w-lg rounded-2xl border border-slate-200/90 bg-white p-6 shadow-xl"
-                        >
-                            <div className="flex items-start justify-between gap-4">
-                                <div>
-                                    <h2
-                                        id="cancel-confirmed-booking-heading"
-                                        className="text-lg font-bold text-slate-900"
-                                    >
-                                        Batalkan Sesi?
-                                    </h2>
-                                    <p className="mt-1 text-sm leading-6 text-slate-500">
-                                        Anda akan membatalkan sesi bersama{' '}
-                                        <span className="font-semibold text-slate-700">
-                                            {selectedConfirmedBooking.mentor?.name ??
-                                                'Mentor'}
-                                        </span>{' '}
-                                        pada{' '}
-                                        {formatBookingDateTime(
-                                            selectedConfirmedBooking.schedule_time,
-                                        )}
-                                        , pukul{' '}
-                                        {formatBookingTimeRange(
-                                            selectedConfirmedBooking,
-                                        )}
-                                        .
-                                    </p>
-                                </div>
-                                <button
-                                    type="button"
-                                    onClick={closeConfirmedCancellationModal}
-                                    disabled={confirmedCancelForm.processing}
-                                    aria-label="Tutup dialog pembatalan sesi"
-                                    className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-[#527D98] disabled:cursor-not-allowed disabled:opacity-60"
-                                >
-                                    <svg
-                                        aria-hidden="true"
-                                        className="h-5 w-5"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                    >
-                                        <path d="m6 6 12 12M18 6 6 18" />
-                                    </svg>
-                                </button>
-                            </div>
+            {/* Modal Ajukan Reschedule */}
+            {isRescheduleModalOpen && selectedRescheduleBooking && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+                    <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+                        <div className="mb-5">
+                            <h2 className="text-lg font-bold text-slate-900">
+                                Ajukan Reschedule
+                            </h2>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Pilih jadwal baru untuk sesi mentoring Anda.
+                            </p>
+                        </div>
 
-                            <form
-                                onSubmit={submitConfirmedCancellation}
-                                className="mt-5"
-                            >
+                        <div className="mb-5 rounded-xl bg-slate-50 p-4">
+                            <p className="text-xs font-semibold uppercase text-slate-500">
+                                Jadwal Saat Ini
+                            </p>
+
+                            <p className="mt-1 text-sm font-semibold text-slate-800">
+                                {formatBookingDateTime(
+                                    selectedRescheduleBooking.schedule_time,
+                                )}
+                            </p>
+
+                            {selectedRescheduleBooking.end_time && (
+                                <p className="text-sm text-slate-600">
+                                    sampai{" "}
+                                    {formatBookingDateTime(
+                                        selectedRescheduleBooking.end_time,
+                                    )}
+                                </p>
+                            )}
+                        </div>
+
+                        {rescheduleForm.errors.session && (
+                            <p className="mb-4 text-sm font-medium text-red-600">
+                                {rescheduleForm.errors.session}
+                            </p>
+                        )}
+
+                        <form onSubmit={submitReschedule} className="space-y-4">
+                            <div>
                                 <label
-                                    htmlFor="confirmed_cancellation_reason"
-                                    className="block text-sm font-semibold text-slate-800"
+                                    htmlFor="reschedule-schedule-time"
+                                    className="mb-1 block text-sm font-semibold text-slate-700"
                                 >
-                                    Alasan Pembatalan
+                                    Jadwal Baru
                                 </label>
-                                <textarea
-                                    ref={confirmedCancellationReasonRef}
-                                    id="confirmed_cancellation_reason"
-                                    name="cancellation_reason"
-                                    rows="4"
-                                    required
-                                    maxLength={500}
-                                    value={
-                                        confirmedCancelForm.data
-                                            .cancellation_reason
-                                    }
+
+                                <input
+                                    id="reschedule-schedule-time"
+                                    type="datetime-local"
+                                    value={rescheduleForm.data.schedule_time}
                                     onChange={(event) =>
-                                        confirmedCancelForm.setData(
-                                            'cancellation_reason',
+                                        rescheduleForm.setData(
+                                            "schedule_time",
                                             event.target.value,
                                         )
                                     }
-                                    className="mt-2 block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm leading-6 text-slate-800 placeholder:text-slate-400 focus:border-[#527D98] focus:outline-none focus:ring-2 focus:ring-[#527D98]/20"
-                                    placeholder="Tuliskan alasan pembatalan sesi..."
+                                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
                                 />
-                                <p className="mt-1 text-right text-xs text-slate-400">
-                                    {
-                                        confirmedCancelForm.data
-                                            .cancellation_reason.length
+
+                                {rescheduleForm.errors.schedule_time && (
+                                    <p className="mt-1 text-sm text-red-600">
+                                        {rescheduleForm.errors.schedule_time}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="reschedule-duration"
+                                    className="mb-1 block text-sm font-semibold text-slate-700"
+                                >
+                                    Durasi
+                                </label>
+
+                                <select
+                                    id="reschedule-duration"
+                                    value={rescheduleForm.data.duration_hours}
+                                    onChange={(event) =>
+                                        rescheduleForm.setData(
+                                            "duration_hours",
+                                            Number(event.target.value),
+                                        )
                                     }
-                                    /500
+                                    className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm focus:border-sky-400 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                                >
+                                    <option value={1}>1 Jam</option>
+                                    <option value={2}>2 Jam</option>
+                                </select>
+
+                                {rescheduleForm.errors.duration_hours && (
+                                    <p className="mt-1 text-sm text-red-600">
+                                        {rescheduleForm.errors.duration_hours}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="rounded-xl bg-sky-50 p-4 text-sm text-sky-700">
+                                <p>
+                                    Jadwal baru harus tersedia pada jadwal
+                                    mentor, maksimal 10 hari ke depan, dan tetap
+                                    menggunakan tipe serta harga sesi yang sama.
                                 </p>
-                                {confirmedCancelForm.errors
-                                    .cancellation_reason && (
-                                    <p className="mt-2 text-sm font-medium text-rose-600">
-                                        {
-                                            confirmedCancelForm.errors
-                                                .cancellation_reason
-                                        }
-                                    </p>
-                                )}
+                                <p className="mt-1">
+                                    Pengajuan akan dikirim kepada mentor untuk
+                                    disetujui.
+                                </p>
+                            </div>
 
-                                {selectedConfirmedBooking.is_free_session ===
-                                false ? (
-                                    <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-xs leading-5 text-rose-700">
-                                        <p>
-                                            DP yang sudah Anda bayarkan tidak
-                                            akan dikembalikan jika Anda
-                                            membatalkan sesi yang sudah
-                                            dikonfirmasi.
-                                        </p>
-                                        <div className="mt-3">
-                                            <label
-                                                htmlFor="acknowledge_dp_forfeit"
-                                                className="flex items-start gap-2 font-semibold text-rose-800 cursor-pointer"
-                                            >
-                                                <input
-                                                    id="acknowledge_dp_forfeit"
-                                                    name="acknowledge_dp_forfeit"
-                                                    type="checkbox"
-                                                    checked={
-                                                        confirmedCancelForm.data
-                                                            .acknowledge_dp_forfeit
-                                                    }
-                                                    onChange={(event) => {
-                                                        confirmedCancelForm.setData(
-                                                            'acknowledge_dp_forfeit',
-                                                            event.target.checked,
-                                                        );
-                                                        confirmedCancelForm.clearErrors(
-                                                            'acknowledge_dp_forfeit',
-                                                        );
-                                                    }}
-                                                    className="mt-0.5 h-4 w-4 shrink-0 rounded border-rose-300 text-rose-600 focus:ring-rose-500"
-                                                />
-                                                Saya mengerti DP tidak
-                                                dikembalikan
-                                            </label>
-                                            {confirmedCancelForm.errors
-                                                .acknowledge_dp_forfeit && (
-                                                <p
-                                                    role="alert"
-                                                    className="mt-2 font-medium text-rose-600"
-                                                >
-                                                    {
-                                                        confirmedCancelForm
-                                                            .errors
-                                                            .acknowledge_dp_forfeit
-                                                    }
-                                                </p>
-                                            )}
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <p className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-xs leading-5 text-[#527D98]">
-                                        Sesi ini gratis, tidak ada DP yang
-                                        hangus.
-                                    </p>
-                                )}
+                            <div className="flex justify-end gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={closeRescheduleModal}
+                                    disabled={rescheduleForm.processing}
+                                    className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
+                                >
+                                    Batal
+                                </button>
 
-                                <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-                                    <button
-                                        type="button"
-                                        onClick={closeConfirmedCancellationModal}
-                                        disabled={confirmedCancelForm.processing}
-                                        className="inline-flex min-h-10 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#527D98] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-                                    >
-                                        Kembali
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={
-                                            confirmedCancelForm.processing ||
-                                            (selectedConfirmedBooking.is_free_session ===
-                                                false &&
-                                                !confirmedCancelForm.data
-                                                    .acknowledge_dp_forfeit)
-                                        }
-                                        className="inline-flex min-h-10 items-center justify-center rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-                                    >
-                                        {confirmedCancelForm.processing
-                                            ? 'Membatalkan...'
-                                            : 'Ya, Batalkan Sesi'}
-                                    </button>
-                                </div>
-                            </form>
-                        </section>
+                                <button
+                                    type="submit"
+                                    disabled={rescheduleForm.processing}
+                                    className="rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-sky-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {rescheduleForm.processing
+                                        ? "Mengajukan..."
+                                        : "Ajukan Reschedule"}
+                                </button>
+                            </div>
+                        </form>
                     </div>
-                )}
+                </div>
+            )}
             {noShowReportBooking && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 backdrop-blur-sm p-4"
@@ -1885,16 +2195,20 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                     Laporkan Mentor Tidak Hadir
                                 </h2>
                                 <p className="mt-1 text-sm leading-6 text-slate-500">
-                                    Sesi bersama{' '}
+                                    Sesi bersama{" "}
                                     <span className="font-semibold text-slate-700">
-                                        {noShowReportBooking.mentor?.name ?? 'Mentor'}
-                                    </span>{' '}
-                                    pada{' '}
+                                        {noShowReportBooking.mentor?.name ??
+                                            "Mentor"}
+                                    </span>{" "}
+                                    pada{" "}
                                     {formatBookingDateTime(
                                         noShowReportBooking.schedule_time,
                                     )}
-                                    , pukul{' '}
-                                    {formatBookingTimeRange(noShowReportBooking)}.
+                                    , pukul{" "}
+                                    {formatBookingTimeRange(
+                                        noShowReportBooking,
+                                    )}
+                                    .
                                 </p>
                             </div>
                             <button
@@ -1936,7 +2250,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                     required
                                     onChange={(event) =>
                                         noShowReportForm.setData(
-                                            'evidence',
+                                            "evidence",
                                             event.target.files?.[0] ?? null,
                                         )
                                     }
@@ -1952,7 +2266,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                     htmlFor="no_show_note"
                                     className="block text-sm font-semibold text-slate-800"
                                 >
-                                    Catatan{' '}
+                                    Catatan{" "}
                                     <span className="font-normal text-slate-400">
                                         (opsional)
                                     </span>
@@ -1965,7 +2279,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                     value={noShowReportForm.data.reporter_note}
                                     onChange={(event) =>
                                         noShowReportForm.setData(
-                                            'reporter_note',
+                                            "reporter_note",
                                             event.target.value,
                                         )
                                     }
@@ -2015,15 +2329,14 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                     className="inline-flex min-h-10 items-center justify-center rounded-xl bg-rose-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     {noShowReportForm.processing
-                                        ? 'Mengirim...'
-                                        : 'Kirim Laporan'}
+                                        ? "Mengirim..."
+                                        : "Kirim Laporan"}
                                 </button>
                             </div>
                         </form>
                     </section>
                 </div>
             )}
-
             {noShowRespondBooking && (
                 <div
                     className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 backdrop-blur-sm p-4"
@@ -2048,15 +2361,15 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                     Tanggapi Laporan No-Show
                                 </h2>
                                 <p className="mt-1 text-sm leading-6 text-slate-500">
-                                    Jika Anda tidak menanggapi sebelum{' '}
+                                    Jika Anda tidak menanggapi sebelum{" "}
                                     <span className="font-semibold text-slate-700">
                                         {formatNoShowDeadline(
                                             noShowRespondBooking.no_show_report
                                                 .respond_deadline,
                                         )}
                                     </span>
-                                    , laporan berlaku: sesi dibatalkan dan DP (untuk
-                                    sesi berbayar) hangus.
+                                    , laporan berlaku: sesi dibatalkan dan DP
+                                    (untuk sesi berbayar) hangus.
                                 </p>
                             </div>
                             <button
@@ -2099,7 +2412,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                     value={noShowRespondForm.data.response_note}
                                     onChange={(event) =>
                                         noShowRespondForm.setData(
-                                            'response_note',
+                                            "response_note",
                                             event.target.value,
                                         )
                                     }
@@ -2113,7 +2426,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                     htmlFor="no_show_response_evidence"
                                     className="block text-sm font-semibold text-slate-800"
                                 >
-                                    Screenshot{' '}
+                                    Screenshot{" "}
                                     <span className="font-normal text-slate-400">
                                         (opsional)
                                     </span>
@@ -2125,7 +2438,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                     accept="image/png,image/jpeg"
                                     onChange={(event) =>
                                         noShowRespondForm.setData(
-                                            'response_evidence',
+                                            "response_evidence",
                                             event.target.files?.[0] ?? null,
                                         )
                                     }
@@ -2167,8 +2480,8 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                     className="inline-flex min-h-10 items-center justify-center rounded-xl bg-[#527D98] px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors hover:bg-[#3E637A] focus:outline-none focus:ring-2 focus:ring-[#527D98] focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     {noShowRespondForm.processing
-                                        ? 'Mengirim...'
-                                        : 'Kirim Sanggahan'}
+                                        ? "Mengirim..."
+                                        : "Kirim Sanggahan"}
                                 </button>
                             </div>
                         </form>
@@ -2199,14 +2512,14 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                     id="refund-confirmation-heading"
                                     className="text-lg font-bold text-slate-900"
                                 >
-                                    {refundDecision === 'sudah_terima'
-                                        ? 'Konfirmasi Refund Sudah Diterima?'
-                                        : 'Laporkan Refund Belum Diterima?'}
+                                    {refundDecision === "sudah_terima"
+                                        ? "Konfirmasi Refund Sudah Diterima?"
+                                        : "Laporkan Refund Belum Diterima?"}
                                 </h2>
                                 <p className="mt-1 text-sm leading-6 text-slate-500">
-                                    {refundDecision === 'sudah_terima'
-                                        ? 'Pastikan uang refund sudah masuk ke rekening Anda. Pilihan ini tidak dapat diubah.'
-                                        : 'Laporan akan dikirim dan tidak dapat diubah. Pastikan Anda sudah mengecek rekening.'}
+                                    {refundDecision === "sudah_terima"
+                                        ? "Pastikan uang refund sudah masuk ke rekening Anda. Pilihan ini tidak dapat diubah."
+                                        : "Laporan akan dikirim dan tidak dapat diubah. Pastikan Anda sudah mengecek rekening."}
                                 </p>
                             </div>
                             <button
@@ -2252,16 +2565,16 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                 onClick={submitRefundConfirmation}
                                 disabled={isRefundSubmitting}
                                 className={`inline-flex min-h-10 items-center justify-center rounded-xl px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${
-                                    refundDecision === 'sudah_terima'
-                                        ? 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500'
-                                        : 'bg-rose-600 hover:bg-rose-700 focus:ring-rose-500'
+                                    refundDecision === "sudah_terima"
+                                        ? "bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500"
+                                        : "bg-rose-600 hover:bg-rose-700 focus:ring-rose-500"
                                 }`}
                             >
                                 {isRefundSubmitting
-                                    ? 'Mengirim...'
-                                    : refundDecision === 'sudah_terima'
-                                      ? 'Ya, Sudah Terima'
-                                      : 'Ya, Laporkan'}
+                                    ? "Mengirim..."
+                                    : refundDecision === "sudah_terima"
+                                      ? "Ya, Sudah Terima"
+                                      : "Ya, Laporkan"}
                             </button>
                         </div>
                     </section>
