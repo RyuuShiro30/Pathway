@@ -1,5 +1,6 @@
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
+import Navbar from '@/Components/Navbar'; // Import Navbar
 
 export default function Index({ journeys }) {
     const articles = journeys?.data ?? [];
@@ -9,23 +10,9 @@ export default function Index({ journeys }) {
             <Head title="Sharing Journey" />
 
             <div className="min-h-screen bg-gray-50">
-                <header className="border-b border-gray-200 bg-white">
-                    <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-                        <Link
-                            href="/"
-                            className="text-2xl font-bold text-indigo-600"
-                        >
-                            Pathway
-                        </Link>
-
-                        <Link
-                            href="/dashboard"
-                            className="text-sm font-medium text-gray-600 hover:text-indigo-600"
-                        >
-                            Dashboard
-                        </Link>
-                    </div>
-                </header>
+                
+                {/* Letakkan Navbar di sini untuk menggantikan <header> bawaan */}
+                <Navbar />
 
                 <main className="mx-auto max-w-6xl px-6 py-12">
                     <div className="mb-10 flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
@@ -115,15 +102,13 @@ export default function Index({ journeys }) {
                                     key={index}
                                     href={link.url ?? '#'}
                                     preserveScroll
-                                    className={`rounded-lg border px-4 py-2 text-sm ${
-                                        link.active
+                                    className={`rounded-lg border px-4 py-2 text-sm ${link.active
                                             ? 'border-indigo-600 bg-indigo-600 text-white'
                                             : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-100'
-                                    } ${
-                                        !link.url
+                                        } ${!link.url
                                             ? 'pointer-events-none opacity-50'
                                             : ''
-                                    }`}
+                                        }`}
                                     dangerouslySetInnerHTML={{
                                         __html: link.label,
                                     }}

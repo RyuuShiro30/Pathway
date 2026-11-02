@@ -11,7 +11,7 @@ export default function Window({ course, materials = [] }) {
                     <Link href="/courses" className="text-white/80 hover:text-white flex items-center gap-2 text-sm font-semibold mb-6 transition-colors">
                         <span>←</span> Kembali ke Katalog
                     </Link>
-                    
+
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
                         <div className="flex-1">
                             <span className="inline-block px-3 py-1 bg-white/20 text-white rounded-lg text-xs font-bold uppercase tracking-wider mb-4 border border-white/30">
@@ -22,10 +22,10 @@ export default function Window({ course, materials = [] }) {
                                 {course.description}
                             </p>
                         </div>
-                        
+
                         {/* TOMBOL MASUK KE RUANG BELAJAR */}
                         <div className="w-full md:w-auto">
-                            <Link 
+                            <Link
                                 href={`/courses/${course.slug}/learn`}
                                 className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-slate-900 bg-emerald-400 hover:bg-emerald-300 rounded-xl transition-all transform hover:-translate-y-1 hover:shadow-lg w-full"
                             >
@@ -39,7 +39,7 @@ export default function Window({ course, materials = [] }) {
             {/* KONTEN UTAMA: PETA MATERI & FORUM */}
             <div className="max-w-6xl mx-auto px-6 -mt-12 relative z-20">
                 <div className="flex flex-col lg:flex-row gap-8">
-                    
+
                     {/* Daftar Ringkasan Materi */}
                     <div className="flex-1 bg-white rounded-3xl p-8 shadow-sm border border-slate-200">
                         <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
@@ -62,25 +62,23 @@ export default function Window({ course, materials = [] }) {
 
                     {/* KARTU FORUM TONGKRONGAN */}
                     <div className="w-full lg:w-96 space-y-6">
-                        <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 rounded-3xl p-1 shadow-lg transform hover:-translate-y-1 transition-all duration-300">
-                            <div className="bg-white/10 backdrop-blur-sm rounded-[23px] p-6 text-white relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-4 opacity-20 transform rotate-12 scale-150 text-4xl">💬</div>
-                                <h3 className="text-xl font-extrabold mb-2 flex items-center gap-2 relative z-10">
+                        <div className="rounded-3xl border border-emerald-500/30 bg-emerald-400 p-6 shadow-sm hover:shadow-md transition-all duration-300 text-emerald-950">
+                            <div className="relative overflow-hidden">
+                                <h3 className="text-lg font-extrabold mb-2 flex items-center gap-2 text-emerald-950">
                                     Pojok Tongkrongan <span className="animate-bounce inline-block">🔥</span>
                                 </h3>
-                                <p className="text-indigo-100 text-sm mb-6 relative z-10 leading-relaxed">
+                                <p className="text-emerald-900 text-sm mb-6 leading-relaxed font-medium">
                                     Ada kode yang *error* atau materi yang membingungkan? Lempar pertanyaannya ke forum kelas!
                                 </p>
-                                <Link 
+                                <Link
                                     href={`/courses/${course.slug}/forums`}
-                                    className="block w-full text-center bg-white text-indigo-900 font-bold py-3 px-4 rounded-xl hover:bg-indigo-50 hover:shadow-lg active:scale-95 transition-all relative z-10 text-sm"
+                                    className="block w-full text-center bg-white text-emerald-800 font-bold py-3 px-4 rounded-xl hover:bg-emerald-50 active:scale-95 transition-all text-sm shadow-sm"
                                 >
                                     Masuk Forum Diskusi →
                                 </Link>
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>

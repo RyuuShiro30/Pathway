@@ -227,8 +227,8 @@ class RescheduleTest extends TestCase
             'student_id' => $otherStudent->id,
             'mentor_id' => $mentor->id,
             'status' => 'dikonfirmasi',
-            'schedule_time' => '2026-11-06 09:00:00',
-            'end_time' => '2026-11-06 10:00:00',
+            'schedule_time' => '2026-11-06 02:00:00',
+            'end_time' => '2026-11-06 03:00:00',
             'duration_hours' => 1,
             'is_free_session' => true,
             'price_snapshot' => 0,
@@ -358,8 +358,8 @@ class RescheduleTest extends TestCase
             'requested_by' => 'student',
             'request_type' => 'student_reschedule',
             'status' => 'menunggu_respons',
-            'new_schedule_time' => '2026-11-06 09:00:00',
-            'new_end_time' => '2026-11-06 10:00:00',
+            'new_schedule_time' => '2026-11-06 02:00:00',
+            'new_end_time' => '2026-11-06 03:00:00',
         ]);
 
         $rescheduleRequest = $session->rescheduleRequests()->first();
@@ -393,8 +393,8 @@ class RescheduleTest extends TestCase
             'student_id' => $student->id,
             'mentor_id' => $mentor->id,
             'status' => 'dikonfirmasi',
-            'schedule_time' => '2026-11-05 09:00:00',
-            'end_time' => '2026-11-05 10:00:00',
+            'schedule_time' => '2026-11-05 02:00:00',
+            'end_time' => '2026-11-05 03:00:00',
             'duration_hours' => 1,
             'is_free_session' => true,
             'price_snapshot' => 0,
