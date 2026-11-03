@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Forum;
 use App\Models\Course;
+use App\Models\ForumReply;
 use Cloudinary\Cloudinary;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -72,19 +73,28 @@ class ForumController extends Controller
     }
     public function show(Course $course, Forum $forum)
     {
-        // Tarik data relasi user (author) yang membuat forum ini
-        $forum->load('author');
+        // Tarik data pembuat diskusi, beserta semua balasan & siapa yang membalas
+        $forum->load(['author', 'replies.user']);
 
-        /* 
-         * Catatan: Nanti kalau fitur membalas (replies) sudah dibuat, 
-         * kita akan menambahkan kode untuk memuat balasannya di sini, contoh:
-         * $forum->load('replies.author');
-         */
-
-        // Lempar data ke halaman React
         return Inertia::render('Forums/Show', [
             'course' => $course,
             'forum'  => $forum
         ]);
+    }
+
+    // 5. Menyimpan balasan/komentar baru
+    public function storeReply(Request $request, Course $course, Forum $forum)
+    {
+        $request->validate([
+            'body' => 'required|string',
+        ]);
+
+        ForumReply::create([
+            'forum_id' => $forum->id,
+            'user_id'  => Auth::id(),
+            'body'     => $request->body,
+        ]);
+
+        return back();
     }
 }
