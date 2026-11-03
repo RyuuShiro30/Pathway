@@ -3,20 +3,28 @@ import { Head, Link, router } from '@inertiajs/react';
 
 export default function Show({ course, materials = [], dbProgress }) {
 
-    // Gunakan data materials langsung dari server (yang sudah membawa status is_completed dari DB)
     const [modules, setModules] = useState(materials);
 
+    // Set default awal menggunakan modul pertama yang belum selesai
     const [activeModuleId, setActiveModuleId] = useState(() => {
         const uncompleted = materials.find(m => !m.is_completed);
         return uncompleted ? uncompleted.id : (materials[0]?.id || null);
     });
 
-    // Sync state jika data materials dari props diperbarui oleh Inertia
     useEffect(() => {
         if (materials && materials.length > 0) {
             setModules(materials);
-            if (!activeModuleId) {
-                setActiveModuleId(materials[0]?.id);
+
+            // Jika activeModuleId belum ada atau modul yang aktif saat ini ternyata sudah berstatus completed,
+            // geser otomatis ke materi uncompleted (belum selesai) pertama.
+            const currentActive = materials.find(m => m.id === activeModuleId);
+            if (!activeModuleId || (currentActive && currentActive.is_completed)) {
+                const uncompleted = materials.find(m => !m.is_completed);
+                if (uncompleted) {
+                    setActiveModuleId(uncompleted.id);
+                } else {
+                    setActiveModuleId(materials[0]?.id);
+                }
             }
         }
     }, [materials]);
