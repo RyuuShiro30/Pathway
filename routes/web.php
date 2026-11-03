@@ -116,6 +116,9 @@ Route::middleware('auth')->group(function () {
     
         Route::get('/courses/{course:slug}/forums/{forum}', [ForumController::class, 'show'])
         ->name('forums.show');
+        
+        Route::post('/courses/{course:slug}/forums/{forum}/replies', [ForumController::class, 'storeReply'])
+        ->name('forums.replies.store');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])
