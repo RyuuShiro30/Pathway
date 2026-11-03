@@ -75,7 +75,9 @@ export default function Index({ course, forums }) {
 
                                     {/* Placeholder Jumlah Balasan */}
                                     <div className="hidden md:flex flex-col items-center justify-center min-w-[80px] p-3 bg-gray-50 rounded-xl group-hover:bg-indigo-50 transition-colors">
-                                        <span className="text-lg font-bold text-gray-700 group-hover:text-indigo-600">?</span>
+                                        <span className="text-lg font-bold text-gray-700 group-hover:text-indigo-600">
+                                            {forum.replies_count || 0}
+                                        </span>
                                         <span className="text-xs text-gray-500 font-medium">Balasan</span>
                                     </div>
                                 </div>
