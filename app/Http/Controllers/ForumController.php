@@ -15,8 +15,9 @@ class ForumController extends Controller
     // 1. Menampilkan daftar semua diskusi di course ini
     public function index(Course $course)
     {
-        // Ambil diskusi, urutkan dari yang terbaru, dan bawa data author-nya
+        // Tambahkan withCount('replies')
         $forums = Forum::with('author')
+            ->withCount('replies')
             ->where('course_id', $course->id)
             ->latest()
             ->get();
