@@ -42,11 +42,15 @@ export default function Show({ course, materials = [], dbProgress }) {
 
         router.post(`/courses/${course.slug}/materials/${activeModule.id}/complete`, {}, {
             preserveScroll: true,
-            onSuccess: () => {
-                // Pindah ke materi selanjutnya jika belum di materi terakhir
+            onSuccess: (page) => {
+
                 if (!isLast) {
                     setActiveModuleId(modules[activeIndex + 1].id);
                 }
+            },
+            onError: (errors) => {
+                console.error("Gagal menyimpan progress:", errors);
+                alert("Gagal menyimpan progres, pastikan kamu terkoneksi ke internet.");
             }
         });
     };
