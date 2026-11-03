@@ -343,6 +343,13 @@ class MentoringSessionController extends Controller
             );
         }
 
+        if (! $booking['is_free_session'] && ! $this->hasCompletePaymentAccount(Auth::user())) {
+            return $this->redirectToScheduleWithBookingError(
+                $mentor,
+                'Anda wajib melengkapi data rekening di Profil sebelum dapat mengajukan booking berbayar.',
+            );
+        }
+
         if (! $booking['is_free_session'] && ! $this->hasCompletePaymentAccount($mentor)) {
             return $this->redirectToScheduleWithBookingError(
                 $mentor,
@@ -447,6 +454,13 @@ class MentoringSessionController extends Controller
                 if (! $this->hasCompletePaymentAccount($mentor)) {
                     throw ValidationException::withMessages([
                         'schedule_time' => 'Mentor belum mengisi rekening untuk menerima DP.',
+                    ]);
+                }
+                
+                $student = Auth::user();
+                if (! $this->hasCompletePaymentAccount($student)) {
+                    throw ValidationException::withMessages([
+                        'schedule_time' => 'Anda wajib melengkapi data rekening di Profil sebelum mengajukan booking berbayar.',
                     ]);
                 }
             }
