@@ -70,4 +70,21 @@ class ForumController extends Controller
         // 4. Kembali ke halaman list forum
         return redirect()->route('forums.index', $course->slug)->with('success', 'Diskusi baru berhasil dibuat!');
     }
+    public function show(Course $course, Forum $forum)
+    {
+        // Tarik data relasi user (author) yang membuat forum ini
+        $forum->load('author');
+
+        /* 
+         * Catatan: Nanti kalau fitur membalas (replies) sudah dibuat, 
+         * kita akan menambahkan kode untuk memuat balasannya di sini, contoh:
+         * $forum->load('replies.author');
+         */
+
+        // Lempar data ke halaman React
+        return Inertia::render('Forums/Show', [
+            'course' => $course,
+            'forum'  => $forum
+        ]);
+    }
 }
