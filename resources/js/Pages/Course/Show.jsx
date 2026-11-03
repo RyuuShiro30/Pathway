@@ -5,7 +5,11 @@ export default function Show({ course, materials = [], dbProgress }) {
 
     // Gunakan data materials langsung dari server (yang sudah membawa status is_completed dari DB)
     const [modules, setModules] = useState(materials);
-    const [activeModuleId, setActiveModuleId] = useState(materials[0]?.id);
+
+    const [activeModuleId, setActiveModuleId] = useState(() => {
+        const uncompleted = materials.find(m => !m.is_completed);
+        return uncompleted ? uncompleted.id : (materials[0]?.id || null);
+    });
 
     // Sync state jika data materials dari props diperbarui oleh Inertia
     useEffect(() => {
