@@ -25,4 +25,8 @@ class Forum extends Model
     {
         return $this->belongsTo(User::class, 'author_id');
     }
+    public function replies()
+    {
+        return $this->hasMany(ForumReply::class);
+    }
 }

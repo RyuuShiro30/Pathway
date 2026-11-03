@@ -1,126 +1,110 @@
-import { Link, Head } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 
-export default function Show({ course, materials = [] }) {
-    // Simulasi progress belajar (bisa dinamis dari database nanti)
-    const progress = 45;
+export default function Show({ course, forum }) {
+    // Inisialisasi form untuk mengirim balasan
+    const { data, setData, post, processing, reset, errors } = useForm({
+        body: '',
+    });
+
+    const submitReply = (e) => {
+        e.preventDefault();
+        post(`/courses/${course.slug}/forums/${forum.id}/replies`, {
+            preserveScroll: true,
+            onSuccess: () => reset('body'), // Kosongkan input form setelah balasan terkirim
+        });
+    };
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] pb-20 font-sans">
-            <Head title={course.title} />
+        <div className="min-h-screen bg-slate-50 py-10 font-sans">
+            <Head title={`${forum.title} | Forum Pathway`} />
+            
+            <div className="max-w-4xl mx-auto px-6 space-y-6">
+                
+                {/* Tombol Kembali */}
+                <Link href={`/courses/${course.slug}/forums`} className="text-indigo-600 font-semibold mb-4 inline-flex items-center gap-2 hover:text-indigo-800 transition-colors">
+                    <span>←</span> Kembali ke Daftar Diskusi
+                </Link>
 
-            {/* HEADER BANNER */}
-            <div className="bg-indigo-900 text-white pt-12 pb-24 px-6 relative overflow-hidden">
-                {/* Aksen background gamifikasi */}
-                <div className="absolute top-0 right-0 -mr-20 -mt-20 w-72 h-72 rounded-full bg-white opacity-5 blur-3xl"></div>
-                <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-indigo-500 opacity-20 blur-3xl"></div>
-
-                <div className="max-w-6xl mx-auto relative z-10">
-                    <Link href="/courses" className="text-indigo-200 hover:text-white flex items-center gap-2 text-sm font-semibold mb-6 transition-colors">
-                        <span>←</span> Kembali ke Katalog Kelas
-                    </Link>
-
-                    <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
-                        <div className="flex-1">
-                            <span className="inline-block px-3 py-1 bg-indigo-800 text-indigo-100 rounded-lg text-xs font-bold uppercase tracking-wider mb-4 border border-indigo-700">
-                                {course.level || 'Beginner Friendly'}
-                            </span>
-                            <h1 className="text-4xl md:text-5xl font-extrabold mb-4 leading-tight">{course.title}</h1>
-                            <p className="text-indigo-200 text-lg max-w-2xl leading-relaxed">
-                                {course.description || 'Pelajari materi ini langkah demi langkah dan bangun portofolio teknologimu bersama mentor berpengalaman.'}
-                            </p>
+                {/* KARTU PERTANYAAN UTAMA (Topik Diskusi) */}
+                <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                    <div className="flex items-center gap-4 mb-6">
+                        <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center font-bold text-lg text-indigo-600">
+                            {forum.author?.name?.charAt(0) || 'U'}
                         </div>
-
-                        {/* Progress Bar Gamifikasi */}
-                        <div className="bg-white/10 backdrop-blur-md border border-white/20 p-6 rounded-2xl w-full md:w-80 shadow-2xl">
-                            <div className="flex justify-between items-end mb-2">
-                                <span className="text-sm font-bold text-indigo-100">EXP Belajar</span>
-                                <span className="text-2xl font-black text-green-400">{progress}%</span>
-                            </div>
-                            <div className="w-full bg-indigo-950/50 rounded-full h-3 mb-2 overflow-hidden border border-white/10">
-                                <div
-                                    className="bg-gradient-to-r from-green-400 to-emerald-300 h-3 rounded-full transition-all duration-1000 relative"
-                                    style={{ width: `${progress}%` }}
-                                >
-                                    <div className="absolute inset-0 bg-white/20 w-full h-full animate-pulse"></div>
-                                </div>
-                            </div>
-                            <p className="text-xs text-indigo-200">Selesaikan 3 materi lagi untuk naik level! 🚀</p>
+                        <div>
+                            <h3 className="font-bold text-slate-900">{forum.author?.name || 'Mahasiswa'}</h3>
+                            <p className="text-xs text-slate-500">Penulis Topik</p>
                         </div>
                     </div>
+                    <h1 className="text-2xl font-extrabold mb-4 text-slate-900">{forum.title}</h1>
+                    <p className="text-slate-700 whitespace-pre-wrap leading-relaxed">{forum.body}</p>
+                    
+                    {/* Menampilkan screenshot jika pengguna melampirkan gambar */}
+                    {forum.image_url && (
+                        <div className="mt-6">
+                            <img src={forum.image_url} alt="Lampiran Masalah" className="rounded-xl border border-slate-200 max-h-96 object-cover shadow-sm" />
+                        </div>
+                    )}
                 </div>
-            </div>
 
-            {/* MAIN CONTENT GRID */}
-            <div className="max-w-6xl mx-auto px-6 -mt-12 relative z-20">
-                <div className="flex flex-col lg:flex-row gap-8">
+                <h3 className="font-bold text-xl text-slate-800 pt-4">
+                    Balasan ({forum.replies?.length || 0})
+                </h3>
 
-                    {/* LEFT COLUMN: Daftar Materi (Syllabus) */}
-                    <div className="flex-1 space-y-6">
-                        <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
-                            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                                <span>📚</span> Peta Perjalanan
-                            </h2>
-
-                            <div className="space-y-4">
-                                {materials.length === 0 ? (
-                                    <div className="text-center py-8 text-gray-500">Materi sedang disusun oleh mentor...</div>
-                                ) : (
-                                    materials.map((materi, index) => (
-                                        <div key={index} className="group flex items-start gap-4 p-4 rounded-2xl hover:bg-indigo-50 border border-transparent hover:border-indigo-100 transition-all cursor-pointer">
-                                            <div className="flex-shrink-0 w-12 h-12 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold shadow-sm group-hover:scale-110 transition-transform">
-                                                {index + 1}
-                                            </div>
-                                            <div>
-                                                <h4 className="text-lg font-bold text-gray-800 group-hover:text-indigo-700 transition-colors">{materi.title}</h4>
-                                                <p className="text-sm text-gray-500 mt-1">Video & Modul Praktik</p>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
-                            </div>
+                {/* AREA DAFTAR BALASAN */}
+                <div className="space-y-4">
+                    {!forum.replies || forum.replies.length === 0 ? (
+                        <div className="bg-white p-8 rounded-3xl text-center border border-slate-100 shadow-sm text-slate-500">
+                            Belum ada yang membalas diskusi ini. Jadilah yang pertama membantu!
                         </div>
-                    </div>
-
-                    {/* RIGHT COLUMN: Sidebar (Forum & Mentor) */}
-                    <div className="w-full lg:w-96 space-y-6">
-
-                        {/* 🌟 KARTU FORUM TONGKRONGAN (GAMIFIKASI) 🌟 */}
-                        <div className="bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 rounded-3xl p-1 shadow-lg transform hover:-translate-y-1 transition-all duration-300">
-                            <div className="bg-white/10 backdrop-blur-sm rounded-[23px] p-6 h-full text-white relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-4 opacity-20 transform rotate-12 scale-150">
-                                    💬
+                    ) : (
+                        forum.replies.map((reply) => (
+                            <div key={reply.id} className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex gap-4">
+                                <div className="w-10 h-10 bg-green-100 text-green-600 rounded-full flex-shrink-0 flex items-center justify-center font-bold">
+                                    {reply.user?.name?.charAt(0) || 'M'}
                                 </div>
-                                <h3 className="text-2xl font-extrabold mb-2 flex items-center gap-2 relative z-10">
-                                    Pojok Tongkrongan <span className="animate-bounce inline-block">🔥</span>
-                                </h3>
-                                <p className="text-indigo-100 text-sm mb-6 relative z-10 leading-relaxed">
-                                    Mentok karena *error*? Jangan pusing sendiri! Lempar *screenshot* kodemu ke forum dan diskusikan bareng *tech enthusiast* lainnya.
-                                </p>
-                                {/* Ini Link yang menghubungkan ke fitur forum yang baru saja kita buat */}
-                                <Link
-                                    href={`/courses/${course.slug}/forums`}
-                                    className="block w-full text-center bg-white text-indigo-900 font-bold py-3 px-4 rounded-xl hover:bg-indigo-50 hover:shadow-lg active:scale-95 transition-all relative z-10"
-                                >
-                                    Masuk ke Forum Sekarang →
-                                </Link>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h4 className="font-bold text-sm text-slate-900">{reply.user?.name || 'Member'}</h4>
+                                        {reply.is_accepted_answer && (
+                                            <span className="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded font-bold uppercase">Solusi</span>
+                                        )}
+                                    </div>
+                                    <p className="text-slate-600 mt-2 whitespace-pre-wrap text-sm leading-relaxed">{reply.body}</p>
+                                </div>
                             </div>
-                        </div>
+                        ))
+                    )}
+                </div>
 
-                        {/* Kartu Mentor (Opsional/Placeholder) */}
-                        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 text-center">
-                            <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-4">Mentor Kelas</h3>
-                            <div className="w-20 h-20 bg-gray-200 rounded-full mx-auto mb-4 overflow-hidden">
-                                <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${course.title}`} alt="Mentor" />
-                            </div>
-                            <h4 className="text-lg font-bold text-gray-900">Kak Mahasiswa Polinema</h4>
-                            <p className="text-sm text-gray-500 mb-4">Software Engineer</p>
-                            <button className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 bg-indigo-50 w-full py-2 rounded-lg transition-colors">
-                                Lihat Profil Mentor
+                {/* AREA FORM TULIS BALASAN */}
+                <div className="bg-white p-6 rounded-3xl shadow-sm border border-indigo-100 mt-8">
+                    <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                        💬 Tulis Balasan Kamu
+                    </h4>
+                    <form onSubmit={submitReply}>
+                        <textarea
+                            className="w-full border border-slate-200 rounded-xl p-4 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-slate-50 transition-all resize-none"
+                            rows="4"
+                            placeholder="Tuliskan jawaban, solusi, atau tanggapanmu di sini..."
+                            value={data.body}
+                            onChange={(e) => setData('body', e.target.value)}
+                            required
+                        ></textarea>
+                        {errors.body && <span className="text-red-500 text-sm mt-1 block">{errors.body}</span>}
+                        
+                        <div className="mt-4 flex justify-end">
+                            <button
+                                type="submit"
+                                disabled={processing}
+                                className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-8 rounded-xl disabled:opacity-50 transition-all hover:shadow-lg active:scale-95"
+                            >
+                                {processing ? 'Mengirim...' : 'Kirim Balasan 🚀'}
                             </button>
                         </div>
-
-                    </div>
+                    </form>
                 </div>
+
             </div>
         </div>
     );
