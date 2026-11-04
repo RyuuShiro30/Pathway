@@ -23,6 +23,13 @@ class CourseSeeder extends Seeder
                 'level' => 'beginner',
                 'is_published' => true,
             ],
+            // Tambahan Course Python
+            [
+                'title' => 'Dasar Pemrograman Python',
+                'description' => 'Pelajari dasar-dasar pemrograman Python dari nol hingga menengah. Cocok untuk pemula yang ingin memulai karir di Data Science, Web Development, atau AI.',
+                'level' => 'beginner',
+                'is_published' => true,
+            ],
         ];
 
         foreach ($courses as $course) {
