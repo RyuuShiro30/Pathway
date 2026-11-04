@@ -787,28 +787,34 @@ export default function MyBookings({ bookings = [], stats = {} }) {
             <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
 
                 {/* PAGE HEADER */}
-                <section className="flex flex-wrap items-end justify-between gap-4">
-                    <div className="space-y-1">
-                        <h1 className="text-2xl font-bold leading-tight text-slate-900 sm:text-3xl">
-                            Daftar Booking Mentoring
-                        </h1>
-                        <p className="text-sm text-slate-500">
-                            Kelola jadwal temu, status verifikasi sesi, dan riwayat mentoring Anda.
-                        </p>
-                    </div>
+            <section className="flex flex-wrap items-end justify-between gap-4">
+                {/* Judul dan Deskripsi di kiri */}
+                <div className="space-y-1">
+                    <h1 className="text-2xl font-bold leading-tight text-slate-900 sm:text-3xl">
+                        Daftar Booking Mentoring
+                    </h1>
+                    <p className="text-sm text-slate-500">
+                        Kelola jadwal temu, status verifikasi sesi, dan riwayat mentoring Anda.
+                    </p>
+                </div>
+
+                {/* Bungkus kedua tombol dalam flex container di kanan */}
+                <div className="flex items-center gap-3">
                     <a
                         href={route('mentors.index')}
-                        className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#527D98] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#3E637A] focus:outline-none focus:ring-2 focus:ring-[#527D98] focus:ring-offset-2"
+                        className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#527D98] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
                     >
-                        + Cari &amp; Jadwalkan Mentor
+                        + Cari & Jadwalkan Mentor
                     </a>
+
                     <Link
                         href="/transactions"
                         className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
                     >
                         Riwayat Transaksi
                     </Link>
-                </section>
+                </div>
+            </section>
 
                 <section
                     aria-label="Statistik booking"
