@@ -802,6 +802,12 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                     >
                         + Cari &amp; Jadwalkan Mentor
                     </a>
+                    <Link
+                        href="/transactions"
+                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                    >
+                        Riwayat Transaksi
+                    </Link>
                 </section>
 
                 <section
@@ -857,15 +863,15 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                     aria-pressed={isSelected}
                                     onClick={() => setSelectedStatus(filter.value)}
                                     className={`inline-flex min-h-9 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#527D98] focus:ring-offset-1 ${isSelected
-                                            ? 'bg-[#527D98] text-white shadow-xs'
-                                            : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                                        ? 'bg-[#527D98] text-white shadow-xs'
+                                        : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                                         }`}
                                 >
                                     {filter.label}
                                     <span
                                         className={`rounded-full px-1.5 py-0.5 text-[11px] font-bold ${isSelected
-                                                ? 'bg-white/20 text-white'
-                                                : pillColor
+                                            ? 'bg-white/20 text-white'
+                                            : pillColor
                                             }`}
                                     >
                                         {count}
@@ -994,8 +1000,8 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                                     </h2>
                                                     <span
                                                         className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-semibold ${booking.is_free_session
-                                                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                                : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                            : 'bg-slate-100 text-slate-700 border border-slate-200'
                                                             }`}
                                                     >
                                                         {booking.is_free_session
@@ -1048,40 +1054,40 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                         <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                                             <span
                                                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${booking.status ===
-                                                        'berlangsung'
-                                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                        : isScheduleOverdue(
-                                                            booking,
-                                                        )
+                                                    'berlangsung'
+                                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                    : isScheduleOverdue(
+                                                        booking,
+                                                    )
+                                                        ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                                        : booking.status ===
+                                                            'dibatalkan' &&
+                                                            [
+                                                                'menunggu',
+                                                                'menunggu_konfirmasi',
+                                                            ].includes(
+                                                                booking.refund_status,
+                                                            )
                                                             ? 'bg-amber-50 text-amber-700 border border-amber-200'
                                                             : booking.status ===
                                                                 'dibatalkan' &&
-                                                                [
-                                                                    'menunggu',
-                                                                    'menunggu_konfirmasi',
-                                                                ].includes(
-                                                                    booking.refund_status,
-                                                                )
-                                                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                                                booking.refund_status ===
+                                                                'selesai'
+                                                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                                                 : booking.status ===
                                                                     'dibatalkan' &&
                                                                     booking.refund_status ===
-                                                                    'selesai'
-                                                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                                    : booking.status ===
-                                                                        'dibatalkan' &&
-                                                                        booking.refund_status ===
-                                                                        'dilaporkan'
-                                                                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                                                        : isNoShowReporter
-                                                                            ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                                                                            : isNoShowRespondent
-                                                                                ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                                                                                : statusStyles[
-                                                                                booking
-                                                                                    .status
-                                                                                ] ??
-                                                                                'bg-slate-100 text-slate-700 border border-slate-200'
+                                                                    'dilaporkan'
+                                                                    ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                                                    : isNoShowReporter
+                                                                        ? 'bg-amber-50 text-amber-800 border border-amber-200'
+                                                                        : isNoShowRespondent
+                                                                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                                                            : statusStyles[
+                                                                            booking
+                                                                                .status
+                                                                            ] ??
+                                                                            'bg-slate-100 text-slate-700 border border-slate-200'
                                                     }`}
                                             >
                                                 {booking.status ===
@@ -1456,8 +1462,8 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                         type="button"
                                         onClick={() => setCurrentPage(page)}
                                         className={`inline-flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold transition ${isActive
-                                                ? 'bg-[#527D98] text-white shadow-xs'
-                                                : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                                            ? 'bg-[#527D98] text-white shadow-xs'
+                                            : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
                                             }`}
                                     >
                                         {page}
@@ -2190,8 +2196,8 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                 onClick={submitRefundConfirmation}
                                 disabled={isRefundSubmitting}
                                 className={`inline-flex min-h-10 items-center justify-center rounded-xl px-4 py-2 text-sm font-bold text-white shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 ${refundDecision === 'sudah_terima'
-                                        ? 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500'
-                                        : 'bg-rose-600 hover:bg-rose-700 focus:ring-rose-500'
+                                    ? 'bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500'
+                                    : 'bg-rose-600 hover:bg-rose-700 focus:ring-rose-500'
                                     }`}
                             >
                                 {isRefundSubmitting
