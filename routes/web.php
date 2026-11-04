@@ -9,6 +9,7 @@ use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ForumController;
 use App\Http\Controllers\JourneyController;
+use App\Http\Controllers\TransactionHistoryController;
 use App\Http\Controllers\MentorDirectoryController;
 use App\Http\Controllers\MentoringSessionController;
 use App\Http\Controllers\MentorProfileController;
@@ -157,6 +158,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/sessions/{session}/review', [ReviewController::class, 'store'])
         ->name('reviews.store');
 
+    // Riwayat Transaksi Mentoring
+    Route::get('/transactions', [TransactionHistoryController::class, 'index'])
+        ->name('transactions.index');
+        
     // Mentor Registration
     Route::get('/mentor/become', function () {
         return Inertia::render('Mentor/BecomeMentor');
