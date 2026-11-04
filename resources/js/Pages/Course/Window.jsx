@@ -1,6 +1,9 @@
 import { Link, Head } from '@inertiajs/react';
 
-export default function Window({ course, materials = [] }) {
+export default function Window({ course, materials = {} }) {
+    // Ambil data array dari materials.data, berikan fallback array kosong jika null
+    const materialList = materials.data || [];
+
     return (
         <div className="min-h-screen bg-slate-50 pb-20 font-sans">
             <Head title={`${course.title} | Jendela Kelas`} />
@@ -40,24 +43,55 @@ export default function Window({ course, materials = [] }) {
             <div className="max-w-6xl mx-auto px-6 -mt-12 relative z-20">
                 <div className="flex flex-col lg:flex-row gap-8">
 
-                    {/* Daftar Ringkasan Materi */}
+                    {/* Daftar Ringkasan Materi dengan Pagination */}
                     <div className="flex-1 bg-white rounded-3xl p-8 shadow-sm border border-slate-200">
                         <h2 className="text-2xl font-bold text-slate-900 mb-6 flex items-center gap-2">
                             <span>📚</span> Modul Pembelajaran
                         </h2>
+                        
                         <div className="space-y-4">
-                            {materials.map((materi, index) => (
-                                <div key={index} className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                                    <div className="flex-shrink-0 w-10 h-10 bg-slate-200 text-slate-700 rounded-full flex items-center justify-center font-bold text-sm">
-                                        {index + 1}
-                                    </div>
-                                    <div>
-                                        <h4 className="text-base font-bold text-slate-800">{materi.title}</h4>
-                                        <p className="text-xs text-slate-500 mt-0.5">Modul Akses Online</p>
-                                    </div>
-                                </div>
-                            ))}
+                            {materialList.length > 0 ? (
+                                materialList.map((materi, index) => {
+                                    // Menghitung nomor urut agar tetap kontinu antar halaman (misal: halaman 2 mulai dari 6)
+                                    const itemNumber = (materials.current_page - 1) * materials.per_page + index + 1;
+
+                                    return (
+                                        <div key={materi.id} className="flex items-start gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                            <div className="flex-shrink-0 w-10 h-10 bg-slate-200 text-slate-700 rounded-full flex items-center justify-center font-bold text-sm">
+                                                {itemNumber}
+                                            </div>
+                                            <div>
+                                                <h4 className="text-base font-bold text-slate-800">{materi.title}</h4>
+                                                <p className="text-xs text-slate-500 mt-0.5">Modul Akses Online</p>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <p className="text-slate-500 text-center py-4">Belum ada modul pembelajaran.</p>
+                            )}
                         </div>
+
+                        {/* NAVIGASI PAGINATION 5-5 */}
+                        {materials.links && materials.links.length > 3 && (
+                            <div className="flex flex-wrap justify-center items-center gap-1 mt-8 pt-6 border-t border-slate-100">
+                                {materials.links.map((link, idx) => (
+                                    <Link
+                                        key={idx}
+                                        href={link.url || '#'}
+                                        preserveScroll
+                                        className={`px-4 py-2 text-sm font-semibold rounded-xl transition-all ${
+                                            link.active
+                                                ? 'bg-slate-900 text-white shadow-sm'
+                                                : link.url
+                                                ? 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                                : 'bg-slate-50 text-slate-300 cursor-not-allowed'
+                                        }`}
+                                        dangerouslySetInnerHTML={{ __html: link.label }}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     {/* KARTU FORUM TONGKRONGAN */}
@@ -79,6 +113,7 @@ export default function Window({ course, materials = [] }) {
                             </div>
                         </div>
                     </div>
+
                 </div>
             </div>
         </div>

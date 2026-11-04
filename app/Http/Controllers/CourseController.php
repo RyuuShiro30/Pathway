@@ -21,14 +21,17 @@ class CourseController extends Controller
             'courses' => $courses
         ]);
     }
-
+    
     public function show(string $slug)
     {
-        $course = Course::with('courseMaterials')->where('slug', $slug)->firstOrFail(); 
+        $course = Course::where('slug', $slug)->firstOrFail(); 
+        
+        // Ubah dari courseMaterials biasa menjadi paginate(5)
+        $materials = $course->courseMaterials()->paginate(5);
         
         return Inertia::render('Course/Window', [
             'course' => $course,
-            'materials' => $course->courseMaterials
+            'materials' => $materials // Ini sekarang berupa objek pagination Laravel
         ]);
     }
 
