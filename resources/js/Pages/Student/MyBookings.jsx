@@ -1,4 +1,4 @@
-import { Head, router, useForm, usePage } from "@inertiajs/react";
+import { Head, router, useForm, usePage, Link } from "@inertiajs/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
     AlertBanner,
@@ -886,12 +886,22 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                             riwayat mentoring Anda.
                         </p>
                     </div>
-                    <a
-                        href={route("mentors.index")}
-                        className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#527D98] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#3E637A] focus:outline-none focus:ring-2 focus:ring-[#527D98] focus:ring-offset-2"
-                    >
-                        + Cari &amp; Jadwalkan Mentor
-                    </a>
+
+                    <div className="flex items-center gap-3">
+                        <a
+                            href={route("mentors.index")}
+                            className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#527D98] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#3E637A] focus:outline-none focus:ring-2 focus:ring-[#527D98] focus:ring-offset-2"
+                        >
+                            + Cari &amp; Jadwalkan Mentor
+                        </a>
+
+                        <Link
+                            href={route("transactions.index")}
+                            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+                        >
+                            Riwayat Transaksi
+                        </Link>
+                    </div>
                 </section>
 
                 <section

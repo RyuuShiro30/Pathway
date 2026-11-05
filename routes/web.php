@@ -9,6 +9,7 @@ use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ForumController;
 use App\Http\Controllers\JourneyController;
+use App\Http\Controllers\TransactionHistoryController;
 use App\Http\Controllers\MentorDirectoryController;
 use App\Http\Controllers\MentoringSessionController;
 use App\Http\Controllers\MentorProfileController;
@@ -113,6 +114,12 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/courses/{course:slug}/forums', [ForumController::class, 'store'])
         ->name('forums.store');
+    
+        Route::get('/courses/{course:slug}/forums/{forum}', [ForumController::class, 'show'])
+        ->name('forums.show');
+        
+        Route::post('/courses/{course:slug}/forums/{forum}/replies', [ForumController::class, 'storeReply'])
+        ->name('forums.replies.store');
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])
@@ -151,6 +158,10 @@ Route::middleware('auth')->group(function () {
     Route::post('/sessions/{session}/review', [ReviewController::class, 'store'])
         ->name('reviews.store');
 
+    // Riwayat Transaksi Mentoring
+    Route::get('/transactions', [TransactionHistoryController::class, 'index'])
+        ->name('transactions.index');
+        
     // Mentor Registration
     Route::get('/mentor/become', function () {
         return Inertia::render('Mentor/BecomeMentor');

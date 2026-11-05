@@ -3,8 +3,8 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use App\Models\Course; // Kita gunakan Model Course
 
 class CourseSeeder extends Seeder
 {
@@ -23,18 +23,25 @@ class CourseSeeder extends Seeder
                 'level' => 'beginner',
                 'is_published' => true,
             ],
+            [
+                'title' => 'Dasar Pemrograman Python',
+                'description' => 'Pelajari dasar-dasar pemrograman Python dari nol hingga menengah. Cocok untuk pemula yang ingin memulai karir di Data Science, Web Development, atau AI.',
+                'level' => 'beginner',
+                'is_published' => true,
+            ],
         ];
 
         foreach ($courses as $course) {
-            DB::table('courses')->insert([
-                'title' => $course['title'],
-                'slug' => Str::slug($course['title']),
-                'description' => $course['description'],
-                'level' => $course['level'],
-                'is_published' => $course['is_published'],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+            // Gunakan updateOrCreate agar tidak error jika data sudah ada
+            Course::updateOrCreate(
+                ['slug' => Str::slug($course['title'])], // Kunci pencarian
+                [
+                    'title' => $course['title'],
+                    'description' => $course['description'],
+                    'level' => $course['level'],
+                    'is_published' => $course['is_published'],
+                ]
+            );
         }
     }
 }

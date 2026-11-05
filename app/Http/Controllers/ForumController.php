@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Forum;
 use App\Models\Course;
+use App\Models\ForumReply;
 use Cloudinary\Cloudinary;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -14,8 +15,9 @@ class ForumController extends Controller
     // 1. Menampilkan daftar semua diskusi di course ini
     public function index(Course $course)
     {
-        // Ambil diskusi, urutkan dari yang terbaru, dan bawa data author-nya
+        // Tambahkan withCount('replies')
         $forums = Forum::with('author')
+            ->withCount('replies')
             ->where('course_id', $course->id)
             ->latest()
             ->get();
@@ -69,5 +71,31 @@ class ForumController extends Controller
 
         // 4. Kembali ke halaman list forum
         return redirect()->route('forums.index', $course->slug)->with('success', 'Diskusi baru berhasil dibuat!');
+    }
+    public function show(Course $course, Forum $forum)
+    {
+        // Tarik data pembuat diskusi, beserta semua balasan & siapa yang membalas
+        $forum->load(['author', 'replies.user']);
+
+        return Inertia::render('Forums/Show', [
+            'course' => $course,
+            'forum'  => $forum
+        ]);
+    }
+
+    // 5. Menyimpan balasan/komentar baru
+    public function storeReply(Request $request, Course $course, Forum $forum)
+    {
+        $request->validate([
+            'body' => 'required|string',
+        ]);
+
+        ForumReply::create([
+            'forum_id' => $forum->id,
+            'user_id'  => Auth::id(),
+            'body'     => $request->body,
+        ]);
+
+        return back();
     }
 }

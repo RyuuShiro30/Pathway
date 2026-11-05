@@ -113,8 +113,8 @@ function formatDate(date, formatter = dateFormatter) {
 
     return parts
         ? formatter.format(
-              new Date(Date.UTC(parts.year, parts.month, parts.day, 12)),
-          )
+            new Date(Date.UTC(parts.year, parts.month, parts.day, 12)),
+        )
         : '';
 }
 
@@ -231,7 +231,7 @@ function isContiguousSelection(segments) {
             index === 0 ||
             (segments[index - 1].date === segment.date &&
                 segments[index - 1].startMinutes + 60 ===
-                    segment.startMinutes),
+                segment.startMinutes),
     );
 }
 
@@ -478,6 +478,9 @@ export default function BookingSchedule({
     const studentName = auth?.user?.name || 'Siti Murid';
     const studentInitials = getInitials(studentName);
     const mentorInitials = getInitials(mentor?.name);
+    const isPaidBooking = !isFreeSession && durationHours > 0;
+    const isBankEmpty = !auth?.user?.bank_name || !auth?.user?.bank_account_number;
+    
     useEffect(() => {
         const intervalId = window.setInterval(() => {
             setNowTimestamp(Date.now());
@@ -888,22 +891,20 @@ export default function BookingSchedule({
                                                 aria-pressed={isSelected}
                                                 disabled={!hasSlots}
                                                 onClick={() => selectDate(date)}
-                                                className={`relative flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-xl border p-2 text-center transition focus:outline-none focus:ring-2 focus:ring-[#527D98] focus:ring-offset-1 ${
-                                                    isSelected
-                                                        ? 'border-[#527D98] bg-[#F0F7FA] text-[#3E637A] ring-2 ring-[#527D98]/30 shadow-xs'
-                                                        : hasSlots
-                                                          ? 'border-slate-200 bg-white text-slate-700 hover:border-[#527D98] hover:bg-slate-50'
-                                                          : 'cursor-not-allowed border-slate-100 bg-slate-50/60 text-slate-300'
-                                                }`}
+                                                className={`relative flex min-h-[76px] flex-col items-center justify-center gap-1 rounded-xl border p-2 text-center transition focus:outline-none focus:ring-2 focus:ring-[#527D98] focus:ring-offset-1 ${isSelected
+                                                    ? 'border-[#527D98] bg-[#F0F7FA] text-[#3E637A] ring-2 ring-[#527D98]/30 shadow-xs'
+                                                    : hasSlots
+                                                        ? 'border-slate-200 bg-white text-slate-700 hover:border-[#527D98] hover:bg-slate-50'
+                                                        : 'cursor-not-allowed border-slate-100 bg-slate-50/60 text-slate-300'
+                                                    }`}
                                             >
                                                 <span
-                                                    className={`text-[11px] capitalize ${
-                                                        isSelected
-                                                            ? 'font-bold text-[#3E637A]'
-                                                            : hasSlots
-                                                              ? 'font-medium text-slate-500'
-                                                              : 'text-slate-300'
-                                                    }`}
+                                                    className={`text-[11px] capitalize ${isSelected
+                                                        ? 'font-bold text-[#3E637A]'
+                                                        : hasSlots
+                                                            ? 'font-medium text-slate-500'
+                                                            : 'text-slate-300'
+                                                        }`}
                                                 >
                                                     {formatDate(
                                                         date,
@@ -911,25 +912,23 @@ export default function BookingSchedule({
                                                     )}
                                                 </span>
                                                 <span
-                                                    className={`text-sm font-bold ${
-                                                        isSelected
-                                                            ? 'text-[#3E637A]'
-                                                            : hasSlots
-                                                              ? 'text-slate-800'
-                                                              : 'text-slate-300'
-                                                    }`}
+                                                    className={`text-sm font-bold ${isSelected
+                                                        ? 'text-[#3E637A]'
+                                                        : hasSlots
+                                                            ? 'text-slate-800'
+                                                            : 'text-slate-300'
+                                                        }`}
                                                 >
                                                     {date.slice(8, 10)}
                                                 </span>
                                                 <span
                                                     aria-hidden="true"
-                                                    className={`h-1.5 w-1.5 rounded-full ${
-                                                        isSelected
-                                                            ? 'bg-[#527D98]'
-                                                            : hasSlots
-                                                              ? 'bg-emerald-500'
-                                                              : 'bg-slate-200'
-                                                    }`}
+                                                    className={`h-1.5 w-1.5 rounded-full ${isSelected
+                                                        ? 'bg-[#527D98]'
+                                                        : hasSlots
+                                                            ? 'bg-emerald-500'
+                                                            : 'bg-slate-200'
+                                                        }`}
                                                 />
                                             </button>
                                         );
@@ -991,7 +990,7 @@ export default function BookingSchedule({
                                     {filters.map((filter) => {
                                         const labelText =
                                             filter.value === 'semua' &&
-                                            allSegments.length > 0
+                                                allSegments.length > 0
                                                 ? `Semua (${allSegments.length} Tersedia)`
                                                 : filter.label;
 
@@ -1005,11 +1004,10 @@ export default function BookingSchedule({
                                                 onClick={() =>
                                                     setActiveFilter(filter.value)
                                                 }
-                                                className={`rounded-full px-4 py-1.5 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#527D98] focus:ring-offset-1 ${
-                                                    activeFilter === filter.value
-                                                        ? 'border-transparent bg-[#527D98] text-white shadow-xs'
-                                                        : 'border-transparent bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900'
-                                                }`}
+                                                className={`rounded-full px-4 py-1.5 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#527D98] focus:ring-offset-1 ${activeFilter === filter.value
+                                                    ? 'border-transparent bg-[#527D98] text-white shadow-xs'
+                                                    : 'border-transparent bg-slate-100 text-slate-600 hover:bg-slate-200/80 hover:text-slate-900'
+                                                    }`}
                                             >
                                                 {labelText}
                                             </button>
@@ -1047,23 +1045,21 @@ export default function BookingSchedule({
                                                     onClick={() =>
                                                         toggleSegment(segment)
                                                     }
-                                                    className={`flex min-h-[96px] flex-col justify-between gap-3 rounded-2xl border p-4 text-left transition focus:outline-none focus:ring-2 focus:ring-[#527D98] focus:ring-offset-1 ${
-                                                        isSelected
-                                                            ? 'border-[#527D98] bg-[#F0F7FA] ring-2 ring-[#527D98]/30 shadow-xs'
-                                                            : canAdd
-                                                              ? 'border-emerald-300 bg-emerald-50/40 hover:border-emerald-500 hover:bg-emerald-50/70'
-                                                              : isDisabled
+                                                    className={`flex min-h-[96px] flex-col justify-between gap-3 rounded-2xl border p-4 text-left transition focus:outline-none focus:ring-2 focus:ring-[#527D98] focus:ring-offset-1 ${isSelected
+                                                        ? 'border-[#527D98] bg-[#F0F7FA] ring-2 ring-[#527D98]/30 shadow-xs'
+                                                        : canAdd
+                                                            ? 'border-emerald-300 bg-emerald-50/40 hover:border-emerald-500 hover:bg-emerald-50/70'
+                                                            : isDisabled
                                                                 ? 'cursor-not-allowed border-slate-100 bg-slate-50/60 text-slate-400'
                                                                 : 'border-slate-200 bg-white hover:border-[#527D98] hover:bg-slate-50 shadow-xs'
-                                                    }`}
+                                                        }`}
                                                 >
                                                     <span className="flex w-full items-center justify-between gap-2">
                                                         <span
-                                                            className={`text-sm font-bold sm:text-base ${
-                                                                isDisabled
-                                                                    ? 'text-slate-400 line-through'
-                                                                    : 'text-slate-900'
-                                                            }`}
+                                                            className={`text-sm font-bold sm:text-base ${isDisabled
+                                                                ? 'text-slate-400 line-through'
+                                                                : 'text-slate-900'
+                                                                }`}
                                                         >
                                                             {segment.start} –{' '}
                                                             {segment.end} WIB
@@ -1096,13 +1092,12 @@ export default function BookingSchedule({
 
                                                     <span className="flex w-full items-center justify-between gap-2 pt-1">
                                                         <span
-                                                            className={`text-xs font-semibold ${
-                                                                segment.type === 'berbayar'
-                                                                    ? isDisabled
-                                                                        ? 'text-slate-400 line-through'
-                                                                        : 'text-slate-700'
-                                                                    : 'rounded-full bg-emerald-50 px-2.5 py-0.5 font-bold text-emerald-700'
-                                                            }`}
+                                                            className={`text-xs font-semibold ${segment.type === 'berbayar'
+                                                                ? isDisabled
+                                                                    ? 'text-slate-400 line-through'
+                                                                    : 'text-slate-700'
+                                                                : 'rounded-full bg-emerald-50 px-2.5 py-0.5 font-bold text-emerald-700'
+                                                                }`}
                                                         >
                                                             {segment.type === 'berbayar'
                                                                 ? `${formatRupiah(segment.price)} / jam`
@@ -1113,8 +1108,8 @@ export default function BookingSchedule({
                                                             {isSelected
                                                                 ? 'Tersedia'
                                                                 : isDisabled
-                                                                  ? 'Tidak tersedia'
-                                                                  : 'Pilih slot'}
+                                                                    ? 'Tidak tersedia'
+                                                                    : 'Pilih slot'}
                                                         </span>
                                                     </span>
                                                 </button>
@@ -1222,10 +1217,10 @@ export default function BookingSchedule({
                                                 {durationHours === 0
                                                     ? '—'
                                                     : isFreeSession
-                                                      ? 'Gratis'
-                                                      : pricePerHour === null
-                                                        ? formatRupiah(totalPrice)
-                                                        : `${formatRupiah(pricePerHour)} x ${durationHours} jam`}
+                                                        ? 'Gratis'
+                                                        : pricePerHour === null
+                                                            ? formatRupiah(totalPrice)
+                                                            : `${formatRupiah(pricePerHour)} x ${durationHours} jam`}
                                             </dd>
                                         </div>
                                     </div>
@@ -1238,8 +1233,8 @@ export default function BookingSchedule({
                                             {durationHours === 0
                                                 ? '—'
                                                 : isFreeSession
-                                                  ? 'Gratis'
-                                                  : formatRupiah(totalPrice)}
+                                                    ? 'Gratis'
+                                                    : formatRupiah(totalPrice)}
                                         </dd>
                                     </div>
 
@@ -1304,6 +1299,18 @@ export default function BookingSchedule({
                                         <span>Konfirmasi instan otomatis terhubung ke kalender.</span>
                                     </div>
                                 </div>
+
+                                {isPaidBooking && isBankEmpty && (
+                                    <div className="mt-5 p-3.5 rounded-xl border border-rose-200 bg-rose-50 flex items-start gap-2">
+                                        <svg className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                        <div className="text-xs text-rose-800 leading-relaxed">
+                                            <span className="font-bold block mb-1">Rekening Bank Kosong!</span>
+                                            Anda wajib melengkapi data rekening di <Link href={route('profile.edit')} className="underline font-bold text-rose-900 hover:text-rose-700">Profil</Link> sebelum dapat mengajukan booking berbayar.
+                                        </div>
+                                    </div>
+                                )}
 
                                 <Button
                                     type="button"
