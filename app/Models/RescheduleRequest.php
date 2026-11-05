@@ -19,6 +19,7 @@ class RescheduleRequest extends Model
         'new_schedule_time',
         'new_end_time',
         'status',
+        'reason',
         'respond_deadline',
         'responded_at',
         'rejection_reason',

@@ -1302,23 +1302,31 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                                 "dikonfirmasi" &&
                                                 isScheduleUpcoming(booking) && (
                                                     <>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() =>
-                                                                openRescheduleModal(
-                                                                    booking,
-                                                                )
-                                                            }
-                                                            disabled={
-                                                                isReschedulePending
-                                                            }
-                                                            className="inline-flex min-h-8 items-center justify-center rounded-xl border border-sky-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-sky-600 transition-colors hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
-                                                        >
-                                                            {isReschedulePending
-                                                                ? "Menunggu Respons Mentor"
-                                                                : "Reschedule"}
-                                                        </button>
+                                                        {/* Tombol Ubah Jadwal */}
+                                                        {!booking.reschedule_requests?.some(
+                                                            (request) =>
+                                                                request.status ===
+                                                                    "diterima" ||
+                                                                request.status ===
+                                                                    "menunggu_respons",
+                                                        ) && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    router.get(
+                                                                        route(
+                                                                            "student.bookings.reschedule",
+                                                                            booking.id,
+                                                                        ),
+                                                                    )
+                                                                }
+                                                                className="inline-flex min-h-8 items-center justify-center rounded-xl border border-sky-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-sky-600 transition-colors hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                                                            >
+                                                                Ubah Jadwal
+                                                            </button>
+                                                        )}
 
+                                                        {/* Tombol Batalkan */}
                                                         <button
                                                             type="button"
                                                             onClick={() =>
@@ -1326,7 +1334,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                                                     booking,
                                                                 )
                                                             }
-                                                            className="inline-flex min-h-8 items-center justify-center rounded-xl border border-rose-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-400"
+                                                            className="inline-flex min-h-8 items-center justify-center rounded-xl bg-sky-600 px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
                                                         >
                                                             Batalkan
                                                         </button>

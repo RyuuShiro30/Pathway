@@ -94,36 +94,36 @@ export default function BookingRequestDetail({ session }) {
         form.patch(route("mentor.booking.respond", session.id), {
             preserveScroll: true,
         });
+    }
 
-        function respondToReschedule(requestId, action) {
-            if (
-                action === "tolak" &&
-                !window.confirm(
-                    "Apakah Anda yakin ingin menolak pengajuan reschedule ini?",
-                )
-            ) {
-                return;
-            }
-
-            let rejectionReason = "";
-
-            if (action === "tolak") {
-                rejectionReason =
-                    window.prompt("Alasan penolakan (opsional):") ?? "";
-            }
-
-            rescheduleForm.transform(() => ({
-                action,
-                rejection_reason: rejectionReason,
-            }));
-
-            rescheduleForm.patch(
-                route("mentor.booking.reschedule.respond", requestId),
-                {
-                    preserveScroll: true,
-                },
-            );
+    function respondToReschedule(requestId, action) {
+        if (
+            action === "tolak" &&
+            !window.confirm(
+                "Apakah Anda yakin ingin menolak pengajuan reschedule ini?",
+            )
+        ) {
+            return;
         }
+
+        let rejectionReason = "";
+
+        if (action === "tolak") {
+            rejectionReason =
+                window.prompt("Alasan penolakan (opsional):") ?? "";
+        }
+
+        rescheduleForm.transform(() => ({
+            action,
+            rejection_reason: rejectionReason,
+        }));
+
+        rescheduleForm.patch(
+            route("mentor.booking.reschedule.respond", requestId),
+            {
+                preserveScroll: true,
+            },
+        );
     }
 
     return (

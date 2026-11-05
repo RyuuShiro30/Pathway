@@ -119,6 +119,7 @@ class MentoringSessionController extends Controller
                                     ->setTimezone('UTC')
                                     ->toISOString(),
                                 'status' => $request->status,
+                                'reason' => $request->reason,
                                 'respond_deadline' => $request->respond_deadline
                                     ->copy()
                                     ->setTimezone('UTC')
@@ -153,6 +154,102 @@ class MentoringSessionController extends Controller
                 'menunggu_konfirmasi' => (int) $stats->menunggu_konfirmasi,
                 'siap_datang' => (int) $stats->siap_datang,
                 'jam_mentoring' => (int) $stats->jam_mentoring,
+            ],
+        ]);
+    }
+
+    public function rescheduleForm(int $id): InertiaResponse
+    {
+        $session = MentoringSession::query()
+            ->where('student_id', Auth::id())
+            ->whereKey($id)
+            ->with([
+                'mentor:id,name,photo_path',
+                'mentor.mentorProfile',
+                'rescheduleRequests',
+            ])
+            ->firstOrFail();
+
+        // Hanya sesi yang sudah dikonfirmasi yang dapat diubah.
+        abort_if($session->status !== 'dikonfirmasi', 403);
+
+        // Batas pengajuan lebih dari 6 jam sebelum sesi.
+        abort_if(now()->addHours(6)->gte($session->schedule_time), 403);
+
+        // Tidak boleh ada pengajuan yang masih menunggu respons.
+        abort_if(
+            $session->rescheduleRequests()
+                ->where('status', 'menunggu_respons')
+                ->exists(),
+            403
+        );
+
+        // Tidak boleh melakukan reschedule lebih dari satu kali.
+        abort_if(
+            $session->rescheduleRequests()
+                ->where('status', 'diterima')
+                ->exists(),
+            403
+        );
+
+        $mentor = $session->mentor;
+        $mentorProfile = $mentor->mentorProfile;
+
+        abort_if($mentorProfile === null, 404);
+
+        $from = Carbon::now('Asia/Jakarta')->startOfDay();
+        $until = $from->copy()->addDays(10);
+        $bookingWindowEnd = $until->copy()->addDay();
+
+        $busySessions = MentoringSession::query()
+            ->where('mentor_id', $mentor->id)
+            ->whereIn('status', ['diajukan', 'dikonfirmasi', 'berlangsung'])
+            ->where('schedule_time', '<', $bookingWindowEnd->copy()->setTimezone('UTC'))
+            ->where('end_time', '>', $from->copy()->setTimezone('UTC'))
+            ->where('id', '!=', $session->id)
+            ->orderBy('schedule_time')
+            ->get(['schedule_time', 'end_time'])
+            ->map(static fn (MentoringSession $busySession): array => [
+                'schedule_time' => $busySession->schedule_time
+                    ->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'end_time' => $busySession->end_time
+                    ->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+            ])
+            ->all();
+
+        return Inertia::render('Student/RescheduleBooking', [
+            'session' => [
+                'id' => $session->id,
+                'status' => $session->status,
+                'schedule_time' => $session->schedule_time
+                    ->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'end_time' => $session->end_time?->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'duration_hours' => $session->duration_hours,
+                'is_free_session' => $session->is_free_session,
+                'price_snapshot' => $session->price_snapshot,
+                'mentor' => [
+                    'id' => $mentor->id,
+                    'name' => $mentor->name,
+                    'photo_path' => $mentor->photo_path,
+                    'expertise' => $mentorProfile->expertise,
+                    'verification_status' => $mentorProfile->verification_status,
+                    'availability_schedule' => $this->normalizeAvailabilitySchedule(
+                        $mentorProfile->availability_schedule
+                    ),
+                ],
+            ],
+            'busy_sessions' => $busySessions,
+            'booking_window' => [
+                'from' => $from->toDateString(),
+                'until' => $until->toDateString(),
             ],
         ]);
     }
@@ -198,12 +295,32 @@ class MentoringSessionController extends Controller
         $validated = $request->validate([
             'schedule_time' => ['required', 'date'],
             'duration_hours' => ['required', 'integer', 'min:1', 'max:2'],
+            'reason' => ['nullable', 'string', 'max:300'],
         ]);
 
         $newScheduleTime = Carbon::parse(
             $validated['schedule_time'],
             'Asia/Jakarta'
         );
+
+        // Jadwal baru harus berbeda dari jadwal lama
+        if ($newScheduleTime->equalTo($session->schedule_time)) {
+            throw ValidationException::withMessages([
+                'schedule_time' => 'Pilih jadwal yang berbeda dari jadwal mentoring saat ini.',
+            ]);
+        }
+
+        // Durasi sesi harus tetap sama dengan sesi awal
+        if (
+            (int) $validated['duration_hours'] !==
+            (int) $session->duration_hours
+        ) {
+            throw ValidationException::withMessages([
+                'duration_hours' => 'Durasi sesi pengganti harus sama dengan sesi awal.',
+            ]);
+        }
+
+
         $newEndTime = $newScheduleTime->copy()->addHours(
             (int) $validated['duration_hours']
         );
@@ -273,7 +390,7 @@ class MentoringSessionController extends Controller
         }
 
         // Simpan request reschedule
-        $session->rescheduleRequests()->create([
+        $reschedule = $session->rescheduleRequests()->create([
             'requested_by' => 'student',
             'request_type' => 'student_reschedule',
             'old_schedule_time' => $session->schedule_time,
@@ -281,8 +398,17 @@ class MentoringSessionController extends Controller
             'new_schedule_time' => $newScheduleTime,
             'new_end_time' => $newEndTime,
             'status' => 'menunggu_respons',
+            'reason' => $validated['reason'] ?? null,
             'respond_deadline' => now()->addHours(24),
         ]);
+
+        // Kirim notifikasi kepada mentor.
+        $session->mentor?->notify(
+            new SessionEvent(
+                'Mahasiswa mengajukan perubahan jadwal mentoring. Silakan periksa pengajuan reschedule.',
+                '/mentor/session/' . $session->id
+            )
+        );
 
         return redirect()
             ->route('student.bookings.index')
@@ -973,6 +1099,7 @@ class MentoringSessionController extends Controller
     }
 
     //Mentor menerima atau menolak pengajuan reschedule student.
+   
     public function respondReschedule(Request $request, int $id): RedirectResponse
     {
         $validated = $request->validate([
@@ -1036,7 +1163,6 @@ class MentoringSessionController extends Controller
             }
 
             // Terima: hanya jadwal yang berubah.
-            // Discord link tetap menggunakan link sesi sebelumnya.
             $session->update([
                 'schedule_time' => $reschedule->new_schedule_time,
                 'end_time' => $reschedule->new_end_time,
@@ -1048,10 +1174,12 @@ class MentoringSessionController extends Controller
             ]);
         });
 
+        // Ambil kembali data pengajuan beserta sesi dan mahasiswa.
         $reschedule = RescheduleRequest::with('session.student')
-            ->find($id);
+            ->findOrFail($id);
 
-        if ($reschedule?->status === 'diterima') {
+        // Jika diterima, kirim notifikasi kepada mahasiswa.
+        if ($reschedule->status === 'diterima') {
             $reschedule->session->student?->notify(
                 new SessionEvent(
                     'Pengajuan reschedule mentoring Anda diterima oleh mentor.',
@@ -1060,11 +1188,14 @@ class MentoringSessionController extends Controller
             );
 
             return redirect()
-                ->route('mentor.requests')
+                ->route('mentor.session.tracking', [
+                    'id' => $reschedule->session_id,
+                ])
                 ->with('success', 'Pengajuan reschedule berhasil diterima.');
         }
 
-        if ($reschedule?->status === 'ditolak') {
+        // Jika ditolak, kirim notifikasi kepada mahasiswa.
+        if ($reschedule->status === 'ditolak') {
             $reschedule->session->student?->notify(
                 new SessionEvent(
                     'Pengajuan reschedule mentoring Anda ditolak oleh mentor.',
@@ -1073,19 +1204,29 @@ class MentoringSessionController extends Controller
             );
 
             return redirect()
-                ->route('mentor.requests')
+                ->route('mentor.session.tracking', [
+                    'id' => $reschedule->session_id,
+                ])
                 ->with('success', 'Pengajuan reschedule ditolak. Jadwal lama tetap berlaku.');
         }
 
         return redirect()
-            ->route('mentor.requests')
+            ->route('mentor.session.tracking', [
+                'id' => $reschedule->session_id,
+            ])
             ->with('error', 'Pengajuan reschedule sudah tidak dapat diproses.');
     }
 
-    // GET - halaman session tracking untuk 1 sesi yang sudah dikonfirmasi
+
+   // GET - halaman session tracking untuk 1 sesi yang sudah dikonfirmasi
     public function tracking($id)
     {
-        $session = MentoringSession::with('student')
+        $session = MentoringSession::with([
+            'student',
+            'rescheduleRequests' => function ($query) {
+                $query->latest();
+            },
+        ])
             ->where('mentor_id', Auth::id())
             ->whereIn('status', ['dikonfirmasi', 'berlangsung', 'selesai'])
             ->findOrFail($id);

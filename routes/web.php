@@ -185,6 +185,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/bookings', [MentoringSessionController::class, 'studentIndex'])
         ->name('student.bookings.index');
 
+    Route::get('/bookings/{id}/reschedule', [MentoringSessionController::class, 'rescheduleForm'])
+        ->name('student.bookings.reschedule');
+
     Route::post('/bookings/{id}/reschedule', [MentoringSessionController::class, 'requestReschedule'])
     ->name('student.bookings.reschedule.store');
 
