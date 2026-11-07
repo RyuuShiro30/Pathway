@@ -253,7 +253,7 @@ class MentoringSessionStoreTest extends TestCase
             'price_snapshot' => 0,
         ]);
 
-        $this->actingAs(User::factory()->create())
+        $this->actingAs($student)
             ->get(route('student.booking.schedule', ['mentor' => $mentor->id]))
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Student/BookingSchedule', false)
@@ -389,7 +389,13 @@ class MentoringSessionStoreTest extends TestCase
         ]);
         $this->travelTo('2026-10-11 00:00:00');
 
-        $this->actingAs(User::factory()->create())
+        $student = User::factory()->create([
+            'bank_name' => 'Bank Contoh',
+            'bank_account_number' => '0987654321',
+            'bank_account_holder' => 'Nama Student',
+        ]);
+
+        $this->actingAs($student)
             ->get(route('student.booking.confirm', [
                 'mentor' => $mentor->id,
                 'date' => '2026-10-12',
@@ -422,7 +428,13 @@ class MentoringSessionStoreTest extends TestCase
         ]);
         $this->travelTo('2026-10-11 00:00:00');
 
-        $this->actingAs(User::factory()->create())
+        $student = User::factory()->create([
+            'bank_name' => 'Bank Contoh',
+            'bank_account_number' => '0987654321',
+            'bank_account_holder' => 'Nama Student',
+        ]);
+
+        $this->actingAs($student)
             ->get(route('student.booking.confirm', [
                 'mentor' => $mentor->id,
                 'date' => '2026-10-12',
@@ -446,7 +458,13 @@ class MentoringSessionStoreTest extends TestCase
         ]);
         $this->travelTo('2026-10-11 00:00:00');
 
-        $this->actingAs(User::factory()->create())
+        $student = User::factory()->create([
+            'bank_name' => 'Bank Contoh',
+            'bank_account_number' => '0987654321',
+            'bank_account_holder' => 'Nama Student',
+        ]);
+
+        $this->actingAs($student)
             ->get(route('student.booking.confirm', [
                 'mentor' => $mentor->id,
                 'date' => '2026-10-12',
@@ -470,7 +488,13 @@ class MentoringSessionStoreTest extends TestCase
         ]);
         $this->travelTo('2026-10-11 00:00:00');
 
-        $this->actingAs(User::factory()->create())
+        $student = User::factory()->create([
+            'bank_name' => 'Bank Contoh',
+            'bank_account_number' => '0987654321',
+            'bank_account_holder' => 'Nama Student',
+        ]);
+
+        $this->actingAs($student)
             ->get(route('student.booking.confirm', [
                 'mentor' => $mentor->id,
                 'date' => '2026-10-12',
@@ -558,7 +582,13 @@ class MentoringSessionStoreTest extends TestCase
         ])->save();
         $this->travelTo('2026-10-11 00:00:00');
 
-        $this->actingAs(User::factory()->create())
+        $student = User::factory()->create([
+            'bank_name' => 'Bank Contoh',
+            'bank_account_number' => '0987654321',
+            'bank_account_holder' => 'Nama Student',
+        ]);
+
+        $this->actingAs($student)
             ->get(route('student.booking.confirm', [
                 'mentor' => $mentor->id,
                 'date' => '2026-10-12',
@@ -583,7 +613,13 @@ class MentoringSessionStoreTest extends TestCase
         ])->save();
         $this->travelTo('2026-10-11 00:00:00');
 
-        $this->actingAs(User::factory()->create())
+        $student = User::factory()->create([
+            'bank_name' => 'Bank Contoh',
+            'bank_account_number' => '0987654321',
+            'bank_account_holder' => 'Nama Student',
+        ]);
+
+        $this->actingAs($student)
             ->get(route('student.booking.confirm', [
                 'mentor' => $mentor->id,
                 'date' => '2026-10-12',
@@ -603,7 +639,13 @@ class MentoringSessionStoreTest extends TestCase
         ]);
         $this->travelTo('2026-10-11 00:00:00');
 
-        $this->actingAs(User::factory()->create())
+        $student = User::factory()->create([
+            'bank_name' => 'Bank Contoh',
+            'bank_account_number' => '0987654321',
+            'bank_account_holder' => 'Nama Student',
+        ]);
+
+        $this->actingAs($student)
             ->get(route('student.booking.confirm', [
                 'mentor' => $mentor->id,
                 'date' => '2026-10-12',
@@ -942,7 +984,11 @@ class MentoringSessionStoreTest extends TestCase
      */
     private function submitBooking(User $mentor, array $overrides = []): TestResponse
     {
-        $student = User::factory()->create();
+        $student = User::factory()->create([
+            'bank_name' => 'Bank Contoh',
+            'bank_account_number' => '0987654321',
+            'bank_account_holder' => 'Nama Student',
+        ]);
         $payload = array_merge([
             'mentor_id' => $mentor->id,
             'schedule_time' => '2026-10-12T02:00:00+00:00',

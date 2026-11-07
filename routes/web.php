@@ -220,6 +220,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/bookings/{id}/refund-confirmation', [MentoringSessionController::class, 'confirmRefund'])
         ->name('student.bookings.refund.confirm');
 
+    Route::patch('/bookings/{id}/refund-reschedule/respond', [MentoringSessionController::class, 'respondRefundRescheduleOffer'])
+    ->name('student.bookings.refund-reschedule.respond');
+
     // Mentor Booking Requests
     Route::get('/mentor/requests', [MentoringSessionController::class, 'requests'])
         ->name('mentor.requests');
@@ -252,6 +255,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/mentor/session/{id}/refund', [MentoringSessionController::class, 'refundForm'])
         ->name('mentor.refund.form');
+
+    Route::post('/mentor/session/{id}/refund/reschedule-offer', [MentoringSessionController::class, 'offerRefundReschedule'])
+        ->name('mentor.refund.reschedule-offer');
 
     Route::post('/sessions/{id}/no-show', [NoShowReportController::class, 'store'])
         ->name('no-show.store');

@@ -39,6 +39,17 @@ class CheckMentorSuspensions extends Command
             ->where('refund_deadline', '<', Carbon::now())
             ->whereNotExists(function ($query): void {
                 $query->select(DB::raw(1))
+                    ->from('mentoring_reschedule_requests')
+                    ->whereColumn(
+                        'mentoring_reschedule_requests.session_id',
+                        'mentoring_sessions.id'
+                    )
+                    ->where('mentoring_reschedule_requests.request_type', 'refund_reschedule_offer')
+                    ->where('mentoring_reschedule_requests.status', 'menunggu_respons')
+                    ->where('mentoring_reschedule_requests.respond_deadline', '>', Carbon::now());
+            })
+            ->whereNotExists(function ($query): void {
+                $query->select(DB::raw(1))
                     ->from('mentor_suspensions')
                     ->whereColumn('mentor_suspensions.session_id', 'mentoring_sessions.id')
                     ->where('mentor_suspensions.reason', MentorSuspension::REASON_LATE_REFUND);
