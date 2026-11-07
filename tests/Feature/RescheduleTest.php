@@ -562,7 +562,7 @@ class RescheduleTest extends TestCase
                 'action' => 'terima',
             ]);
 
-        $response->assertRedirect(route('mentor.requests'));
+        $response->assertRedirect(route('mentor.session.tracking', $session->id));
 
         $session->refresh();
         $reschedule->refresh();
@@ -631,8 +631,7 @@ class RescheduleTest extends TestCase
                 'rejection_reason' => 'Jadwal baru tidak sesuai dengan ketersediaan mentor.',
             ]);
 
-        $response->assertRedirect(route('mentor.requests'));
-
+        $response->assertRedirect(route('mentor.session.tracking', $session->id));
         $session->refresh();
         $reschedule->refresh();
 
