@@ -5,6 +5,8 @@ use App\Http\Controllers\Admin\AdminCourseController;
 use App\Http\Controllers\Admin\AdminMaterialController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\BadgeController;
+use App\Http\Controllers\MerchandiseController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ForumController;
@@ -69,22 +71,26 @@ Route::get('/journeys/{journey:slug}', [JourneyController::class, 'show'])
 | Admin Guest Routes (Hanya bisa diakses jika BELUM login)
 |--------------------------------------------------------------------------
 */
+
 Route::middleware('guest')->prefix('admin')->name('admin.')->group(function () {
     Route::get('/login', [AdminAuthController::class, 'create'])
         ->name('login');
-        
+
     Route::post('/login', [AdminAuthController::class, 'store'])
         ->name('login.store');
 });
+
 
 /*
 |--------------------------------------------------------------------------
 | Admin Protected Routes (Hanya bisa diakses oleh Admin)
 |--------------------------------------------------------------------------
 */
+
 Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('courses', AdminCourseController::class);
     Route::resource('courses.materials', AdminMaterialController::class)->shallow();
+
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])
         ->name('dashboard');
 });
@@ -114,11 +120,11 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/courses/{course:slug}/forums', [ForumController::class, 'store'])
         ->name('forums.store');
-    
-        Route::get('/courses/{course:slug}/forums/{forum}', [ForumController::class, 'show'])
+
+    Route::get('/courses/{course:slug}/forums/{forum}', [ForumController::class, 'show'])
         ->name('forums.show');
-        
-        Route::post('/courses/{course:slug}/forums/{forum}/replies', [ForumController::class, 'storeReply'])
+
+    Route::post('/courses/{course:slug}/forums/{forum}/replies', [ForumController::class, 'storeReply'])
         ->name('forums.replies.store');
 
     // Profile
@@ -182,6 +188,27 @@ Route::middleware('auth')->group(function () {
 
     Route::patch('/mentor/availability', [MentorProfileController::class, 'updateAvailability'])
         ->name('mentor.availability.update');
+
+    // Mentor Badge, Merchandise & Redeem Point
+    Route::middleware('mentor')->group(function () {
+
+        // Badge
+        Route::get('/mentor/badges', [BadgeController::class, 'index'])
+            ->name('mentor.badges.index');
+
+        Route::post('/mentor/badges/{id}/redeem', [BadgeController::class, 'redeem'])
+            ->name('mentor.badges.redeem');
+
+        // Merchandise
+        Route::get('/mentor/merchandise', [MerchandiseController::class, 'index'])
+            ->name('mentor.merchandise.index');
+
+        Route::post('/mentor/merchandise/{id}/redeem', [MerchandiseController::class, 'redeem'])
+            ->name('mentor.merchandise.redeem');
+
+        Route::get('/mentor/merchandise/history', [MerchandiseController::class, 'history'])
+            ->name('mentor.merchandise.history');
+    });
 
     // Booking Mentoring
     Route::get('/mentors/{mentor}/booking', [MentoringSessionController::class, 'schedule'])

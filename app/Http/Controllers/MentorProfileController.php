@@ -6,6 +6,7 @@ use App\Models\MentoringSession;
 use App\Models\MentorProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class MentorProfileController extends Controller
@@ -103,6 +104,7 @@ class MentorProfileController extends Controller
                 ] : null,
             ])
             ->values();
+
         $confirmedSessions = MentoringSession::query()
             ->where('mentor_id', Auth::id())
             ->whereIn('status', ['dikonfirmasi', 'berlangsung'])
@@ -130,6 +132,22 @@ class MentorProfileController extends Controller
             ])
             ->values();
 
+        // Hitung saldo poin mentor.
+        $pointsBalance = (int) DB::table('point_transactions')
+            ->where('user_id', Auth::id())
+            ->selectRaw("
+                COALESCE(SUM(
+                    CASE
+                        WHEN transaction_type IN ('earned_mentoring', 'admin_bonus')
+                            THEN amount
+                        WHEN transaction_type IN ('redeemed_badge', 'redeemed_merchandise')
+                            THEN -amount
+                        ELSE 0
+                    END
+                ), 0) AS balance
+            ")
+            ->value('balance');
+
         return Inertia::render('Mentor/Dashboard', [
             'mentorProfile' => $mentorProfile,
             'bookingRequests' => $requests,
@@ -137,10 +155,11 @@ class MentorProfileController extends Controller
             'reportedRefundRequests' => $reportedRefundRequests,
             'studentCancelledSessions' => $studentCancelledSessions,
             'confirmedSessions' => $confirmedSessions,
+            'pointsBalance' => $pointsBalance,
         ]);
     }
 
-    // Aksi: update jadwal ketersediaan (dipanggil saat mentor klik "Simpan")
+    // Aksi: update jadwal ketersediaan
     public function updateAvailability(Request $request)
     {
         $validated = $request->validate([
@@ -173,6 +192,7 @@ class MentorProfileController extends Controller
 
             return ($hours * 60) + $minutes;
         };
+
         $dayLabels = [
             'senin' => 'Senin',
             'selasa' => 'Selasa',
@@ -211,7 +231,9 @@ class MentorProfileController extends Controller
         $mentorProfile = MentorProfile::where('user_id', Auth::id())->first();
 
         if (! $mentorProfile) {
-            return redirect()->back()->withErrors(['message' => 'Profil mentor belum ditemukan']);
+            return redirect()->back()->withErrors([
+                'message' => 'Profil mentor belum ditemukan',
+            ]);
         }
 
         $mentorProfile->update([
@@ -227,6 +249,9 @@ class MentorProfileController extends Controller
             ),
         ]);
 
-        return redirect()->back()->with('success', 'Jadwal ketersediaan berhasil diperbarui');
+        return redirect()->back()->with(
+            'success',
+            'Jadwal ketersediaan berhasil diperbarui'
+        );
     }
 }
