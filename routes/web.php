@@ -4,6 +4,9 @@ use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\AdminCourseController;
 use App\Http\Controllers\Admin\AdminMaterialController;
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminBadgeController;
+use App\Http\Controllers\Admin\AdminMerchandiseController;
+use App\Http\Controllers\Admin\AdminMerchandiseOrderController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\MerchandiseController;
@@ -91,6 +94,19 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::resource('courses', AdminCourseController::class);
     Route::resource('courses.materials', AdminMaterialController::class)->shallow();
 
+    // Redeem Point - Badge
+    Route::resource('badges', AdminBadgeController::class)->except(['show']);
+
+    // Redeem Point - Merchandise
+    Route::resource('merchandises', AdminMerchandiseController::class)->except(['show']);
+
+    // Redeem Point - Pesanan Merchandise
+    Route::get('/merchandise-orders', [AdminMerchandiseOrderController::class, 'index'])
+        ->name('merchandise-orders.index');
+
+    Route::put('/merchandise-orders/{order}', [AdminMerchandiseOrderController::class, 'update'])
+        ->name('merchandise-orders.update');
+
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])
         ->name('dashboard');
 });
@@ -167,7 +183,7 @@ Route::middleware('auth')->group(function () {
     // Riwayat Transaksi Mentoring
     Route::get('/transactions', [TransactionHistoryController::class, 'index'])
         ->name('transactions.index');
-        
+
     // Mentor Registration
     Route::get('/mentor/become', function () {
         return Inertia::render('Mentor/BecomeMentor');
@@ -227,7 +243,7 @@ Route::middleware('auth')->group(function () {
         ->name('student.bookings.reschedule');
 
     Route::post('/bookings/{id}/reschedule', [MentoringSessionController::class, 'requestReschedule'])
-    ->name('student.bookings.reschedule.store');
+        ->name('student.bookings.reschedule.store');
 
     Route::get('/notifications', [NotificationController::class, 'index'])
         ->name('notifications.index');
@@ -258,8 +274,8 @@ Route::middleware('auth')->group(function () {
         ->name('mentor.booking.respond');
 
     Route::patch('/mentor/booking/{id}/reschedule/respond', [MentoringSessionController::class, 'respondReschedule'])
-    ->name('mentor.booking.reschedule.respond');
-    
+        ->name('mentor.booking.reschedule.respond');
+
     // Mentor Session Tracking
     Route::get('/mentor/session/{id}', [MentoringSessionController::class, 'tracking'])
         ->name('mentor.session.tracking');
