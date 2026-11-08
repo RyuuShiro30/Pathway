@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\AdminMaterialController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminBadgeController;
 use App\Http\Controllers\Admin\AdminMerchandiseController;
+use App\Http\Controllers\Admin\AdminMerchandiseOrderController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\MerchandiseController;
@@ -98,6 +99,13 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
 
     // Redeem Point - Merchandise
     Route::resource('merchandises', AdminMerchandiseController::class)->except(['show']);
+
+    // Redeem Point - Pesanan Merchandise
+    Route::get('/merchandise-orders', [AdminMerchandiseOrderController::class, 'index'])
+        ->name('merchandise-orders.index');
+
+    Route::put('/merchandise-orders/{order}', [AdminMerchandiseOrderController::class, 'update'])
+        ->name('merchandise-orders.update');
 
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])
         ->name('dashboard');
