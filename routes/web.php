@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\AdminCourseController;
 use App\Http\Controllers\Admin\AdminMaterialController;
 use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminBadgeController;
+use App\Http\Controllers\Admin\AdminMerchandiseController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\MerchandiseController;
@@ -94,6 +95,9 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
 
     // Redeem Point - Badge
     Route::resource('badges', AdminBadgeController::class)->except(['show']);
+
+    // Redeem Point - Merchandise
+    Route::resource('merchandises', AdminMerchandiseController::class)->except(['show']);
 
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])
         ->name('dashboard');
