@@ -131,6 +131,7 @@ export default function Dashboard({
     reportedRefundRequests = [],
     studentCancelledSessions = [],
     confirmedSessions = [],
+    pointsBalance = 0,
 }) {
     const { auth, flash } = usePage().props;
 
@@ -673,8 +674,8 @@ export default function Dashboard({
                     />
                 )}
 
-                {/* 4 BARIS KARTU STATISTIK */}
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                               {/* 5 BARIS KARTU STATISTIK */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                     <StatCard
                         title="PERMINTAAN MENUNGGU"
                         value={safeBookingRequests.length}
@@ -717,6 +718,40 @@ export default function Dashboard({
                         badgeVariant="purple"
                         subText="06:00 - 22:00"
                     />
+
+                                        <div className="rounded-2xl border border-purple-100 bg-white p-4">
+                        <StatCard
+                            title="TOTAL POIN"
+                            value={Number(pointsBalance).toLocaleString('id-ID')}
+                            unit="poin tersedia"
+                            badgeText="Reward Mentor"
+                            badgeVariant="purple"
+                            subText="10 poin setiap sesi gratis selesai"
+                        />
+
+                        <div className="mt-3 space-y-2">
+                            <Link
+                                href={route('mentor.badges.index')}
+                                className="block rounded-lg bg-purple-50 p-2 text-center text-sm font-semibold text-purple-700 hover:bg-purple-100"
+                            >
+                                Tukar Badge
+                            </Link>
+
+                            <Link
+                                href={route('mentor.merchandise.index')}
+                                className="block rounded-lg bg-indigo-50 p-2 text-center text-sm font-semibold text-indigo-700 hover:bg-indigo-100"
+                            >
+                                Tukar Merchandise
+                            </Link>
+
+                            <Link
+                                href={route('mentor.merchandise.history')}
+                                className="block rounded-lg bg-slate-100 p-2 text-center text-sm font-semibold text-slate-700 hover:bg-slate-200"
+                            >
+                                Riwayat Penukaran
+                            </Link>
+                        </div>
+                    </div>
                 </div>
 
                 {/* GRID 2 KOLOM */}

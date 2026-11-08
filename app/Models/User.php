@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -36,6 +37,18 @@ class User extends Authenticatable
     public function enrollments()
     {
         return $this->hasMany(UserEnrollment::class);
+    }
+
+    // Relasi transaksi poin
+    public function pointTransactions(): HasMany
+    {
+        return $this->hasMany(PointTransaction::class, 'user_id');
+    }
+
+    // Relasi badge yang dimiliki user
+    public function badges(): HasMany
+    {
+        return $this->hasMany(UserBadge::class, 'user_id');
     }
 
     protected function casts(): array
