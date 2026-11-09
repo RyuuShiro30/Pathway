@@ -24,7 +24,7 @@ class MentorCompleteSessionPointsTest extends TestCase
         Notification::fake();
     }
 
-    public function test_mentor_receives_10_points_after_completing_a_free_session(): void
+    public function test_mentor_receives_100_points_after_completing_a_free_session(): void
     {
         $mentor = $this->createMentor();
         $student = User::factory()->create();
@@ -48,7 +48,7 @@ class MentorCompleteSessionPointsTest extends TestCase
 
         $this->assertDatabaseHas('point_transactions', [
             'user_id' => $mentor->id,
-            'amount' => 10,
+            'amount' => 100,
             'transaction_type' => 'earned_mentoring',
             'related_id' => $session->id,
         ]);

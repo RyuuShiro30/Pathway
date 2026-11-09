@@ -1344,7 +1344,7 @@ class MentoringSessionController extends Controller
                 if (! $alreadyAwarded) {
                     DB::table('point_transactions')->insert([
                         'user_id' => $session->mentor_id,
-                        'amount' => 10,
+                        'amount' => 100,
                         'transaction_type' => 'earned_mentoring',
                         'description' => 'Poin dari sesi mentoring gratis #' . $session->id,
                         'related_id' => $session->id,
