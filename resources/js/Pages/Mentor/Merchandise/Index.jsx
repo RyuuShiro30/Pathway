@@ -50,20 +50,20 @@ export default function Index({ merchandises = [], pointsBalance = 0 }) {
         <>
             <Head title="Katalog Merchandise" />
 
-            <div className="min-h-screen bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
+            <div className="min-h-screen bg-[#F4F7F9] px-4 py-8 font-sans text-[#172033] antialiased sm:px-6 lg:px-8">
                 <div className="mx-auto max-w-7xl">
 
                     {/* Header */}
                     <div className="mb-8">
-                        <p className="text-sm font-medium text-indigo-600">
+                        <p className="text-sm font-semibold tracking-wide text-[#6594B1]">
                             REWARD MENTOR
                         </p>
 
-                        <h1 className="mt-2 text-3xl font-bold text-gray-900">
+                        <h1 className="mt-2 text-3xl font-bold tracking-tight text-[#172033]">
                             Katalog Merchandise
                         </h1>
 
-                        <p className="mt-2 text-gray-600">
+                        <p className="mt-2 text-sm leading-6 text-[#7A8B99]">
                             Tukarkan poin yang kamu kumpulkan dengan merchandise
                             menarik dari Pathway.
                         </p>
@@ -71,57 +71,58 @@ export default function Index({ merchandises = [], pointsBalance = 0 }) {
 
                     {/* Flash Message */}
                     {flash?.success && (
-                        <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700">
+                        <div className="mb-6 rounded-xl border border-green-200 bg-green-50 p-4 text-sm font-medium text-green-700">
                             {flash.success}
                         </div>
                     )}
 
                     {flash?.error && (
-                        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">
                             {flash.error}
                         </div>
                     )}
 
                     {/* Point Balance */}
-                    <div className="mb-8 rounded-2xl bg-indigo-600 p-6 text-white shadow-sm">
-                        <p className="text-sm text-indigo-100">
+                    <div className="mb-8 rounded-2xl border border-[#D8E3E9] bg-[#6594B1] p-6 text-white shadow-sm">
+                        <p className="text-sm font-medium text-blue-50">
                             Saldo Poin Kamu
                         </p>
 
                         <div className="mt-2 flex items-center gap-3">
-                            <span className="text-4xl font-bold">
+                            <span className="text-4xl font-bold tracking-tight">
                                 {Number(pointsBalance).toLocaleString('id-ID')}
                             </span>
-                            <span className="text-lg font-medium text-indigo-100">
+
+                            <span className="text-lg font-semibold text-blue-50">
                                 Poin
                             </span>
                         </div>
 
-                        <p className="mt-3 text-sm text-indigo-100">
+                        <p className="mt-3 text-sm leading-6 text-blue-50">
                             Kumpulkan poin dari sesi mentoring gratis yang telah selesai.
                         </p>
                     </div>
 
                     {/* Merchandise Catalog */}
                     <div className="mb-5 flex items-center justify-between">
-                        <h2 className="text-xl font-bold text-gray-900">
+                        <h2 className="text-xl font-bold text-[#172033]">
                             Pilihan Merchandise
                         </h2>
 
-                        <span className="text-sm text-gray-500">
+                        <span className="text-sm text-[#7A8B99]">
                             {merchandises.length} produk
                         </span>
                     </div>
 
                     {merchandises.length === 0 ? (
-                        <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
+                        <div className="rounded-2xl border border-dashed border-[#D8E3E9] bg-white px-6 py-16 text-center shadow-sm">
                             <div className="text-5xl">🎁</div>
 
-                            <h3 className="mt-4 text-lg font-semibold text-gray-800">
+                            <h3 className="mt-4 text-base font-bold text-[#172033]">
                                 Belum Ada Merchandise
                             </h3>
 
-                            <p className="mt-2 text-sm text-gray-500">
+                            <p className="mt-2 text-sm leading-6 text-[#7A8B99]">
                                 Merchandise akan ditampilkan di sini setelah
                                 tersedia di katalog.
                             </p>
@@ -131,9 +132,9 @@ export default function Index({ merchandises = [], pointsBalance = 0 }) {
                             {merchandises.map((item) => (
                                 <div
                                     key={item.id}
-                                    className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-md"
+                                    className="overflow-hidden rounded-2xl border border-[#D8E3E9] bg-white shadow-sm transition duration-200 hover:-translate-y-1 hover:shadow-md"
                                 >
-                                    <div className="flex h-52 items-center justify-center bg-gray-100">
+                                    <div className="flex h-52 items-center justify-center bg-[#E6EFF4]">
                                         {item.image_url ? (
                                             <img
                                                 src={item.image_url}
@@ -146,31 +147,31 @@ export default function Index({ merchandises = [], pointsBalance = 0 }) {
                                     </div>
 
                                     <div className="p-5">
-                                        <h3 className="text-lg font-bold text-gray-900">
+                                        <h3 className="text-base font-bold text-[#172033]">
                                             {item.name}
                                         </h3>
 
-                                        <p className="mt-2 min-h-10 text-sm text-gray-500">
+                                        <p className="mt-2 min-h-10 text-sm leading-6 text-[#7A8B99]">
                                             {item.description || 'Merchandise eksklusif Pathway.'}
                                         </p>
 
                                         <div className="mt-4 flex items-center justify-between">
                                             <div>
-                                                <p className="text-xs text-gray-500">
+                                                <p className="text-xs font-medium text-[#7A8B99]">
                                                     Harga
                                                 </p>
 
-                                                <p className="font-bold text-indigo-600">
+                                                <p className="mt-1 font-bold text-[#6594B1]">
                                                     {Number(item.point_cost).toLocaleString('id-ID')} Poin
                                                 </p>
                                             </div>
 
                                             <div className="text-right">
-                                                <p className="text-xs text-gray-500">
+                                                <p className="text-xs font-medium text-[#7A8B99]">
                                                     Stok
                                                 </p>
 
-                                                <p className="font-semibold text-gray-800">
+                                                <p className="mt-1 font-semibold text-[#172033]">
                                                     {item.stock}
                                                 </p>
                                             </div>
@@ -183,7 +184,7 @@ export default function Index({ merchandises = [], pointsBalance = 0 }) {
                                                 item.stock < 1 ||
                                                 pointsBalance < item.point_cost
                                             }
-                                            className="mt-5 w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                                            className="mt-5 w-full rounded-xl bg-[#6594B1] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#56839F] disabled:cursor-not-allowed disabled:bg-slate-300"
                                         >
                                             {item.stock < 1
                                                 ? 'Stok Habis'
@@ -201,15 +202,15 @@ export default function Index({ merchandises = [], pointsBalance = 0 }) {
 
             {/* Redeem Modal */}
             {selectedMerchandise && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-black/50 p-4">
-                    <div className="my-8 w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+                <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/50 p-4">
+                    <div className="my-8 w-full max-w-lg rounded-2xl border border-[#D8E3E9] bg-white p-6 shadow-xl">
                         <div className="mb-6 flex items-start justify-between">
                             <div>
-                                <h2 className="text-xl font-bold text-gray-900">
+                                <h2 className="text-xl font-bold text-[#172033]">
                                     Tukar Merchandise
                                 </h2>
 
-                                <p className="mt-1 text-sm text-gray-500">
+                                <p className="mt-1 text-sm text-[#7A8B99]">
                                     {selectedMerchandise.name}
                                 </p>
                             </div>
@@ -217,7 +218,7 @@ export default function Index({ merchandises = [], pointsBalance = 0 }) {
                             <button
                                 type="button"
                                 onClick={closeRedeemForm}
-                                className="text-2xl text-gray-400 hover:text-gray-700"
+                                className="text-2xl text-[#7A8B99] transition hover:text-[#172033]"
                             >
                                 &times;
                             </button>
@@ -227,7 +228,7 @@ export default function Index({ merchandises = [], pointsBalance = 0 }) {
 
                             {/* Quantity */}
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">
+                                <label className="mb-1 block text-sm font-semibold text-[#172033]">
                                     Jumlah
                                 </label>
 
@@ -237,7 +238,7 @@ export default function Index({ merchandises = [], pointsBalance = 0 }) {
                                     max={Math.min(10, selectedMerchandise.stock)}
                                     value={data.quantity}
                                     onChange={(e) => setData('quantity', e.target.value)}
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:outline-none"
+                                    className="w-full rounded-xl border border-[#D8E3E9] bg-white px-3 py-2.5 text-sm text-[#172033] outline-none transition focus:border-[#6594B1] focus:ring-2 focus:ring-[#6594B1]/20"
                                 />
 
                                 {errors.quantity && (
@@ -248,31 +249,33 @@ export default function Index({ merchandises = [], pointsBalance = 0 }) {
                             </div>
 
                             {/* Total Points */}
-                            <div className="rounded-lg bg-indigo-50 p-4">
+                            <div className="rounded-xl border border-[#D8E3E9] bg-[#E6EFF4] p-4">
                                 <div className="flex justify-between text-sm">
-                                    <span className="text-gray-600">
+                                    <span className="text-[#7A8B99]">
                                         Harga per barang
                                     </span>
 
-                                    <span className="font-medium">
+                                    <span className="font-semibold text-[#172033]">
                                         {Number(selectedMerchandise.point_cost).toLocaleString('id-ID')} poin
                                     </span>
                                 </div>
 
-                                <div className="mt-2 flex justify-between font-bold">
-                                    <span>Total poin</span>
+                                <div className="mt-3 flex justify-between font-bold">
+                                    <span className="text-[#172033]">
+                                        Total poin
+                                    </span>
 
-                                    <span className="text-indigo-600">
+                                    <span className="text-[#6594B1]">
                                         {totalPoints.toLocaleString('id-ID')} poin
                                     </span>
                                 </div>
 
-                                <div className="mt-2 flex justify-between text-sm">
-                                    <span className="text-gray-600">
+                                <div className="mt-3 flex justify-between text-sm">
+                                    <span className="text-[#7A8B99]">
                                         Saldo setelah penukaran
                                     </span>
 
-                                    <span className="font-medium">
+                                    <span className="font-semibold text-[#172033]">
                                         {(pointsBalance - totalPoints).toLocaleString('id-ID')} poin
                                     </span>
                                 </div>
@@ -280,7 +283,7 @@ export default function Index({ merchandises = [], pointsBalance = 0 }) {
 
                             {/* Recipient Name */}
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">
+                                <label className="mb-1 block text-sm font-semibold text-[#172033]">
                                     Nama Penerima
                                 </label>
 
@@ -289,7 +292,7 @@ export default function Index({ merchandises = [], pointsBalance = 0 }) {
                                     value={data.recipient_name}
                                     onChange={(e) => setData('recipient_name', e.target.value)}
                                     placeholder="Masukkan nama penerima"
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:outline-none"
+                                    className="w-full rounded-xl border border-[#D8E3E9] bg-white px-3 py-2.5 text-sm text-[#172033] outline-none transition placeholder:text-slate-400 focus:border-[#6594B1] focus:ring-2 focus:ring-[#6594B1]/20"
                                 />
 
                                 {errors.recipient_name && (
@@ -301,7 +304,7 @@ export default function Index({ merchandises = [], pointsBalance = 0 }) {
 
                             {/* Phone Number */}
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">
+                                <label className="mb-1 block text-sm font-semibold text-[#172033]">
                                     Nomor Telepon
                                 </label>
 
@@ -310,7 +313,7 @@ export default function Index({ merchandises = [], pointsBalance = 0 }) {
                                     value={data.phone_number}
                                     onChange={(e) => setData('phone_number', e.target.value)}
                                     placeholder="Contoh: 081234567890"
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:outline-none"
+                                    className="w-full rounded-xl border border-[#D8E3E9] bg-white px-3 py-2.5 text-sm text-[#172033] outline-none transition placeholder:text-slate-400 focus:border-[#6594B1] focus:ring-2 focus:ring-[#6594B1]/20"
                                 />
 
                                 {errors.phone_number && (
@@ -322,7 +325,7 @@ export default function Index({ merchandises = [], pointsBalance = 0 }) {
 
                             {/* Shipping Address */}
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">
+                                <label className="mb-1 block text-sm font-semibold text-[#172033]">
                                     Alamat Pengiriman
                                 </label>
 
@@ -331,7 +334,7 @@ export default function Index({ merchandises = [], pointsBalance = 0 }) {
                                     value={data.shipping_address}
                                     onChange={(e) => setData('shipping_address', e.target.value)}
                                     placeholder="Masukkan alamat lengkap pengiriman"
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-indigo-500 focus:outline-none"
+                                    className="w-full rounded-xl border border-[#D8E3E9] bg-white px-3 py-2.5 text-sm text-[#172033] outline-none transition placeholder:text-slate-400 focus:border-[#6594B1] focus:ring-2 focus:ring-[#6594B1]/20"
                                 />
 
                                 {errors.shipping_address && (
@@ -347,7 +350,7 @@ export default function Index({ merchandises = [], pointsBalance = 0 }) {
                                     type="button"
                                     onClick={closeRedeemForm}
                                     disabled={processing}
-                                    className="w-1/2 rounded-lg border border-gray-300 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                                    className="w-1/2 rounded-xl border border-[#D8E3E9] px-4 py-3 text-sm font-semibold text-[#172033] transition hover:bg-[#F4F7F9] disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     Batal
                                 </button>
@@ -355,7 +358,7 @@ export default function Index({ merchandises = [], pointsBalance = 0 }) {
                                 <button
                                     type="submit"
                                     disabled={processing || totalPoints > pointsBalance}
-                                    className="w-1/2 rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+                                    className="w-1/2 rounded-xl bg-[#6594B1] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#56839F] disabled:cursor-not-allowed disabled:bg-slate-300"
                                 >
                                     {processing ? 'Memproses...' : 'Konfirmasi Tukar'}
                                 </button>
