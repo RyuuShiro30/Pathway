@@ -36,8 +36,8 @@ export default function History({ history = [] }) {
         <>
             <Head title="Riwayat Penukaran Merchandise" />
 
-            <div className="min-h-screen bg-gray-50 px-4 py-8 sm:px-6 lg:px-8">
-                <div className="mx-auto max-w-5xl">
+            <div className="min-h-screen w-full bg-gray-50 px-5 py-8 sm:px-8 lg:px-12">
+                <div className="w-full">
 
                     {/* Header */}
                     <div className="mb-8">
@@ -60,7 +60,7 @@ export default function History({ history = [] }) {
 
                     {/* History List */}
                     {history.length === 0 ? (
-                        <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-16 text-center">
+                        <div className="w-full rounded-2xl border border-dashed border-gray-300 bg-white px-6 py-20 text-center">
                             <div className="text-5xl">📦</div>
 
                             <h2 className="mt-4 text-lg font-semibold text-gray-800">
@@ -79,7 +79,7 @@ export default function History({ history = [] }) {
                             </Link>
                         </div>
                     ) : (
-                        <div className="space-y-5">
+                        <div className="w-full space-y-5">
                             {history.map((item) => {
                                 const status =
                                     statusConfig[item.shipping_status] || {
@@ -90,7 +90,7 @@ export default function History({ history = [] }) {
                                 return (
                                     <div
                                         key={item.id}
-                                        className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+                                        className="w-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
                                     >
                                         <div className="flex flex-col gap-4 border-b border-gray-100 p-5 sm:flex-row sm:items-center sm:justify-between">
                                             <div>
