@@ -809,7 +809,7 @@ export default function Dashboard({
                             unit="poin tersedia"
                             badgeText="Reward Mentor"
                             badgeVariant="purple"
-                            subText="10 poin setiap sesi gratis selesai"
+                            subText="100 poin setiap sesi gratis selesai"
                         />
 
                         <div className="mt-3 space-y-2">
