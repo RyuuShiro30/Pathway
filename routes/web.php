@@ -66,8 +66,8 @@ Route::get('/journeys', [JourneyController::class, 'index'])
     ->name('journeys.index');
 
 Route::get('/journeys/{journey:slug}', [JourneyController::class, 'show'])
+    ->where('journey', '^(?!create$)[a-zA-Z0-9-]+$')
     ->name('journeys.show');
-
 
 /*
 |--------------------------------------------------------------------------
