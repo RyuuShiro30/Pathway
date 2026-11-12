@@ -33,10 +33,12 @@ class CheckMentorSuspensions extends Command
 
     private function suspendForLateRefunds(MentorSuspensionService $service): int
     {
-        $sessions = MentoringSession::query()
-            ->where('refund_status', 'menunggu')
+    $sessions = MentoringSession::query()
+        ->where('is_free_session', false)
+        ->where('refund_status', 'menunggu')
             ->whereNotNull('refund_deadline')
             ->where('refund_deadline', '<', Carbon::now())
+           
             ->whereNotExists(function ($query): void {
                 $query->select(DB::raw(1))
                     ->from('mentoring_reschedule_requests')
@@ -45,9 +47,9 @@ class CheckMentorSuspensions extends Command
                         'mentoring_sessions.id'
                     )
                     ->where('mentoring_reschedule_requests.request_type', 'refund_reschedule_offer')
-                    ->where('mentoring_reschedule_requests.status', 'menunggu_respons')
-                    ->where('mentoring_reschedule_requests.respond_deadline', '>', Carbon::now());
+                    ->where('mentoring_reschedule_requests.status', 'menunggu_respons');
             })
+
             ->whereNotExists(function ($query): void {
                 $query->select(DB::raw(1))
                     ->from('mentor_suspensions')
