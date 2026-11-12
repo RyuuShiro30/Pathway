@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminBadgeController;
 use App\Http\Controllers\Admin\AdminMerchandiseController;
 use App\Http\Controllers\Admin\AdminMerchandiseOrderController;
+use App\Http\Controllers\Admin\AdminRefundReportController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\MerchandiseController;
@@ -109,6 +110,12 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
 
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])
         ->name('dashboard');
+    Route::get('/refund-reports', [AdminRefundReportController::class, 'index'])
+        ->name('refund-reports.index');
+    Route::get('/refund-reports/{session}', [AdminRefundReportController::class, 'show'])
+        ->name('refund-reports.show');
+    Route::patch('/refund-reports/{session}/decide', [AdminRefundReportController::class, 'decide'])
+        ->name('refund-reports.decide');
 });
 
 

@@ -31,6 +31,8 @@ class MentoringSession extends Model
         'refund_status',
         'refund_deadline',
         'refund_proof_uploaded_at',
+        'refund_admin_note',
+        'refund_reviewed_at',
     ];
 
     protected $casts = [
