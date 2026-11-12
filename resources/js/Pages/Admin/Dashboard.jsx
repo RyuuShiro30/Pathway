@@ -82,6 +82,7 @@ export default function Dashboard({ statistics, reviewQueue, monitoring }) {
                                 description="Menunggu proses verifikasi"
                                 value={reviewQueue.pending_mentors}
                                 icon={<MentorIcon />}
+                                href="/admin/mentors?status=pending"
                             />
 
                             <ReviewCard
