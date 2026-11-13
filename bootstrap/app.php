@@ -1,10 +1,12 @@
 <?php
 
+use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\IsAdmin;
 use App\Http\Middleware\IsMentor;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -16,8 +18,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
-            \App\Http\Middleware\HandleInertiaRequests::class,
-            \Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets::class,
+            HandleInertiaRequests::class,
+            AddLinkHeadersForPreloadedAssets::class,
         ]);
 
         $middleware->alias([
@@ -27,9 +29,11 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Dipakai middleware 'guest': kalau user sudah login, dikirim ke mana
         $middleware->redirectUsersTo(function (Request $request) {
-            return $request->user()?->role === 'admin'
-                ? '/admin/courses'
-                : '/dashboard';
+            return match ($request->user()?->role) {
+                'admin' => '/admin/dashboard',
+                'mentor' => '/mentor/dashboard',
+                default => '/dashboard',
+            };
         });
 
         // Dipakai middleware 'auth': kalau belum login, dikirim ke mana

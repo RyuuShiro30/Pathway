@@ -21,8 +21,12 @@ use Inertia\Response as InertiaResponse;
 
 class MentoringSessionController extends Controller
 {
-    public function studentIndex(): InertiaResponse
+    public function studentIndex(): InertiaResponse|RedirectResponse
     {
+        if (Auth::user()?->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        }
+
         $studentId = Auth::id();
         $stats = MentoringSession::query()
             ->where('student_id', $studentId)
