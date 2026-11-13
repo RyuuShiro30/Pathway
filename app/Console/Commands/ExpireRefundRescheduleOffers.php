@@ -16,7 +16,7 @@ class ExpireRefundRescheduleOffers extends Command
 
     protected $signature = 'refund-reschedule:expire-offers';
 
-    protected $description = 'Mengakhiri tawaran reschedule refund yang tidak direspons dalam 24 jam';
+    protected $description = 'Mengakhiri tawaran reschedule yang tidak direspons dalam 24 jam';
 
     public function handle(): int
     {
@@ -34,7 +34,7 @@ class ExpireRefundRescheduleOffers extends Command
             }
         }
 
-        $this->info("Tawaran reschedule refund kedaluwarsa: {$expiredCount}.");
+        $this->info("Tawaran reschedule kedaluwarsa: {$expiredCount}.");
 
         return self::SUCCESS;
     }
@@ -42,6 +42,23 @@ class ExpireRefundRescheduleOffers extends Command
     private function expireOffer(int $offerId): bool
     {
         return DB::transaction(function () use ($offerId): bool {
+            // Ambil session_id terlebih dahulu tanpa mengunci offer.
+            $sessionId = RescheduleRequest::query()
+                ->whereKey($offerId)
+                ->where('request_type', 'refund_reschedule_offer')
+                ->value('session_id');
+
+            if (! $sessionId) {
+                return false;
+            }
+
+            // Kunci session terlebih dahulu agar urutannya konsisten
+            // dengan controller.
+            $session = MentoringSession::query()
+                ->whereKey($sessionId)
+                ->lockForUpdate()
+                ->first();
+
             $offer = RescheduleRequest::query()
                 ->whereKey($offerId)
                 ->where('request_type', 'refund_reschedule_offer')
@@ -55,37 +72,68 @@ class ExpireRefundRescheduleOffers extends Command
 
             $now = Carbon::now();
 
-            if ($offer->respond_deadline->gt($now)) {
+            if (
+                ! $offer->respond_deadline ||
+                $offer->respond_deadline->gt($now)
+            ) {
                 return false;
             }
 
-            $session = MentoringSession::query()
-                ->whereKey($offer->session_id)
-                ->lockForUpdate()
-                ->first();
-
+            // Tandai tawaran sebagai kedaluwarsa.
             $offer->update([
                 'status' => 'kedaluwarsa',
                 'responded_at' => $now,
             ]);
 
-            if (! $session || $session->refund_status !== 'menunggu') {
-                return false;
+            if (! $session || $session->status !== 'dibatalkan') {
+                return true;
             }
 
-            // Refund kembali berjalan dengan batas waktu 48 jam.
+            $student = User::query()->find($session->student_id);
+            $mentor = User::query()->find($session->mentor_id);
+
+            // Sesi gratis: tetap dibatalkan dan tidak ada refund.
+            if ($session->is_free_session) {
+                if ($session->cancelled_by !== 'mentor') {
+                    return true;
+                }
+
+                $student?->notify(
+                    new SessionEvent(
+                        'Tawaran jadwal pengganti untuk sesi gratis telah kedaluwarsa. Sesi tetap dibatalkan tanpa proses refund.',
+                        '/bookings'
+                    )
+                );
+
+                $mentor?->notify(
+                    new SessionEvent(
+                        'Tawaran jadwal pengganti untuk sesi gratis tidak direspons student dalam 24 jam. Sesi tetap dibatalkan.',
+                        '/mentor/session/' . $session->id
+                    )
+                );
+
+                return true;
+            }
+
+            // Sesi berbayar: refund dilanjutkan dengan batas waktu 48 jam.
+            if ($session->refund_status !== 'menunggu') {
+                return true;
+            }
+
             $session->update([
-                'refund_deadline' => $now->copy()->addHours(self::REFUND_WINDOW_HOURS),
+                'refund_deadline' => $now->copy()->addHours(
+                    self::REFUND_WINDOW_HOURS
+                ),
             ]);
 
-            User::query()->find($session->student_id)?->notify(
+            $student?->notify(
                 new SessionEvent(
-                    'Tawaran jadwal pengganti dari mentor telah kedaluwarsa. Proses refund dilanjutkan.',
+                    'Tawaran jadwal pengganti dari mentor telah kedaluwarsa. Proses refund dilanjutkan dengan batas waktu 48 jam.',
                     '/bookings'
                 )
             );
 
-            User::query()->find($session->mentor_id)?->notify(
+            $mentor?->notify(
                 new SessionEvent(
                     'Tawaran reschedule tidak direspons student. Proses refund dilanjutkan dengan batas waktu 48 jam.',
                     '/mentor/session/' . $session->id . '/refund'

@@ -24,6 +24,12 @@ class MentorProfileController extends Controller
         $refundRequests = MentoringSession::query()
             ->where('mentor_id', Auth::id())
             ->where('refund_status', 'menunggu')
+            ->whereDoesntHave('rescheduleRequests', function ($query) {
+                $query
+                    ->where('requested_by', 'mentor')
+                    ->where('request_type', 'refund_reschedule_offer')
+                    ->where('status', 'menunggu_respons');
+            })
             ->with(['student:id,name'])
             ->orderBy('refund_deadline', 'asc')
             ->get(['id', 'student_id', 'schedule_time', 'end_time', 'refund_deadline'])
@@ -130,10 +136,70 @@ class MentorProfileController extends Controller
             ])
             ->values();
 
+        $rescheduleOffers = MentoringSession::query()
+        ->where('mentor_id', Auth::id())
+        ->where('status', 'dibatalkan')
+        ->whereHas('rescheduleRequests', function ($query) {
+            $query
+                ->where('requested_by', 'mentor')
+                ->where('request_type', 'refund_reschedule_offer')
+                ->where('status', 'menunggu_respons');
+        })
+        ->with([
+            'student:id,name',
+            'rescheduleRequests' => function ($query) {
+                $query
+                    ->where('requested_by', 'mentor')
+                    ->where('request_type', 'refund_reschedule_offer')
+                    ->where('status', 'menunggu_respons')
+                    ->orderByDesc('id');
+            },
+        ])
+        ->orderBy('schedule_time', 'asc')
+        ->get([
+            'id',
+            'student_id',
+            'schedule_time',
+            'end_time',
+            'is_free_session',
+            'refund_status',
+        ])
+        ->map(static function (MentoringSession $session): array {
+            $offer = $session->rescheduleRequests->first();
+
+            return [
+                'id' => $session->id,
+                'student' => $session->student ? [
+                    'id' => $session->student->id,
+                    'name' => $session->student->name,
+                ] : null,
+                'old_schedule_time' => $session->schedule_time
+                    ?->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'new_schedule_time' => $offer?->new_schedule_time
+                    ?->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'new_end_time' => $offer?->new_end_time
+                    ?->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'reason' => $offer?->reason,
+                'respond_deadline' => $offer?->respond_deadline
+                    ?->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'is_free_session' => $session->is_free_session,
+            ];
+        })
+        ->values();
+
         return Inertia::render('Mentor/Dashboard', [
             'mentorProfile' => $mentorProfile,
             'bookingRequests' => $requests,
             'refundRequests' => $refundRequests,
+            'rescheduleOffers' => $rescheduleOffers,
             'reportedRefundRequests' => $reportedRefundRequests,
             'studentCancelledSessions' => $studentCancelledSessions,
             'confirmedSessions' => $confirmedSessions,

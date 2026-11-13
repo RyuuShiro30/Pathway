@@ -256,6 +256,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/mentor/session/{id}/refund', [MentoringSessionController::class, 'refundForm'])
         ->name('mentor.refund.form');
 
+    // Halaman penawaran jadwal pengganti
+    Route::get('/mentor/session/{id}/reschedule-offer', [MentoringSessionController::class, 'rescheduleOfferForm'])
+        ->name('mentor.refund.reschedule-offer.form');
+
     Route::post('/mentor/session/{id}/refund/reschedule-offer', [MentoringSessionController::class, 'offerRefundReschedule'])
         ->name('mentor.refund.reschedule-offer');
 
