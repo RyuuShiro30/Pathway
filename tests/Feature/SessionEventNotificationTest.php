@@ -44,7 +44,7 @@ class SessionEventNotificationTest extends TestCase
     private function createSession(string $status): array
     {
         $student = User::factory()->create();
-        $mentor = User::factory()->create();
+        $mentor = User::factory()->mentor()->create();
         $start = Carbon::now()->addDays(2);
 
         $session = MentoringSession::query()->create([

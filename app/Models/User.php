@@ -19,6 +19,16 @@ class User extends Authenticatable
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    public function isMentor(): bool
+    {
+        return $this->role === 'mentor';
+    }
+
     public function mentorProfile(): HasOne
     {
         return $this->hasOne(MentorProfile::class, 'user_id', 'id');

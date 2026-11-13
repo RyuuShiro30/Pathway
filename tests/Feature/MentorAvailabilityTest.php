@@ -316,7 +316,7 @@ class MentorAvailabilityTest extends TestCase
      */
     private function createMentorProfile(): array
     {
-        $user = User::factory()->create();
+        $user = User::factory()->mentor()->create();
         $mentorProfile = MentorProfile::create([
             'user_id' => $user->id,
             'expertise' => 'Web Development',

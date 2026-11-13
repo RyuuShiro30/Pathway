@@ -27,7 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Dipakai middleware 'guest': kalau user sudah login, dikirim ke mana
         $middleware->redirectUsersTo(function (Request $request) {
-            return $request->user()?->email === 'pathway@admin.com'
+            return $request->user()?->role === 'admin'
                 ? '/admin/courses'
                 : '/dashboard';
         });

@@ -11,10 +11,8 @@ class IsAdmin
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $adminEmail = 'pathway@admin.com';
-
         // Belum login: arahkan ke halaman login admin
-        if (!Auth::check()) {
+        if (! Auth::check()) {
             return redirect()->route('admin.login');
         }
 

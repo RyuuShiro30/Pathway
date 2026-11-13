@@ -19,7 +19,7 @@ class NotificationTriggersTest extends TestCase
 
     public function test_suspending_mentor_stores_database_notification(): void
     {
-        $mentor = User::factory()->create();
+        $mentor = User::factory()->mentor()->create();
 
         app(MentorSuspensionService::class)->suspend($mentor->id, 'refund_terlambat');
 
@@ -51,7 +51,7 @@ class NotificationTriggersTest extends TestCase
         Storage::fake('local');
 
         $student = User::factory()->create();
-        $mentor = User::factory()->create();
+        $mentor = User::factory()->mentor()->create();
         $start = Carbon::parse('2026-10-20 10:00:00');
 
         $session = MentoringSession::query()->create([

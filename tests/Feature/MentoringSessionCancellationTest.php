@@ -13,7 +13,7 @@ class MentoringSessionCancellationTest extends TestCase
 
     public function test_mentor_cancels_confirmed_paid_session_and_sets_refund_deadline(): void
     {
-        $mentor = User::factory()->create();
+        $mentor = User::factory()->mentor()->create();
         $session = $this->createConfirmedSession($mentor, false);
         $this->travelTo('2026-10-06 06:00:00');
 
@@ -36,7 +36,7 @@ class MentoringSessionCancellationTest extends TestCase
 
     public function test_mentor_can_cancel_confirmed_free_session_without_refund(): void
     {
-        $mentor = User::factory()->create();
+        $mentor = User::factory()->mentor()->create();
         $session = $this->createConfirmedSession($mentor, true);
 
         $response = $this->actingAs($mentor)->patch(
@@ -57,7 +57,7 @@ class MentoringSessionCancellationTest extends TestCase
 
     public function test_mentor_cannot_cancel_session_after_it_has_started(): void
     {
-        $mentor = User::factory()->create();
+        $mentor = User::factory()->mentor()->create();
         $session = $this->createConfirmedSession($mentor, false, 'berlangsung');
 
         $response = $this->actingAs($mentor)->patch(
@@ -76,7 +76,7 @@ class MentoringSessionCancellationTest extends TestCase
 
     public function test_another_user_cannot_cancel_a_mentor_session(): void
     {
-        $mentor = User::factory()->create();
+        $mentor = User::factory()->mentor()->create();
         $anotherUser = User::factory()->create();
         $session = $this->createConfirmedSession($mentor, false);
 
@@ -95,7 +95,7 @@ class MentoringSessionCancellationTest extends TestCase
 
     public function test_cancellation_reason_is_required(): void
     {
-        $mentor = User::factory()->create();
+        $mentor = User::factory()->mentor()->create();
         $session = $this->createConfirmedSession($mentor, false);
 
         $response = $this->actingAs($mentor)
@@ -115,7 +115,7 @@ class MentoringSessionCancellationTest extends TestCase
 
     public function test_unauthenticated_user_is_redirected_to_login_when_cancelling_session(): void
     {
-        $mentor = User::factory()->create();
+        $mentor = User::factory()->mentor()->create();
         $session = $this->createConfirmedSession($mentor, false);
 
         $response = $this->patch(route('mentor.session.cancel', $session->id), [

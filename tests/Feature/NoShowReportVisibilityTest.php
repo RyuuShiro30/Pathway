@@ -132,7 +132,7 @@ class NoShowReportVisibilityTest extends TestCase
     private function createSession(string $status = 'dikonfirmasi'): array
     {
         $student = User::factory()->create();
-        $mentor = User::factory()->create();
+        $mentor = User::factory()->mentor()->create();
         $scheduleTime = Carbon::parse('2026-10-20 10:00:00');
 
         $session = MentoringSession::query()->create([

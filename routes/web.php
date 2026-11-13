@@ -201,7 +201,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/transactions', [TransactionHistoryController::class, 'index'])
         ->name('transactions.index');
 
-    // Mentor Registration
+    // Mentor Registration (untuk calon mentor — TIDAK perlu role mentor)
     Route::get('/mentor/become', function () {
         return Inertia::render('Mentor/BecomeMentor');
     })->name('mentor.become');
@@ -215,15 +215,15 @@ Route::middleware('auth')->group(function () {
     Route::delete('/mentor/certificates/{certificate}', [MentorRegistrationController::class, 'destroyCertificate'])
         ->name('mentor.certificate.destroy');
 
-    // Mentor Dashboard & Availability
-    Route::get('/mentor/dashboard', [MentorProfileController::class, 'dashboard'])
-        ->name('mentor.dashboard');
-
-    Route::patch('/mentor/availability', [MentorProfileController::class, 'updateAvailability'])
-        ->name('mentor.availability.update');
-
-    // Mentor Badge, Merchandise & Redeem Point
+    // Mentor-only: Dashboard, Availability, Requests, Booking, Session, Refund
     Route::middleware('mentor')->group(function () {
+
+        // Dashboard & Availability
+        Route::get('/mentor/dashboard', [MentorProfileController::class, 'dashboard'])
+            ->name('mentor.dashboard');
+
+        Route::patch('/mentor/availability', [MentorProfileController::class, 'updateAvailability'])
+            ->name('mentor.availability.update');
 
         // Badge
         Route::get('/mentor/badges', [BadgeController::class, 'index'])
@@ -280,39 +280,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/bookings/{id}/refund-confirmation', [MentoringSessionController::class, 'confirmRefund'])
         ->name('student.bookings.refund.confirm');
 
-    // Mentor Booking Requests
-    Route::get('/mentor/requests', [MentoringSessionController::class, 'requests'])
-        ->name('mentor.requests');
-
-    Route::get('/mentor/booking/{id}', [MentoringSessionController::class, 'show'])
-        ->name('mentor.booking.show');
-
-    Route::patch('/mentor/booking/{id}/respond', [MentoringSessionController::class, 'respond'])
-        ->name('mentor.booking.respond');
-
-    Route::patch('/mentor/booking/{id}/reschedule/respond', [MentoringSessionController::class, 'respondReschedule'])
-        ->name('mentor.booking.reschedule.respond');
-
-    // Mentor Session Tracking
-    Route::get('/mentor/session/{id}', [MentoringSessionController::class, 'tracking'])
-        ->name('mentor.session.tracking');
-
-    Route::patch('/mentor/session/{id}/start', [MentoringSessionController::class, 'startSession'])
-        ->name('mentor.session.start');
-
-    Route::patch('/mentor/session/{id}/complete', [MentoringSessionController::class, 'completeSession'])
-        ->name('mentor.session.complete');
-
-    Route::patch('/mentor/session/{id}/cancel', [MentoringSessionController::class, 'cancelSession'])
-        ->name('mentor.session.cancel');
-
-    // Mentor Refund & No Show
-    Route::patch('/mentor/session/{id}/refund', [MentoringSessionController::class, 'completeRefund'])
-        ->name('mentor.refund.complete');
-
-    Route::get('/mentor/session/{id}/refund', [MentoringSessionController::class, 'refundForm'])
-        ->name('mentor.refund.form');
-
+    // No-show (dipakai murid dan mentor)
     Route::post('/sessions/{id}/no-show', [NoShowReportController::class, 'store'])
         ->name('no-show.store');
 
@@ -322,6 +290,42 @@ Route::middleware('auth')->group(function () {
     Route::get('/no-show-reports/{id}/evidence/{type}', [NoShowReportController::class, 'evidence'])
         ->where('type', 'report|response')
         ->name('no-show.evidence');
+
+    // Mentor Booking Requests
+    Route::middleware('mentor')->group(function () {
+        Route::get('/mentor/requests', [MentoringSessionController::class, 'requests'])
+            ->name('mentor.requests');
+
+        Route::get('/mentor/booking/{id}', [MentoringSessionController::class, 'show'])
+            ->name('mentor.booking.show');
+
+        Route::patch('/mentor/booking/{id}/respond', [MentoringSessionController::class, 'respond'])
+            ->name('mentor.booking.respond');
+
+        Route::patch('/mentor/booking/{id}/reschedule/respond', [MentoringSessionController::class, 'respondReschedule'])
+            ->name('mentor.booking.reschedule.respond');
+
+        // Mentor Session Tracking
+        Route::get('/mentor/session/{id}', [MentoringSessionController::class, 'tracking'])
+            ->name('mentor.session.tracking');
+
+        Route::patch('/mentor/session/{id}/start', [MentoringSessionController::class, 'startSession'])
+            ->name('mentor.session.start');
+
+        Route::patch('/mentor/session/{id}/complete', [MentoringSessionController::class, 'completeSession'])
+            ->name('mentor.session.complete');
+
+        Route::patch('/mentor/session/{id}/cancel', [MentoringSessionController::class, 'cancelSession'])
+            ->name('mentor.session.cancel');
+
+        // Mentor Refund & No Show
+        Route::patch('/mentor/session/{id}/refund', [MentoringSessionController::class, 'completeRefund'])
+            ->name('mentor.refund.complete');
+
+        Route::get('/mentor/session/{id}/refund', [MentoringSessionController::class, 'refundForm'])
+            ->name('mentor.refund.form');
+
+    });
 });
 
 require __DIR__.'/auth.php';

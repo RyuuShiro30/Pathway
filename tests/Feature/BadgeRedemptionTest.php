@@ -114,9 +114,7 @@ class BadgeRedemptionTest extends TestCase
 
     private function createMentor(): User
     {
-        $mentor = User::factory()->create([
-            'role' => 'mentor',
-        ]);
+        $mentor = User::factory()->mentor()->create();
 
         MentorProfile::query()->create([
             'user_id' => $mentor->id,
