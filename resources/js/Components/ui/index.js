@@ -5,5 +5,5 @@ export { default as StatCard } from './StatCard';
 export { default as SectionHeader } from './SectionHeader';
 export { default as AlertBanner } from './AlertBanner';
 export { default as EmptyState } from './EmptyState';
-export { themeTokens } from './tokens';
+export { themeTokens, mentorNavTokens } from './tokens';
 
