@@ -2,8 +2,8 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use App\Models\MentoringSession;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -13,10 +13,13 @@ class MentoringSessionSeeder extends Seeder
     {
         $mentor = User::where('name', 'lili')->first();
 
-        if (!$mentor) {
+        if (! $mentor) {
             $this->command->error('User mentor "lili" tidak ditemukan.');
+
             return;
         }
+
+        $mentor->forceFill(['role' => 'mentor'])->save();
 
         // Bikin 5 mentee dummy sekaligus
         $mentees = collect([
@@ -26,10 +29,17 @@ class MentoringSessionSeeder extends Seeder
             ['name' => 'Dewi Lestari', 'email' => 'dewi@example.com'],
             ['name' => 'Rizky Hidayat', 'email' => 'rizky@example.com'],
         ])->map(function ($data) {
-            return User::firstOrCreate(
+            $user = User::updateOrCreate(
                 ['email' => $data['email']],
-                ['name' => $data['name'], 'password' => Hash::make('password')]
+                [
+                    'name' => $data['name'],
+                    'password' => Hash::make('password'),
+                    'role' => 'student',
+                ]
             );
+            $user->forceFill(['role' => 'student'])->save();
+
+            return $user;
         });
 
         // 1. Sesi gratis, status diajukan (belum direspon mentor)

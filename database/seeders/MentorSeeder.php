@@ -82,6 +82,7 @@ class MentorSeeder extends Seeder
                     ->where('id', $userId)
                     ->update([
                         'name' => $mentor['name'],
+                        'role' => 'mentor',
                         'updated_at' => $now,
                     ]);
             } else {
@@ -89,6 +90,7 @@ class MentorSeeder extends Seeder
                     'name' => $mentor['name'],
                     'email' => $mentor['email'],
                     'password' => Hash::make('password'),
+                    'role' => 'mentor',
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);

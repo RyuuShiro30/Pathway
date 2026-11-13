@@ -13,10 +13,14 @@ class MentorSuspensionService
 {
     public function isSuspended(int $mentorId): bool
     {
-        return MentorSuspension::query()
-            ->where('mentor_id', $mentorId)
-            ->active()
-            ->exists();
+        return MentorProfile::query()
+            ->where('user_id', $mentorId)
+            ->where('is_suspended', true)
+            ->exists()
+            || MentorSuspension::query()
+                ->where('mentor_id', $mentorId)
+                ->active()
+                ->exists();
     }
 
     /**

@@ -54,6 +54,8 @@ class MerchandiseController extends Controller
      */
     public function redeem(Request $request, int $id): RedirectResponse
     {
+        abort_if(Auth::user()?->isSuspendedMentor(), 403, 'Akun mentor Anda sedang disuspend.');
+
         $validated = $request->validate([
             'quantity' => ['required', 'integer', 'min:1', 'max:10'],
             'recipient_name' => ['required', 'string', 'max:255'],
@@ -124,7 +126,7 @@ class MerchandiseController extends Controller
                 'user_id' => $userId,
                 'amount' => $totalPoints,
                 'transaction_type' => 'redeemed_merchandise',
-                'description' => 'Penukaran merchandise: ' . $merchandise->name,
+                'description' => 'Penukaran merchandise: '.$merchandise->name,
                 'related_id' => $merchandise->id,
             ]);
 

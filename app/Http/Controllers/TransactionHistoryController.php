@@ -22,12 +22,15 @@ class TransactionHistoryController extends Controller
             ->orderByDesc('created_at');
 
         // Batasi data berdasarkan role sesuai SOP
-        if ($user->role === 'student') {
+        if ($user->role === 'admin') {
+            // Admin melihat seluruh transaksi tanpa batasan.
+        } elseif ($user->role === 'student') {
             $query->where('student_id', $user->id);
         } elseif ($user->role === 'mentor') {
             $query->where('mentor_id', $user->id);
-        } 
-        // Jika Admin, dibiarkan mengambil seluruh data transaksi tanpa batasan.
+        } else {
+            abort(403);
+        }
 
         $transactions = $query->paginate(15)->through(function ($session) {
             return [

@@ -14,6 +14,10 @@ class MentorProfileController extends Controller
     // Buka halaman Dashboard Mentor
     public function dashboard()
     {
+        if (Auth::user()?->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        }
+
         $mentorProfile = MentorProfile::where('user_id', Auth::id())->first();
 
         $requests = MentoringSession::with('student')
@@ -162,6 +166,8 @@ class MentorProfileController extends Controller
     // Aksi: update jadwal ketersediaan
     public function updateAvailability(Request $request)
     {
+        abort_if($request->user()?->isSuspendedMentor(), 403, 'Akun mentor Anda sedang disuspend.');
+
         $validated = $request->validate([
             'availability_schedule' => 'present|array',
             'availability_schedule.*.day' => 'required|string|in:senin,selasa,rabu,kamis,jumat,sabtu,minggu',

@@ -5,11 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\MentoringSession;
 use App\Models\MentorProfile;
 use App\Models\NoShowReport;
+use App\Models\RescheduleRequest;
 use App\Models\User;
 use App\Notifications\RefundProofUploaded;
 use App\Notifications\SessionEvent;
 use App\Services\MentorSuspensionService;
-use App\Models\RescheduleRequest;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,8 +21,12 @@ use Inertia\Response as InertiaResponse;
 
 class MentoringSessionController extends Controller
 {
-    public function studentIndex(): InertiaResponse
+    public function studentIndex(): InertiaResponse|RedirectResponse
     {
+        if (Auth::user()?->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        }
+
         $studentId = Auth::id();
         $stats = MentoringSession::query()
             ->where('student_id', $studentId)
@@ -320,7 +324,6 @@ class MentoringSessionController extends Controller
             ]);
         }
 
-
         $newEndTime = $newScheduleTime->copy()->addHours(
             (int) $validated['duration_hours']
         );
@@ -406,7 +409,7 @@ class MentoringSessionController extends Controller
         $session->mentor?->notify(
             new SessionEvent(
                 'Mahasiswa mengajukan perubahan jadwal mentoring. Silakan periksa pengajuan reschedule.',
-                '/mentor/session/' . $session->id
+                '/mentor/session/'.$session->id
             )
         );
 
@@ -543,6 +546,8 @@ class MentoringSessionController extends Controller
 
     public function schedule(User $mentor): InertiaResponse
     {
+        abort_if($mentor->isSuspendedMentor(), 404, 'Mentor tidak tersedia.');
+
         $mentorProfile = $this->mentorProfileForBooking($mentor);
         $from = Carbon::now('Asia/Jakarta')->startOfDay();
         $until = $from->copy()->addDays(10);
@@ -970,11 +975,11 @@ class MentoringSessionController extends Controller
     }
 
     private function hasBookingConflict(
-    int $mentorId,
-    Carbon $bookingStart,
-    Carbon $bookingEnd,
-    bool $lockForUpdate = false,
-    ?int $excludeSessionId = null,
+        int $mentorId,
+        Carbon $bookingStart,
+        Carbon $bookingEnd,
+        bool $lockForUpdate = false,
+        ?int $excludeSessionId = null,
     ): bool {
         $query = MentoringSession::query()
             ->where('mentor_id', $mentorId)
@@ -1127,8 +1132,8 @@ class MentoringSessionController extends Controller
         });
     }
 
-    //Mentor menerima atau menolak pengajuan reschedule student.
-   
+    // Mentor menerima atau menolak pengajuan reschedule student.
+
     public function respondReschedule(Request $request, int $id): RedirectResponse
     {
         $validated = $request->validate([
@@ -1246,8 +1251,7 @@ class MentoringSessionController extends Controller
             ->with('error', 'Pengajuan reschedule sudah tidak dapat diproses.');
     }
 
-
-   // GET - halaman session tracking untuk 1 sesi yang sudah dikonfirmasi
+    // GET - halaman session tracking untuk 1 sesi yang sudah dikonfirmasi
     public function tracking($id)
     {
         $session = MentoringSession::with([
@@ -1346,7 +1350,7 @@ class MentoringSessionController extends Controller
                         'user_id' => $session->mentor_id,
                         'amount' => 100,
                         'transaction_type' => 'earned_mentoring',
-                        'description' => 'Poin dari sesi mentoring gratis #' . $session->id,
+                        'description' => 'Poin dari sesi mentoring gratis #'.$session->id,
                         'related_id' => $session->id,
                         'created_at' => now(),
                         'updated_at' => now(),

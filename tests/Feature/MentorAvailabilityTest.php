@@ -292,7 +292,7 @@ class MentorAvailabilityTest extends TestCase
 
     public function test_mentor_can_clear_all_availability_slots(): void
     {
-        $user = User::factory()->create();
+        $user = User::factory()->mentor()->create();
         $mentorProfile = MentorProfile::create([
             'user_id' => $user->id,
             'expertise' => 'Web Development',
@@ -316,7 +316,7 @@ class MentorAvailabilityTest extends TestCase
      */
     private function createMentorProfile(): array
     {
-        $user = User::factory()->create();
+        $user = User::factory()->mentor()->create();
         $mentorProfile = MentorProfile::create([
             'user_id' => $user->id,
             'expertise' => 'Web Development',

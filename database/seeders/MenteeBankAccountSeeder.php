@@ -11,8 +11,9 @@ class MenteeBankAccountSeeder extends Seeder
     {
         $mentee = User::where('email', 'mentee@example.com')->first();
 
-        if (!$mentee) {
+        if (! $mentee) {
             $this->command->error('User Budi (mentee@example.com) tidak ditemukan.');
+
             return;
         }
 
@@ -20,6 +21,7 @@ class MenteeBankAccountSeeder extends Seeder
             'bank_name' => 'BCA',
             'bank_account_number' => '1234567890',
             'bank_account_holder' => 'Budi Mentee',
+            'role' => 'student',
         ])->save();
 
         $this->command->info('Rekening dummy Budi berhasil disimpan.');

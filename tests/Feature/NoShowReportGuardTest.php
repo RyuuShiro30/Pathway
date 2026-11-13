@@ -85,7 +85,7 @@ class NoShowReportGuardTest extends TestCase
     private function createSessionWithReport(string $reportStatus): array
     {
         $student = User::factory()->create();
-        $mentor = User::factory()->create();
+        $mentor = User::factory()->mentor()->create();
         $scheduleTime = now()->addDay();
 
         $session = MentoringSession::query()->create([
