@@ -22,11 +22,12 @@ class MentorDirectoryController extends Controller
             ->withCount('reviews')
             ->withAvg('reviews', 'rating')
             ->where('verification_status', 'verified')
+            ->where('is_suspended', false)
             ->when($search, function ($query) use ($search) {
                 $query->whereHas('user', function ($userQuery) use ($search) {
                     $userQuery->whereRaw(
                         'LOWER(name) LIKE ?',
-                        ['%' . strtolower($search) . '%']
+                        ['%'.strtolower($search).'%']
                     );
                 });
             })
@@ -71,6 +72,7 @@ class MentorDirectoryController extends Controller
             });
 
         $expertises = MentorProfile::where('verification_status', 'verified')
+            ->where('is_suspended', false)
             ->select('expertise')
             ->distinct()
             ->orderBy('expertise')
@@ -92,10 +94,10 @@ class MentorDirectoryController extends Controller
     public function show($id)
     {
         $mentor = MentorProfile::with([
-                'user',
-                'certificates',
-                'reviews.student',
-            ])
+            'user',
+            'certificates',
+            'reviews.student',
+        ])
             ->withCount('reviews')
             ->withAvg('reviews', 'rating')
             ->where('verification_status', 'verified')

@@ -19,7 +19,7 @@ class MentorDashboardNoShowTest extends TestCase
         $this->travelTo('2026-10-20 10:20:00');
 
         $student = User::factory()->create();
-        $mentor = User::factory()->create();
+        $mentor = User::factory()->mentor()->create();
         $scheduleTime = Carbon::parse('2026-10-20 10:00:00');
 
         $session = MentoringSession::query()->create([

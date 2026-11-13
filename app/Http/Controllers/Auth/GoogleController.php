@@ -43,6 +43,14 @@ class GoogleController extends Controller
 
         Auth::login($user, true);
 
+        if ($user->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        }
+
+        if ($user->role === 'mentor') {
+            return redirect()->route('mentor.dashboard');
+        }
+
         return redirect()->route('dashboard');
     }
 }

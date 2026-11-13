@@ -6,6 +6,7 @@ use App\Models\MentoringSession;
 use App\Models\MentorProfile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class MentorProfileController extends Controller
@@ -13,6 +14,10 @@ class MentorProfileController extends Controller
     // Buka halaman Dashboard Mentor
     public function dashboard()
     {
+        if (Auth::user()?->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        }
+
         $mentorProfile = MentorProfile::where('user_id', Auth::id())->first();
 
         $requests = MentoringSession::with('student')
@@ -109,6 +114,7 @@ class MentorProfileController extends Controller
                 ] : null,
             ])
             ->values();
+
         $confirmedSessions = MentoringSession::query()
             ->where('mentor_id', Auth::id())
             ->whereIn('status', ['dikonfirmasi', 'berlangsung'])
@@ -137,63 +143,79 @@ class MentorProfileController extends Controller
             ->values();
 
         $rescheduleOffers = MentoringSession::query()
-        ->where('mentor_id', Auth::id())
-        ->where('status', 'dibatalkan')
-        ->whereHas('rescheduleRequests', function ($query) {
-            $query
-                ->where('requested_by', 'mentor')
-                ->where('request_type', 'refund_reschedule_offer')
-                ->where('status', 'menunggu_respons');
-        })
-        ->with([
-            'student:id,name',
-            'rescheduleRequests' => function ($query) {
+            ->where('mentor_id', Auth::id())
+            ->where('status', 'dibatalkan')
+            ->whereHas('rescheduleRequests', function ($query) {
                 $query
                     ->where('requested_by', 'mentor')
                     ->where('request_type', 'refund_reschedule_offer')
-                    ->where('status', 'menunggu_respons')
-                    ->orderByDesc('id');
-            },
-        ])
-        ->orderBy('schedule_time', 'asc')
-        ->get([
-            'id',
-            'student_id',
-            'schedule_time',
-            'end_time',
-            'is_free_session',
-            'refund_status',
-        ])
-        ->map(static function (MentoringSession $session): array {
-            $offer = $session->rescheduleRequests->first();
+                    ->where('status', 'menunggu_respons');
+            })
+            ->with([
+                'student:id,name',
+                'rescheduleRequests' => function ($query) {
+                    $query
+                        ->where('requested_by', 'mentor')
+                        ->where('request_type', 'refund_reschedule_offer')
+                        ->where('status', 'menunggu_respons')
+                        ->orderByDesc('id');
+                },
+            ])
+            ->orderBy('schedule_time', 'asc')
+            ->get([
+                'id',
+                'student_id',
+                'schedule_time',
+                'end_time',
+                'is_free_session',
+                'refund_status',
+            ])
+            ->map(static function (MentoringSession $session): array {
+                $offer = $session->rescheduleRequests->first();
 
-            return [
-                'id' => $session->id,
-                'student' => $session->student ? [
-                    'id' => $session->student->id,
-                    'name' => $session->student->name,
-                ] : null,
-                'old_schedule_time' => $session->schedule_time
-                    ?->copy()
-                    ->setTimezone('UTC')
-                    ->toISOString(),
-                'new_schedule_time' => $offer?->new_schedule_time
-                    ?->copy()
-                    ->setTimezone('UTC')
-                    ->toISOString(),
-                'new_end_time' => $offer?->new_end_time
-                    ?->copy()
-                    ->setTimezone('UTC')
-                    ->toISOString(),
-                'reason' => $offer?->reason,
-                'respond_deadline' => $offer?->respond_deadline
-                    ?->copy()
-                    ->setTimezone('UTC')
-                    ->toISOString(),
-                'is_free_session' => $session->is_free_session,
-            ];
-        })
-        ->values();
+                return [
+                    'id' => $session->id,
+                    'student' => $session->student ? [
+                        'id' => $session->student->id,
+                        'name' => $session->student->name,
+                    ] : null,
+                    'old_schedule_time' => $session->schedule_time
+                        ?->copy()
+                        ->setTimezone('UTC')
+                        ->toISOString(),
+                    'new_schedule_time' => $offer?->new_schedule_time
+                        ?->copy()
+                        ->setTimezone('UTC')
+                        ->toISOString(),
+                    'new_end_time' => $offer?->new_end_time
+                        ?->copy()
+                        ->setTimezone('UTC')
+                        ->toISOString(),
+                    'reason' => $offer?->reason,
+                    'respond_deadline' => $offer?->respond_deadline
+                        ?->copy()
+                        ->setTimezone('UTC')
+                        ->toISOString(),
+                    'is_free_session' => $session->is_free_session,
+                ];
+            })
+            ->values();
+
+        // Hitung saldo poin mentor.
+        $pointsBalance = (int) DB::table('point_transactions')
+            ->where('user_id', Auth::id())
+            ->selectRaw("
+                COALESCE(SUM(
+                    CASE
+                        WHEN transaction_type IN ('earned_mentoring', 'admin_bonus')
+                            THEN amount
+                        WHEN transaction_type IN ('redeemed_badge', 'redeemed_merchandise')
+                            THEN -amount
+                        ELSE 0
+                    END
+                ), 0) AS balance
+            ")
+            ->value('balance');
 
         return Inertia::render('Mentor/Dashboard', [
             'mentorProfile' => $mentorProfile,
@@ -203,12 +225,15 @@ class MentorProfileController extends Controller
             'reportedRefundRequests' => $reportedRefundRequests,
             'studentCancelledSessions' => $studentCancelledSessions,
             'confirmedSessions' => $confirmedSessions,
+            'pointsBalance' => $pointsBalance,
         ]);
     }
 
-    // Aksi: update jadwal ketersediaan (dipanggil saat mentor klik "Simpan")
+    // Aksi: update jadwal ketersediaan
     public function updateAvailability(Request $request)
     {
+        abort_if($request->user()?->isSuspendedMentor(), 403, 'Akun mentor Anda sedang disuspend.');
+
         $validated = $request->validate([
             'availability_schedule' => 'present|array',
             'availability_schedule.*.day' => 'required|string|in:senin,selasa,rabu,kamis,jumat,sabtu,minggu',
@@ -239,6 +264,7 @@ class MentorProfileController extends Controller
 
             return ($hours * 60) + $minutes;
         };
+
         $dayLabels = [
             'senin' => 'Senin',
             'selasa' => 'Selasa',
@@ -277,7 +303,9 @@ class MentorProfileController extends Controller
         $mentorProfile = MentorProfile::where('user_id', Auth::id())->first();
 
         if (! $mentorProfile) {
-            return redirect()->back()->withErrors(['message' => 'Profil mentor belum ditemukan']);
+            return redirect()->back()->withErrors([
+                'message' => 'Profil mentor belum ditemukan',
+            ]);
         }
 
         $mentorProfile->update([
@@ -293,6 +321,9 @@ class MentorProfileController extends Controller
             ),
         ]);
 
-        return redirect()->back()->with('success', 'Jadwal ketersediaan berhasil diperbarui');
+        return redirect()->back()->with(
+            'success',
+            'Jadwal ketersediaan berhasil diperbarui'
+        );
     }
 }

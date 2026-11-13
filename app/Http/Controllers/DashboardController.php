@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\Auth;
-use App\Models\UserEnrollment;
 use App\Models\MentoringSession;
-use App\Models\UserProgress; // Tambahkan ini untuk menghitung modul selesai
+use App\Models\UserEnrollment;
+use App\Models\UserProgress;
+use Illuminate\Support\Facades\Auth; // Tambahkan ini untuk menghitung modul selesai
 use Inertia\Inertia;
 
 class DashboardController extends Controller
@@ -14,17 +14,25 @@ class DashboardController extends Controller
     {
         $user = Auth::user();
 
+        if ($user?->role === 'admin') {
+            return redirect()->route('admin.dashboard');
+        }
+
+        if ($user?->role === 'mentor') {
+            return redirect()->route('mentor.dashboard');
+        }
+
         // ==========================================
         // 1. PERHITUNGAN METRIK STATISTIK DASHBOARD
         // ==========================================
-        
+
         // Total Course yang sudah tamat (100%)
         $courseSelesaiCount = UserEnrollment::where('user_id', $user->id)
             ->where('status', 'completed')
             ->count();
 
         // Total Modul individual yang sudah diselesaikan (diklik Selesai & Lanjut)
-        $modulSelesaiCount = UserProgress::whereHas('enrollment', function($query) use ($user) {
+        $modulSelesaiCount = UserProgress::whereHas('enrollment', function ($query) use ($user) {
             $query->where('user_id', $user->id);
         })->where('is_completed', true)->count();
 
@@ -32,7 +40,6 @@ class DashboardController extends Controller
         $sesiSelesaiCount = MentoringSession::where('student_id', $user->id)
             ->where('status', 'selesai')
             ->count();
-
 
         // ==========================================
         // 2. PENGAMBILAN DATA WIDGET KONTEN UTAMA
@@ -59,9 +66,9 @@ class DashboardController extends Controller
 
         // Sesi mentoring yang selesai untuk fitur rating
         $completedSessions = MentoringSession::with([
-                'mentor.mentorProfile',
-                'review',
-            ])
+            'mentor.mentorProfile',
+            'review',
+        ])
             ->where('student_id', $user->id)
             ->where('status', 'selesai')
             ->orderBy('schedule_time', 'desc')
@@ -71,14 +78,14 @@ class DashboardController extends Controller
         return Inertia::render('Dashboard', [
             // Data Metrik Angka
             'courseSelesaiCount' => $courseSelesaiCount,
-            'modulSelesaiCount'  => $modulSelesaiCount,
-            'sesiSelesaiCount'   => $sesiSelesaiCount,
-            
+            'modulSelesaiCount' => $modulSelesaiCount,
+            'sesiSelesaiCount' => $sesiSelesaiCount,
+
             // Data List/Array
-            'activeCourses'      => $activeCourses,
-            'lastBooking'        => $lastBooking,
-            'myCourses'          => $myCourses,
-            'completedSessions'  => $completedSessions,
+            'activeCourses' => $activeCourses,
+            'lastBooking' => $lastBooking,
+            'myCourses' => $myCourses,
+            'completedSessions' => $completedSessions,
         ]);
     }
 }

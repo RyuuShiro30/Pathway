@@ -266,7 +266,7 @@ class StudentCancelBookingTest extends TestCase
     public function test_session_mentor_can_open_refund_form_only_for_their_cancelled_paid_booking(): void
     {
         $student = User::factory()->create();
-        $mentor = User::factory()->create();
+        $mentor = User::factory()->mentor()->create();
         $session = $this->createSession($student, $mentor, false);
         $anotherStudent = User::factory()->create();
         $anotherMentor = User::factory()->create();

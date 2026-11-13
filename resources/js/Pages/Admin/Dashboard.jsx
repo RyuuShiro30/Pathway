@@ -1,5 +1,5 @@
 import React from "react";
-import { Head } from "@inertiajs/react";
+import { Head, Link } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
 
 export default function Dashboard({ statistics, reviewQueue, monitoring }) {
@@ -82,6 +82,7 @@ export default function Dashboard({ statistics, reviewQueue, monitoring }) {
                                 description="Menunggu proses verifikasi"
                                 value={reviewQueue.pending_mentors}
                                 icon={<MentorIcon />}
+                                href="/admin/mentors?status=pending"
                             />
 
                             <ReviewCard
@@ -89,6 +90,7 @@ export default function Dashboard({ statistics, reviewQueue, monitoring }) {
                                 description="Laporan yang perlu ditinjau"
                                 value={reviewQueue.refund_reports}
                                 icon={<ReceiptIcon />}
+                                href="/admin/refund-reports"
                             />
 
                             <ReviewCard
@@ -196,7 +198,30 @@ function StatCard({ title, value, icon }) {
    ANTREAN CARD
    ========================================================= */
 
-function ReviewCard({ title, description, value, icon }) {
+function ReviewCard({ title, description, value, icon, href }) {
+    const buttonContent = (
+        <>
+            Lihat Detail
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+            >
+                <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9 5l7 7-7 7"
+                />
+            </svg>
+        </>
+    );
+
+    const buttonClass =
+        "inline-flex items-center gap-2 rounded-lg bg-[#6594B1] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#557F99]";
+
     return (
         <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:shadow-md">
             <div className="flex items-start justify-between gap-3">
@@ -222,26 +247,15 @@ function ReviewCard({ title, description, value, icon }) {
             </div>
 
             <div className="mt-5 border-t border-slate-100 pt-4">
-                <button
-                    type="button"
-                    className="inline-flex items-center gap-2 rounded-lg bg-[#6594B1] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#557F99]"
-                >
-                    Lihat Detail
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-4 w-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        strokeWidth={2}
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M9 5l7 7-7 7"
-                        />
-                    </svg>
-                </button>
+                {href ? (
+                    <Link href={href} className={buttonClass}>
+                        {buttonContent}
+                    </Link>
+                ) : (
+                    <button type="button" className={buttonClass}>
+                        {buttonContent}
+                    </button>
+                )}
             </div>
         </div>
     );

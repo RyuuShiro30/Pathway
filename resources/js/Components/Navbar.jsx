@@ -18,6 +18,24 @@ export default function Navbar({ active }) {
 
     const [showingDropdown, setShowingDropdown] = useState(false);
 
+    const isMentor = user?.role === "mentor";
+
+    const menuItems = MENU.flatMap((item) => {
+        if (item.key === "jadi-mentor") {
+            if (isMentor) {
+                return [
+                    {
+                        key: "portal-mentor",
+                        label: "Portal Mentor",
+                        href: "/mentor/dashboard",
+                    },
+                ];
+            }
+            return [item];
+        }
+        return [item];
+    });
+
     return (
         <nav className="flex items-center justify-between bg-[#6594B1] px-6 py-3 shadow-md">
             {/* Logo dan nama Pathway */}
@@ -35,7 +53,7 @@ export default function Navbar({ active }) {
 
             {/* Menu navigasi */}
             <div className="hidden items-center space-x-1 text-sm text-slate-200 lg:flex">
-                {MENU.map((item) => {
+                {menuItems.map((item) => {
                     // 2. Cocokkan: aktif jika props 'active' dipanggil secara manual, 
                     // ATAU jika URL browser saat ini berawalan dengan href dari menu
                     const isActive = active === item.key || url.startsWith(item.href);
@@ -84,7 +102,7 @@ export default function Navbar({ active }) {
                         </div>
 
                         <img
-                            src={user?.profile_photo_url ?? "/images/bwa.webp"}
+                            src={user?.photo_path ?? user?.profile_photo_url ?? "/images/bwa.webp"}
                             alt="Foto profil"
                             className="h-9 w-9 rounded-full bg-[#6b9bc3] object-cover transition hover:ring-2 hover:ring-white/50"
                         />

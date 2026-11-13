@@ -18,14 +18,16 @@ class MentoringWorkflowSeeder extends Seeder
         $now = Carbon::now();
 
         // 1. Admin Akun
-        User::updateOrCreate(
+        $admin = User::updateOrCreate(
             ['email' => 'pathway@admin.com'],
             [
                 'name' => 'Pathway Admin',
                 'password' => 'password',
+                'role' => 'admin',
                 'email_verified_at' => $now,
             ]
         );
+        $admin->forceFill(['role' => 'admin'])->save();
 
         // 2. Mentor Utama (mentor@test.com)
         $mainMentor = User::updateOrCreate(
@@ -33,12 +35,14 @@ class MentoringWorkflowSeeder extends Seeder
             [
                 'name' => 'Budi Mentor',
                 'password' => 'password',
+                'role' => 'mentor',
                 'email_verified_at' => $now,
                 'bank_name' => 'BCA',
                 'bank_account_number' => '1122334455',
                 'bank_account_holder' => 'Budi Mentor',
             ]
         );
+        $mainMentor->forceFill(['role' => 'mentor'])->save();
 
         MentorProfile::updateOrCreate(
             ['user_id' => $mainMentor->id],
@@ -69,12 +73,14 @@ class MentoringWorkflowSeeder extends Seeder
             [
                 'name' => 'Joko Suspended',
                 'password' => 'password',
+                'role' => 'mentor',
                 'email_verified_at' => $now,
                 'bank_name' => 'Mandiri',
                 'bank_account_number' => '9988776655',
                 'bank_account_holder' => 'Joko Suspended',
             ]
         );
+        $suspendedMentor->forceFill(['role' => 'mentor'])->save();
 
         MentorProfile::updateOrCreate(
             ['user_id' => $suspendedMentor->id],
@@ -98,36 +104,42 @@ class MentoringWorkflowSeeder extends Seeder
             [
                 'name' => 'Siti Murid',
                 'password' => 'password',
+                'role' => 'student',
                 'email_verified_at' => $now,
                 'bank_name' => 'BNI',
                 'bank_account_number' => '5566778899',
                 'bank_account_holder' => 'Siti Murid',
             ]
         );
+        $mainStudent->forceFill(['role' => 'student'])->save();
 
         $studentNoShow = User::updateOrCreate(
             ['email' => 'murid.noshow@test.com'],
             [
                 'name' => 'Andi NoShow',
                 'password' => 'password',
+                'role' => 'student',
                 'email_verified_at' => $now,
                 'bank_name' => 'BCA',
                 'bank_account_number' => '7788990011',
                 'bank_account_holder' => 'Andi NoShow',
             ]
         );
+        $studentNoShow->forceFill(['role' => 'student'])->save();
 
         $studentCancel = User::updateOrCreate(
             ['email' => 'murid.cancel@test.com'],
             [
                 'name' => 'Rina Pembatalan',
                 'password' => 'password',
+                'role' => 'student',
                 'email_verified_at' => $now,
                 'bank_name' => 'BRI',
                 'bank_account_number' => '3344556677',
                 'bank_account_holder' => 'Rina Pembatalan',
             ]
         );
+        $studentCancel->forceFill(['role' => 'student'])->save();
 
         // ==========================================
         // 19 SKENARIO ALUR MENTORING
@@ -605,4 +617,3 @@ class MentoringWorkflowSeeder extends Seeder
         $this->command->info('MentoringWorkflowSeeder berhasil dijalankan: 19 skenario alur mentoring siap ditest.');
     }
 }
-
