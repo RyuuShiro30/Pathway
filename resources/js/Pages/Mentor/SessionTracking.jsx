@@ -1,6 +1,6 @@
 import { Head, Link, useForm, usePage } from "@inertiajs/react";
 import { useEffect, useState } from "react";
-import NotificationBell from "@/Components/NotificationBell";
+import MentorNavbar from "@/Components/MentorNavbar";
 import { AlertBanner, Badge, Button, Card, themeTokens } from "@/Components/ui";
 
 const sessionDateTimeFormatter = new Intl.DateTimeFormat("id-ID", {
@@ -321,81 +321,7 @@ export default function SessionTracking({
             `}</style>
 
             {/* TOP NAVIGATION BAR */}
-            <header className="sticky top-0 z-40 bg-[#548299] text-white shadow-md">
-                <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 sm:px-6 lg:px-8">
-                    <div className="flex shrink-0 items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-xl font-extrabold text-white shadow-inner">
-                            P
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xl font-black tracking-tight">
-                                Pathway
-                            </span>
-                            <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold tracking-wider text-white">
-                                MENTOR
-                            </span>
-                        </div>
-                    </div>
-
-                    <nav
-                        aria-label="Navigasi mentor"
-                        className="order-4 flex w-full items-center gap-1.5 overflow-x-auto whitespace-nowrap text-sm font-medium xl:order-none xl:w-auto"
-                    >
-                        <Link
-                            href={route("mentor.dashboard")}
-                            className="rounded-full px-4 py-1.5 text-white/80 transition hover:bg-white/10 hover:text-white"
-                        >
-                            Overview
-                        </Link>
-                        <span className="rounded-full px-4 py-1.5 text-white/80">
-                            Mentors Directory
-                        </span>
-                        <span className="rounded-full px-4 py-1.5 text-white/80">
-                            Mentees &amp; Students
-                        </span>
-                    </nav>
-
-                    <div className="flex min-w-0 flex-1 items-center justify-end gap-3 sm:gap-5">
-                        <label className="relative flex min-w-0 max-w-xs flex-1 items-center">
-                            <svg
-                                className="pointer-events-none absolute left-3.5 h-4 w-4 text-white/60"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                />
-                            </svg>
-                            <input
-                                type="search"
-                                placeholder="Cari mentor, topik..."
-                                aria-label="Cari mentor atau topik"
-                                className="w-full rounded-full border border-white/25 bg-white/15 py-1.5 pl-9 pr-3 text-xs text-white placeholder:text-white/70 focus:border-white focus:bg-white/25 focus:outline-none focus:ring-1 focus:ring-white"
-                            />
-                        </label>
-                        <div className="flex shrink-0 items-center gap-3">
-                            <NotificationBell />
-                            <div className="flex items-center gap-2.5 rounded-full bg-white/10 py-1 pl-1 pr-3">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E5ECDD] text-xs font-bold text-[#34443D] shadow-sm">
-                                    {mentorInitials}
-                                </div>
-                                <div className="hidden text-left sm:block">
-                                    <p className="max-w-[130px] truncate text-xs font-semibold leading-tight text-white">
-                                        {mentorName}
-                                    </p>
-                                    <p className="truncate text-[10px] text-white/75">
-                                        Mentor
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            <MentorNavbar mentorName={mentorName} />
 
             <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
                 {/* BREADCRUMB & STATUS BAR */}

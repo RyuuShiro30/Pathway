@@ -1,7 +1,7 @@
 import { Head, Link, useForm, usePage } from "@inertiajs/react";
 import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
-import NotificationBell from "@/Components/NotificationBell";
+import MentorNavbar from "@/Components/MentorNavbar";
 import {
     AlertBanner,
     Badge,
@@ -495,89 +495,11 @@ export default function Dashboard({
             `}</style>
 
             {/* TOP NAVIGATION BAR */}
-            <header className="sticky top-0 z-40 bg-[#548299] text-white shadow-md">
-                <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 sm:px-6 lg:px-8">
-                    <div className="flex shrink-0 items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-xl font-extrabold text-white shadow-inner">
-                            P
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xl font-black tracking-tight">
-                                Pathway
-                            </span>
-                            <span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-bold tracking-wider text-white">
-                                MENTOR
-                            </span>
-                        </div>
-                    </div>
-
-                    <nav
-                        aria-label="Navigasi mentor"
-                        className="order-4 flex w-full items-center gap-1.5 overflow-x-auto whitespace-nowrap text-sm font-medium xl:order-none xl:w-auto"
-                    >
-                        <Link
-                            href={route("mentor.dashboard")}
-                            aria-current="page"
-                            className="rounded-full bg-white/20 px-4 py-1.5 font-semibold text-white transition hover:bg-white/30"
-                        >
-                            Overview
-                        </Link>
-                        <Link
-                            href={route("mentors.index")}
-                            className="rounded-full px-4 py-1.5 text-white/80 transition hover:bg-white/10 hover:text-white"
-                        >
-                            Mentors Directory
-                        </Link>
-                        <Link
-                            href={route("courses.index")}
-                            className="rounded-full px-4 py-1.5 text-white/80 transition hover:bg-white/10 hover:text-white"
-                        >
-                            Courses &amp; Materials
-                        </Link>
-                    </nav>
-
-                    <div className="flex min-w-0 flex-1 items-center justify-end gap-3 sm:gap-5">
-                        <label className="relative flex min-w-0 max-w-xs flex-1 items-center">
-                            <svg
-                                className="pointer-events-none absolute left-3.5 h-4 w-4 text-white/60"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                />
-                            </svg>
-                            <input
-                                type="search"
-                                placeholder="Cari mentee, jadwal, topik..."
-                                aria-label="Cari mentee atau topik"
-                                className="w-full rounded-full border border-white/25 bg-white/15 py-1.5 pl-9 pr-3 text-xs text-white placeholder:text-white/70 focus:border-white focus:bg-white/25 focus:outline-none focus:ring-1 focus:ring-white"
-                            />
-                        </label>
-
-                        <div className="flex shrink-0 items-center gap-3">
-                            <NotificationBell />
-                            <div className="flex items-center gap-2.5 rounded-full bg-white/10 py-1 pl-1 pr-3">
-                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E5ECDD] text-xs font-bold text-[#34443D] shadow-sm">
-                                    {avatarInitials}
-                                </div>
-                                <div className="hidden text-left sm:block">
-                                    <p className="max-w-[130px] truncate text-xs font-semibold leading-tight text-white">
-                                        {mentorName}
-                                    </p>
-                                    <p className="truncate text-[10px] text-white/75">
-                                        {mentorProfile?.expertise ?? "Mentor"}
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            <MentorNavbar
+                active="overview"
+                mentorName={mentorName}
+                mentorProfile={mentorProfile}
+            />
 
             {/* MAIN CONTENT AREA */}
             <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8 space-y-6">
@@ -1440,11 +1362,12 @@ export default function Dashboard({
                                     <Button
                                         type="submit"
                                         disabled={form.processing}
-                                        variant="dark"
+                                        variant="ghost"
                                         size="md"
+                                        className="!bg-[#91D06C] hover:!bg-[#82C25D] !text-[#1F3D2B] border-transparent font-bold shadow-sm focus:ring-[#91D06C]/40"
                                     >
                                         <svg
-                                            className="h-4 w-4 text-emerald-400"
+                                            className="h-4 w-4 text-[#1F3D2B]"
                                             fill="none"
                                             viewBox="0 0 24 24"
                                             stroke="currentColor"
@@ -1751,31 +1674,31 @@ export default function Dashboard({
                             </Card>
                         )}
 
-                        {/* 4. PROFIL MENTOR (DARK CARD) */}
-                        <Card as="section" variant="dark" className="p-5">
+                        {/* 4. PROFIL MENTOR (CARD) */}
+                        <Card as="section" className="border-transparent !bg-[#6594B1] p-5 text-white shadow-sm">
                             <div className="flex items-start gap-3.5">
-                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-700 text-sm font-bold text-white shadow-sm">
+                                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/20 text-sm font-bold text-white shadow-sm">
                                     {avatarInitials}
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                    <p className="text-[10px] font-bold uppercase tracking-wider text-white/80">
                                         PROFIL MENTOR
                                     </p>
                                     <h3 className="truncate text-base font-bold text-white">
                                         {mentorName}
                                     </h3>
-                                    <p className="truncate text-xs text-slate-400">
+                                    <p className="truncate text-xs text-white/85">
                                         {mentorProfile?.expertise ??
                                             "Fullstack & Cloud Architecture"}
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="mt-4 border-t border-slate-700 pt-3">
-                                <p className="text-xs font-bold text-slate-300">
+                            <div className="mt-4 border-t border-white/20 pt-3">
+                                <p className="text-xs font-bold text-white">
                                     Tentang Saya:
                                 </p>
-                                <p className="mt-1 text-xs text-slate-400 leading-relaxed line-clamp-3">
+                                <p className="mt-1 text-xs text-white/90 leading-relaxed line-clamp-3">
                                     {mentorProfile?.bio ||
                                         "Senior Developer dengan pengalaman 8+ tahun di industri tech. Siap membimbing seputar Laravel, React, dan System Design."}
                                 </p>
@@ -1784,9 +1707,9 @@ export default function Dashboard({
                             <div className="mt-4">
                                 <Button
                                     href={route("profile.edit")}
-                                    variant="subtleDark"
+                                    variant="ghost"
                                     size="sm"
-                                    className="w-full py-2"
+                                    className="w-full py-2 !bg-white/20 hover:!bg-white/30 !text-white border-transparent transition shadow-xs"
                                 >
                                     Edit Profil Mentor
                                 </Button>
