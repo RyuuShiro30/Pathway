@@ -77,7 +77,7 @@ class MentoringSessionCancellationTest extends TestCase
     public function test_another_user_cannot_cancel_a_mentor_session(): void
     {
         $mentor = User::factory()->mentor()->create();
-        $anotherUser = User::factory()->create();
+        $anotherUser = User::factory()->mentor()->create();
         $session = $this->createConfirmedSession($mentor, false);
 
         $response = $this->actingAs($anotherUser)->patch(
