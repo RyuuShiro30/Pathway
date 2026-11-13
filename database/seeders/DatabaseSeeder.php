@@ -17,7 +17,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Kunci akun admin utama agar selalu ada dengan role admin
-        User::updateOrCreate(
+        $admin = User::updateOrCreate(
             ['email' => 'pathway@admin.com'],
             [
                 'name' => 'Pathway Admin',
@@ -26,8 +26,9 @@ class DatabaseSeeder extends Seeder
                 'email_verified_at' => now(),
             ]
         );
+        $admin->forceFill(['role' => 'admin'])->save();
 
-        User::firstOrCreate(
+        $testUser = User::updateOrCreate(
             ['email' => 'test@example.com'],
             [
                 'name' => 'Test User',
@@ -35,6 +36,7 @@ class DatabaseSeeder extends Seeder
                 'role' => 'student',
             ]
         );
+        $testUser->forceFill(['role' => 'student'])->save();
 
         $this->call([
             MentorSeeder::class,
