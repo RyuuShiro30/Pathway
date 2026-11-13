@@ -67,6 +67,8 @@ class BadgeController extends Controller
      */
     public function redeem(int $id): RedirectResponse
     {
+        abort_if(Auth::user()?->isSuspendedMentor(), 403, 'Akun mentor Anda sedang disuspend.');
+
         $userId = Auth::id();
 
         try {
@@ -114,7 +116,7 @@ class BadgeController extends Controller
                     'user_id' => $userId,
                     'amount' => $badge->point_cost,
                     'transaction_type' => 'redeemed_badge',
-                    'description' => 'Penukaran badge: ' . $badge->name,
+                    'description' => 'Penukaran badge: '.$badge->name,
                     'related_id' => $badge->id,
                 ]);
             });
