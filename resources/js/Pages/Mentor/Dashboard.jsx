@@ -128,18 +128,21 @@ export default function Dashboard({
     mentorProfile,
     bookingRequests = [],
     refundRequests = [],
+    rescheduleOffers = [],
     reportedRefundRequests = [],
     studentCancelledSessions = [],
     confirmedSessions = [],
     pointsBalance = 0,
 }) {
     const { auth, flash } = usePage().props;
-
     const safeBookingRequests = Array.isArray(bookingRequests)
         ? bookingRequests
         : [];
     const safeRefundRequests = Array.isArray(refundRequests)
         ? refundRequests
+        : [];
+    const safeRescheduleOffers = Array.isArray(rescheduleOffers)
+        ? rescheduleOffers
         : [];
     const safeReportedRefundRequests = Array.isArray(reportedRefundRequests)
         ? reportedRefundRequests
@@ -1390,7 +1393,107 @@ export default function Dashboard({
 
                     {/* KOLOM KANAN (SIDEBAR / 5 of 12 atau 4 of 12) */}
                     <div className="space-y-6 lg:col-span-5 xl:col-span-4">
-                        {/* 1. MENUNGGU REFUND */}
+                        {/* 1. MENUNGGU RESPONS MENTEE */}
+                        <Card
+                            as="section"
+                            id="menunggu-respons-mentee"
+                            variant="warning"
+                            className="p-5"
+                        >
+                            <SectionHeader
+                                tag="MENUNGGU RESPONS"
+                                tagColor="text-amber-700"
+                                title={`Menunggu Respons Mentee (${safeRescheduleOffers.length})`}
+                                badge={
+                                    <Badge variant="warning" size="sm">
+                                        {safeRescheduleOffers.length} Penawaran
+                                    </Badge>
+                                }
+                                className="border-b border-amber-100 pb-3 mb-3"
+                            />
+
+                            {safeRescheduleOffers.length > 0 ? (
+                                <div className="space-y-3">
+                                    {safeRescheduleOffers.map((offer) => (
+                                        <div
+                                            key={offer.id}
+                                            className="rounded-xl border border-amber-100 bg-amber-50/40 p-3.5"
+                                        >
+                                            <div className="flex items-center justify-between gap-2">
+                                                <h3 className="text-sm font-bold text-slate-900">
+                                                    {offer.student?.name ??
+                                                        "Student"}
+                                                </h3>
+
+                                                <Badge
+                                                    variant="warningBold"
+                                                    size="xs"
+                                                >
+                                                    Menunggu Respons
+                                                </Badge>
+                                            </div>
+
+                                            <div className="mt-3 space-y-2 text-xs text-slate-600">
+                                                <div>
+                                                    <p className="font-semibold text-slate-700">
+                                                        Jadwal Sebelumnya
+                                                    </p>
+                                                    <p>
+                                                        {formatSessionDateTime(
+                                                            offer.old_schedule_time,
+                                                        )}
+                                                    </p>
+                                                </div>
+
+                                                <div>
+                                                    <p className="font-semibold text-slate-700">
+                                                        Jadwal Pengganti
+                                                    </p>
+                                                    <p className="text-emerald-700 font-semibold">
+                                                        {formatSessionDateTime(
+                                                            offer.new_schedule_time,
+                                                        )}
+                                                    </p>
+                                                </div>
+
+                                                {offer.reason && (
+                                                    <div>
+                                                        <p className="font-semibold text-slate-700">
+                                                            Alasan
+                                                        </p>
+                                                        <p>{offer.reason}</p>
+                                                    </div>
+                                                )}
+
+                                                <div className="rounded-lg border border-amber-100 bg-white p-2.5">
+                                                    <p className="font-semibold text-amber-800">
+                                                        Batas Respons Mentee
+                                                    </p>
+                                                    <p className="mt-0.5 text-amber-700">
+                                                        {formatSessionDateTime(
+                                                            offer.respond_deadline,
+                                                        )}
+                                                    </p>
+                                                    <p className="mt-1 text-[11px] text-slate-500">
+                                                        Mentee memiliki waktu 24
+                                                        jam untuk menerima atau
+                                                        menolak penawaran jadwal
+                                                        pengganti.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <EmptyState
+                                    message="Tidak ada penawaran jadwal pengganti yang menunggu respons mentee."
+                                    className="py-4"
+                                />
+                            )}
+                        </Card>
+
+                        {/* 2. MENUNGGU REFUND */}
                         <Card
                             as="section"
                             id="menunggu-refund"

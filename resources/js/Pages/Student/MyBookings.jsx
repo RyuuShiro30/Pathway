@@ -205,6 +205,10 @@ function getStatusLabel(booking) {
         return "Menunggu Verifikasi DP";
     }
 
+    if (isPendingMentorRefundReschedule(booking)) {
+        return "Menunggu Respons Anda";
+    }
+
     if (
         booking.status === "dibatalkan" &&
         booking.refund_status === "menunggu"
@@ -315,6 +319,24 @@ function getLatestRescheduleRequest(booking) {
     return requests[0] ?? null;
 }
 
+function isPendingMentorRefundReschedule(booking) {
+    const request = getLatestRescheduleRequest(booking);
+
+    if (
+        booking.status !== "dibatalkan" ||
+        request?.requested_by !== "mentor" ||
+        request?.request_type !== "refund_reschedule_offer" ||
+        request?.status !== "menunggu_respons" ||
+        !request?.respond_deadline
+    ) {
+        return false;
+    }
+
+    const deadline = new Date(request.respond_deadline);
+
+    return !Number.isNaN(deadline.getTime()) && deadline.getTime() > Date.now();
+}
+
 function getPublicStorageUrl(path) {
     if (!path) {
         return null;
@@ -374,6 +396,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
     const [selectedStatus, setSelectedStatus] = useState("semua");
     const [searchQuery, setSearchQuery] = useState("");
     const [sortOrder, setSortOrder] = useState("terdekat");
+    const [currentTime, setCurrentTime] = useState(() => Date.now());
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [selectedRefundBooking, setSelectedRefundBooking] = useState(null);
@@ -434,20 +457,22 @@ export default function MyBookings({ bookings = [], stats = {} }) {
             ).length,
             menunggu: safeBookings.filter((b) => b.status === "diajukan")
                 .length,
-            perlu_respon: safeBookings.filter(
-                (b) =>
+            perlu_respon: safeBookings.filter((b) => {
+                const hasPendingRefundReschedule =
+                    isPendingMentorRefundReschedule(b);
+
+                return (
+                    hasPendingRefundReschedule ||
                     (b.no_show_report &&
                         b.no_show_report.status === "menunggu_respons" &&
                         (!b.no_show_report.is_reporter ||
                             b.no_show_report.can_respond)) ||
                     (b.status === "dibatalkan" &&
-                        b.refund_status === "menunggu_konfirmasi"),
-            ).length,
-            selesai: safeBookings.filter((b) => b.status === "selesai").length,
-            dibatalkan: safeBookings.filter((b) => b.status === "dibatalkan")
-                .length,
+                        b.refund_status === "menunggu_konfirmasi")
+                );
+            }).length,
         }),
-        [safeBookings],
+        [safeBookings, currentTime],
     );
 
     const filteredAndSortedBookings = useMemo(() => {
@@ -460,15 +485,20 @@ export default function MyBookings({ bookings = [], stats = {} }) {
         } else if (selectedStatus === "menunggu") {
             result = result.filter((b) => b.status === "diajukan");
         } else if (selectedStatus === "perlu_respon") {
-            result = result.filter(
-                (b) =>
+            result = result.filter((b) => {
+                const hasPendingRefundReschedule =
+                    isPendingMentorRefundReschedule(b);
+
+                return (
+                    hasPendingRefundReschedule ||
                     (b.no_show_report &&
                         b.no_show_report.status === "menunggu_respons" &&
                         (!b.no_show_report.is_reporter ||
                             b.no_show_report.can_respond)) ||
                     (b.status === "dibatalkan" &&
-                        b.refund_status === "menunggu_konfirmasi"),
-            );
+                        b.refund_status === "menunggu_konfirmasi")
+                );
+            });
         } else if (selectedStatus === "selesai") {
             result = result.filter((b) => b.status === "selesai");
         } else if (selectedStatus === "dibatalkan") {
@@ -508,7 +538,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
 
             return timeA - timeB;
         });
-    }, [safeBookings, selectedStatus, searchQuery, sortOrder]);
+    }, [safeBookings, selectedStatus, searchQuery, sortOrder, currentTime]);
 
     const itemsPerPage = 6;
     const totalPages = Math.max(
@@ -525,6 +555,16 @@ export default function MyBookings({ bookings = [], stats = {} }) {
         startIndex,
         endIndex,
     );
+
+    useEffect(() => {
+        const interval = window.setInterval(() => {
+            setCurrentTime(Date.now());
+        }, 30_000);
+
+        return () => {
+            window.clearInterval(interval);
+        };
+    }, []);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -833,6 +873,25 @@ export default function MyBookings({ bookings = [], stats = {} }) {
         setRefundDecisionError("");
     }
 
+    function respondToMentorReschedule(booking, action) {
+        const confirmationMessage =
+            action === "terima"
+                ? "Apakah Anda yakin ingin menerima tawaran jadwal pengganti dari mentor?"
+                : "Apakah Anda yakin ingin menolak tawaran jadwal pengganti dari mentor?";
+
+        if (!window.confirm(confirmationMessage)) {
+            return;
+        }
+
+        router.patch(
+            route("student.bookings.refund-reschedule.respond", booking.id),
+            { action },
+            {
+                preserveScroll: true,
+            },
+        );
+    }
+
     function submitRefundConfirmation() {
         if (!selectedRefundBooking || !refundDecision || isRefundSubmitting) {
             return;
@@ -1083,8 +1142,153 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                         booking,
                                     )}`}
                                 >
-                                    {/* Main Row */}
-                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-3.5 sm:px-5 sm:py-3.5">
+                                    {/* Tampilan Khusus Tawaran Jadwal Baru dari Mentor */}
+                                    {isPendingMentorRefundReschedule(
+                                        booking,
+                                    ) && (
+                                        <div className="space-y-3 p-3.5 sm:px-5 sm:py-3.5">
+                                            {/* Baris Informasi Mentor dan Status */}
+                                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                                <div className="flex min-w-0 items-center gap-3">
+                                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#486B88] text-sm font-bold text-white">
+                                                        {getInitials(
+                                                            booking.mentor
+                                                                ?.name,
+                                                        )}
+                                                    </div>
+
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-bold text-slate-900">
+                                                            {booking.mentor
+                                                                ?.name ??
+                                                                "Mentor"}
+                                                        </p>
+                                                        <p className="text-xs text-slate-500">
+                                                            {booking.mentor
+                                                                ?.expertise ||
+                                                                booking.notes_from_student ||
+                                                                "Sesi Mentoring"}
+                                                        </p>
+                                                    </div>
+
+                                                    <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-700">
+                                                        {booking.is_free_session
+                                                            ? "Gratis"
+                                                            : formatRupiah(
+                                                                  booking.price_snapshot,
+                                                              )}
+                                                    </span>
+                                                </div>
+
+                                                <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                                                    Menunggu Respons Anda
+                                                </span>
+                                            </div>
+
+                                            {/* Informasi Jadwal */}
+                                            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+                                                    <p className="text-[11px] font-semibold text-slate-500">
+                                                        Jadwal Awal
+                                                    </p>
+                                                    <p className="mt-1 text-xs font-semibold text-slate-800">
+                                                        {formatBookingDateTime(
+                                                            booking.schedule_time,
+                                                        )}
+                                                    </p>
+                                                    <p className="text-[11px] text-slate-500">
+                                                        {formatBookingTimeRange(
+                                                            booking,
+                                                        )}
+                                                    </p>
+                                                </div>
+
+                                                <div className="rounded-lg border border-sky-200 bg-sky-50/60 px-3 py-2.5">
+                                                    <div className="flex items-center justify-between gap-2">
+                                                        <p className="text-[11px] font-semibold text-sky-700">
+                                                            Jadwal Pengganti
+                                                        </p>
+                                                        <span className="shrink-0 rounded-md bg-sky-100 px-2 py-1 text-[10px] font-semibold text-sky-700">
+                                                            Oleh Mentor
+                                                        </span>
+                                                    </div>
+
+                                                    <p className="mt-1 text-xs font-bold text-sky-900">
+                                                        {formatBookingDateTime(
+                                                            latestRescheduleRequest.new_schedule_time,
+                                                        )}
+                                                    </p>
+                                                    <p className="text-[11px] text-sky-700">
+                                                        {formatBookingTimeRange(
+                                                            {
+                                                                schedule_time:
+                                                                    latestRescheduleRequest.new_schedule_time,
+                                                                end_time:
+                                                                    latestRescheduleRequest.new_end_time,
+                                                            },
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* Batas Waktu dan Tombol */}
+                                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="flex items-center gap-2 text-xs text-amber-700">
+                                                    <span>⏳</span>
+                                                    <span>
+                                                        Batas respons:{" "}
+                                                        <strong>
+                                                            {formatNoShowDeadline(
+                                                                latestRescheduleRequest.respond_deadline,
+                                                            )}
+                                                        </strong>
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex justify-end gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            respondToMentorReschedule(
+                                                                booking,
+                                                                "tolak",
+                                                            )
+                                                        }
+                                                        className="inline-flex min-h-9 items-center justify-center rounded-lg border border-rose-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50"
+                                                    >
+                                                        Tolak Jadwal
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            respondToMentorReschedule(
+                                                                booking,
+                                                                "terima",
+                                                            )
+                                                        }
+                                                        className="inline-flex min-h-9 items-center justify-center rounded-lg bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
+                                                    >
+                                                        Terima Jadwal
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Main Row
+                                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-3.5 sm:px-5 sm:py-3.5"> */}
+
+                                    {/* Main Row - Layout Booking Lama */}
+                                    <div
+                                        className={`flex flex-col lg:flex-row lg:items-center justify-between gap-4 p-3.5 sm:px-5 sm:py-3.5 ${
+                                            isPendingMentorRefundReschedule(
+                                                booking,
+                                            )
+                                                ? "hidden"
+                                                : ""
+                                        }`}
+                                    >
                                         {/* Left: Avatar + Mentor Info */}
                                         <div className="flex min-w-0 items-center gap-3.5">
                                             <div
@@ -1159,16 +1363,22 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                             </div>
 
                                             {latestRescheduleRequest && (
-                                                <div className="w-72 rounded-xl border border-sky-100 bg-sky-50 px-3.5 py-2.5">
+                                                <div className="w-80 shrink-0 rounded-xl border border-sky-100 bg-sky-50 px-3.5 py-2.5">
                                                     <p className="text-xs font-bold text-sky-800">
-                                                        Pengajuan Reschedule
+                                                        {latestRescheduleRequest.request_type ===
+                                                        "refund_reschedule_offer"
+                                                            ? "Tawaran Jadwal Pengganti dari Mentor"
+                                                            : "Pengajuan Penjadwalan Ulang oleh Mentee"}
                                                     </p>
 
                                                     <div className="mt-1 space-y-0.5 text-[11px] text-sky-700">
                                                         <p>
                                                             <span className="font-semibold">
-                                                                Jadwal baru:
-                                                            </span>{" "}
+                                                                {latestRescheduleRequest.request_type ===
+                                                                "refund_reschedule_offer"
+                                                                    ? "Jadwal Pengganti: "
+                                                                    : "Jadwal yang Diajukan: "}
+                                                            </span>
                                                             {formatBookingDateTime(
                                                                 latestRescheduleRequest.new_schedule_time,
                                                             )}{" "}
@@ -1189,7 +1399,10 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                                             </span>{" "}
                                                             {latestRescheduleRequest.status ===
                                                             "menunggu_respons"
-                                                                ? "Menunggu Respons Mentor"
+                                                                ? latestRescheduleRequest.request_type ===
+                                                                  "refund_reschedule_offer"
+                                                                    ? "Menunggu Respons Anda"
+                                                                    : "Menunggu Respons Mentor"
                                                                 : latestRescheduleRequest.status ===
                                                                     "diterima"
                                                                   ? "Diterima"
@@ -1264,6 +1477,37 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                             </span>
 
                                             {/* Action Buttons */}
+                                            {isPendingMentorRefundReschedule(
+                                                booking,
+                                            ) && (
+                                                <>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            respondToMentorReschedule(
+                                                                booking,
+                                                                "terima",
+                                                            )
+                                                        }
+                                                        className="inline-flex min-h-8 items-center justify-center rounded-xl bg-emerald-600 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-emerald-700"
+                                                    >
+                                                        Terima Jadwal
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            respondToMentorReschedule(
+                                                                booking,
+                                                                "tolak",
+                                                            )
+                                                        }
+                                                        className="inline-flex min-h-8 items-center justify-center rounded-xl border border-rose-200 bg-white px-3.5 py-1.5 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50"
+                                                    >
+                                                        Tolak Jadwal
+                                                    </button>
+                                                </>
+                                            )}
                                             {discordUrl && (
                                                 <a
                                                     href={discordUrl}
@@ -2001,7 +2245,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                     <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
                         <div className="mb-5">
                             <h2 className="text-lg font-bold text-slate-900">
-                                Ajukan Reschedule
+                                Ajukan Penjadwalan Ulang
                             </h2>
                             <p className="mt-1 text-sm text-slate-500">
                                 Pilih jadwal baru untuk sesi mentoring Anda.
@@ -2041,7 +2285,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                     htmlFor="reschedule-schedule-time"
                                     className="mb-1 block text-sm font-semibold text-slate-700"
                                 >
-                                    Jadwal Baru
+                                    Jadwal yang Diajukan
                                 </label>
 
                                 <input
@@ -2096,9 +2340,10 @@ export default function MyBookings({ bookings = [], stats = {} }) {
 
                             <div className="rounded-xl bg-sky-50 p-4 text-sm text-sky-700">
                                 <p>
-                                    Jadwal baru harus tersedia pada jadwal
-                                    mentor, maksimal 10 hari ke depan, dan tetap
-                                    menggunakan tipe serta harga sesi yang sama.
+                                    Jadwal yang diajukan harus sesuai dengan
+                                    ketersediaan mentor, maksimal 10 hari ke
+                                    depan, serta menggunakan tipe dan harga sesi
+                                    yang sama.
                                 </p>
                                 <p className="mt-1">
                                     Pengajuan akan dikirim kepada mentor untuk
@@ -2123,7 +2368,7 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                                 >
                                     {rescheduleForm.processing
                                         ? "Mengajukan..."
-                                        : "Ajukan Reschedule"}
+                                        : "Ajukan Penjadwalan Ulang"}
                                 </button>
                             </div>
                         </form>

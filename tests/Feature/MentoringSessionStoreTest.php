@@ -253,7 +253,7 @@ class MentoringSessionStoreTest extends TestCase
             'price_snapshot' => 0,
         ]);
 
-        $this->actingAs($this->createStudentWithPaymentAccount())
+        $this->actingAs($student)
             ->get(route('student.booking.schedule', ['mentor' => $mentor->id]))
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Student/BookingSchedule', false)
@@ -956,7 +956,6 @@ class MentoringSessionStoreTest extends TestCase
     private function submitBooking(User $mentor, array $overrides = []): TestResponse
     {
         $student = $this->createStudentWithPaymentAccount();
-
         $payload = array_merge([
             'mentor_id' => $mentor->id,
             'schedule_time' => '2026-10-12T02:00:00+00:00',

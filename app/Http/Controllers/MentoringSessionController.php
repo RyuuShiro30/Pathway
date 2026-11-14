@@ -1276,17 +1276,434 @@ class MentoringSessionController extends Controller
         ]);
     }
 
-    // GET - halaman proses refund untuk mentor
-    public function refundForm($id)
+    // GET - halaman penawaran jadwal pengganti untuk sesi gratis dan berbayar
+    public function rescheduleOfferForm(int $id): InertiaResponse|RedirectResponse
     {
         $session = MentoringSession::with('student')
             ->where('mentor_id', Auth::id())
-            ->where('refund_status', 'menunggu')
+            ->where('status', 'dibatalkan')
+            ->where(function ($query) {
+                $query->where(function ($paid) {
+                    $paid->where('is_free_session', false)
+                        ->whereIn('cancelled_by', ['mentor', 'sistem'])
+                        ->where('refund_status', 'menunggu');
+                })->orWhere(function ($free) {
+                    $free->where('is_free_session', true)
+                        ->where('cancelled_by', 'mentor');
+                });
+            })
             ->findOrFail($id);
+
+        // Cegah penawaran jadwal jika batas refund sudah lewat.
+        if (
+            ! $session->is_free_session
+            && (
+                ! $session->refund_deadline
+                || $session->refund_deadline->lte(now())
+            )
+        ) {
+            return redirect()
+                ->route('mentor.dashboard')
+                ->with('error', 'Batas waktu refund telah berakhir. Silakan lanjutkan proses refund.');
+        }
+
+        // Pastikan belum ada tawaran yang menunggu respons mentee.
+        abort_if(
+            $session->rescheduleRequests()
+                ->where('request_type', 'refund_reschedule_offer')
+                ->where('status', 'menunggu_respons')
+                ->exists(),
+            403,
+            'Saat ini penawaran jadwal pengganti sedang menunggu respons mentee.'
+        );
+
+        // Batasi maksimal satu penawaran reschedule refund per sesi.
+        abort_if(
+            $session->rescheduleRequests()
+                ->where('request_type', 'refund_reschedule_offer')
+                ->exists(),
+            403,
+            'Sesi ini sudah pernah ditawarkan jadwal pengganti. Silakan lanjutkan proses refund.'
+        );
+
+        $mentorProfile = MentorProfile::query()
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        $from = Carbon::now('Asia/Jakarta')->startOfDay();
+        $until = $from->copy()->addDays(10);
+        $bookingWindowEnd = $until->copy()->addDay();
+
+        $busySessions = MentoringSession::query()
+            ->where('mentor_id', Auth::id())
+            ->whereIn('status', ['diajukan', 'dikonfirmasi', 'berlangsung'])
+            ->where('schedule_time', '<', $bookingWindowEnd->copy()->setTimezone('UTC'))
+            ->where('end_time', '>', $from->copy()->setTimezone('UTC'))
+            ->where('id', '!=', $session->id)
+            ->orderBy('schedule_time')
+            ->get(['schedule_time', 'end_time'])
+            ->map(static fn (MentoringSession $busySession): array => [
+                'schedule_time' => $busySession->schedule_time
+                    ->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'end_time' => $busySession->end_time
+                    ->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+            ])
+            ->all();
+
+        return Inertia::render('Mentor/RescheduleOffer', [
+            'session' => $session,
+            'mentor' => [
+                'id' => Auth::id(),
+                'availability_schedule' => $this->normalizeAvailabilitySchedule(
+                    $mentorProfile->availability_schedule
+                ),
+            ],
+            'busy_sessions' => $busySessions,
+            'booking_window' => [
+                'from' => $from->toDateString(),
+                'until' => $until->toDateString(),
+            ],
+        ]);
+    }
+
+    // GET - halaman proses refund khusus sesi berbayar
+    public function refundForm(int $id): InertiaResponse
+    {
+        $session = MentoringSession::with('student')
+            ->where('mentor_id', Auth::id())
+            ->where('status', 'dibatalkan')
+            ->where('is_free_session', false)
+            ->where('refund_status', 'menunggu')
+            ->whereDoesntHave('rescheduleRequests', function ($query) {
+                $query
+                    ->where('requested_by', 'mentor')
+                    ->where('request_type', 'refund_reschedule_offer')
+                    ->where('status', 'menunggu_respons');
+            })
+            ->findOrFail($id);
+
+        // Periksa apakah sesi pernah mendapatkan penawaran jadwal pengganti.
+        $hasPreviousOffer = $session->rescheduleRequests()
+            ->where('request_type', 'refund_reschedule_offer')
+            ->exists();
 
         return Inertia::render('Mentor/RefundProcess', [
             'session' => $session,
+            'hasPreviousOffer' => $hasPreviousOffer,
         ]);
+    }
+
+    // POST - mentor menawarkan jadwal pengganti
+    public function offerRefundReschedule(Request $request, int $id): RedirectResponse
+    {
+        $validated = $request->validate([
+            'schedule_time' => ['required', 'date'],
+            'reason' => ['nullable', 'string', 'max:300'],
+        ]);
+
+        return DB::transaction(function () use ($validated, $id) {
+            $session = MentoringSession::query()
+                ->where('mentor_id', Auth::id())
+                ->whereKey($id)
+                ->where('status', 'dibatalkan')
+                ->where(function ($query) {
+                    $query->where(function ($paid) {
+                        // Sesi berbayar yang masih menunggu refund
+                        $paid->where('is_free_session', false)
+                            ->whereIn('cancelled_by', ['mentor', 'sistem'])
+                            ->where('refund_status', 'menunggu')
+                            ->where('refund_deadline', '>', now());
+                    })->orWhere(function ($free) {
+                        // Sesi gratis yang dibatalkan oleh mentor
+                        $free->where('is_free_session', true)
+                            ->where('cancelled_by', 'mentor');
+                    });
+                })
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            // Batasi maksimal satu penawaran reschedule refund per sesi.
+            $hasPreviousOffer = $session->rescheduleRequests()
+                ->where('request_type', 'refund_reschedule_offer')
+                ->exists();
+
+            if ($hasPreviousOffer) {
+                return redirect()
+                    ->route('mentor.dashboard')
+                    ->with(
+                        'error',
+                        'Sesi ini sudah pernah ditawarkan jadwal pengganti. Silakan lanjutkan proses refund.'
+                    );
+            }
+
+            $newScheduleTime = Carbon::parse(
+                $validated['schedule_time'],
+                'Asia/Jakarta'
+            );
+
+            if (! $this->isWithinBookingWindow($newScheduleTime)) {
+                throw ValidationException::withMessages([
+                    'schedule_time' => 'Jadwal pengganti harus berada dalam 10 hari ke depan.',
+                ]);
+            }
+
+            if ($newScheduleTime->equalTo($session->schedule_time)) {
+                throw ValidationException::withMessages([
+                    'schedule_time' => 'Pilih jadwal yang berbeda dari jadwal sesi awal.',
+                ]);
+            }
+
+            $mentorProfile = MentorProfile::query()
+                ->where('user_id', $session->mentor_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $mentorProfile) {
+                throw ValidationException::withMessages([
+                    'schedule_time' => 'Data jadwal mentor tidak ditemukan.',
+                ]);
+            }
+
+            $booking = $this->resolveBookingDetails(
+                $mentorProfile,
+                $newScheduleTime,
+                (int) $session->duration_hours
+            );
+
+            if ($booking === null) {
+                throw ValidationException::withMessages([
+                    'schedule_time' => 'Jadwal tersebut tidak tersedia pada jadwal mentor.',
+                ]);
+            }
+
+            // Tipe dan harga sesi pengganti harus sama dengan sesi awal.
+            if (
+                $booking['is_free_session'] !== $session->is_free_session
+                || $booking['total_price'] != $session->price_snapshot
+            ) {
+                throw ValidationException::withMessages([
+                    'schedule_time' => 'Tipe dan harga sesi pengganti harus sama dengan sesi awal.',
+                ]);
+            }
+
+            if ($this->hasBookingConflict(
+                (int) $session->mentor_id,
+                $booking['schedule_time'],
+                $booking['end_time'],
+                true,
+                (int) $session->id,
+            )) {
+                throw ValidationException::withMessages([
+                    'schedule_time' => 'Jadwal pengganti sudah digunakan untuk sesi lain.',
+                ]);
+            }
+
+            $session->rescheduleRequests()->create([
+                'requested_by' => 'mentor',
+                'request_type' => 'refund_reschedule_offer',
+                'old_schedule_time' => $session->schedule_time,
+                'old_end_time' => $session->end_time,
+                'new_schedule_time' => $booking['schedule_time'],
+                'new_end_time' => $booking['end_time'],
+                'status' => 'menunggu_respons',
+                'reason' => $validated['reason'] ?? null,
+                'respond_deadline' => now()->addHours(24),
+
+                // Refund hanya dijeda untuk sesi berbayar.
+                'refund_paused_at' => $session->is_free_session
+                    ? null
+                    : now(),
+            ]);
+
+            $session->student?->notify(
+                new SessionEvent(
+                    'Mentor menawarkan jadwal pengganti. Silakan periksa tawaran di halaman booking.',
+                    '/bookings'
+                )
+            );
+
+            return redirect()
+                ->back()
+                ->with('success', 'Tawaran jadwal pengganti berhasil dikirim kepada mentee.');
+        });
+    }
+
+    // PATCH - student menerima atau menolak tawaran reschedule dari mentor
+    public function respondRefundRescheduleOffer(Request $request, int $id): RedirectResponse
+    {
+        $validated = $request->validate([
+            'action' => ['required', 'in:terima,tolak'],
+        ]);
+
+        $result = DB::transaction(function () use ($id, $validated) {
+            $session = MentoringSession::query()
+                ->where('student_id', Auth::id())
+                ->whereKey($id)
+                ->where('status', 'dibatalkan')
+                ->where(function ($query) {
+                    $query->where(function ($paid) {
+                        $paid->where('is_free_session', false)
+                            ->where('refund_status', 'menunggu');
+                    })->orWhere(function ($free) {
+                        $free->where('is_free_session', true)
+                            ->where('cancelled_by', 'mentor');
+                    });
+                })
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $offer = $session->rescheduleRequests()
+                ->where('requested_by', 'mentor')
+                ->where('request_type', 'refund_reschedule_offer')
+                ->latest()
+                ->lockForUpdate()
+                ->first();
+
+            if (! $offer || $offer->status !== 'menunggu_respons') {
+                throw ValidationException::withMessages([
+                    'reschedule' => 'Tidak ada tawaran jadwal pengganti yang menunggu respons.',
+                ]);
+            }
+
+            $isFreeSession = $session->is_free_session;
+
+            // Jika sudah melewati batas 24 jam, tawaran kedaluwarsa.
+            if (now()->gte($offer->respond_deadline)) {
+                $offer->update([
+                    'status' => 'kedaluwarsa',
+                    'responded_at' => now(),
+                ]);
+
+                // Refund hanya dilanjutkan untuk sesi berbayar.
+                if (! $isFreeSession) {
+                    $session->update([
+                        'refund_deadline' => now()->addHours(48),
+                    ]);
+
+                    $session->mentor?->notify(
+                        new SessionEvent(
+                            'Tawaran jadwal pengganti kedaluwarsa. Proses refund dilanjutkan dengan batas waktu 48 jam.',
+                            '/mentor/session/' . $session->id . '/refund'
+                        )
+                    );
+                } else {
+                    $session->mentor?->notify(
+                        new SessionEvent(
+                            'Tawaran jadwal pengganti untuk sesi gratis kedaluwarsa. Sesi tetap dibatalkan.',
+                            '/mentor/session/' . $session->id
+                        )
+                    );
+                }
+
+                return $isFreeSession
+                    ? 'kedaluwarsa_gratis'
+                    : 'kedaluwarsa_berbayar';
+            }
+
+            // Student menolak tawaran.
+            if ($validated['action'] === 'tolak') {
+                $offer->update([
+                    'status' => 'ditolak',
+                    'responded_at' => now(),
+                ]);
+
+                if (! $isFreeSession) {
+                    $session->update([
+                        'refund_deadline' => now()->addHours(48),
+                    ]);
+
+                    $message = 'Student menolak tawaran jadwal pengganti. Proses refund dilanjutkan dengan batas waktu 48 jam.';
+
+                    $url = '/mentor/session/' . $session->id . '/refund';
+                } else {
+                    $message = 'Student menolak tawaran jadwal pengganti untuk sesi gratis. Sesi tetap dibatalkan tanpa proses refund.';
+
+                    $url = '/mentor/session/' . $session->id;
+                }
+
+                $session->mentor?->notify(
+                    new SessionEvent($message, $url)
+                );
+
+                return $isFreeSession
+                    ? 'ditolak_gratis'
+                    : 'ditolak_berbayar';
+            }
+
+            // Pastikan jadwal pengganti belum digunakan sesi lain.
+            if ($this->hasBookingConflict(
+                (int) $session->mentor_id,
+                $offer->new_schedule_time,
+                $offer->new_end_time,
+                true,
+                (int) $session->id,
+            )) {
+                throw ValidationException::withMessages([
+                    'reschedule' => 'Jadwal pengganti sudah tidak tersedia.',
+                ]);
+            }
+
+            // Student menerima tawaran.
+            $session->update([
+                'status' => 'dikonfirmasi',
+                'schedule_time' => $offer->new_schedule_time,
+                'end_time' => $offer->new_end_time,
+                'refund_status' => 'tidak_berlaku',
+                'refund_deadline' => null,
+                'cancelled_by' => null,
+                'cancellation_reason' => null,
+            ]);
+
+            $offer->update([
+                'status' => 'diterima',
+                'responded_at' => now(),
+            ]);
+
+            $session->mentor?->notify(
+                new SessionEvent(
+                    'Student menerima tawaran jadwal pengganti. Sesi mentoring kembali dikonfirmasi.',
+                    '/mentor/session/' . $session->id
+                )
+            );
+
+            return 'diterima';
+        });
+
+        if ($result === 'kedaluwarsa_gratis') {
+            return redirect()
+                ->route('student.bookings.index')
+                ->withErrors([
+                    'reschedule' => 'Tawaran sudah kedaluwarsa. Sesi gratis tetap dibatalkan tanpa proses refund.',
+                ]);
+        }
+
+        if ($result === 'kedaluwarsa_berbayar') {
+            return redirect()
+                ->route('student.bookings.index')
+                ->withErrors([
+                    'reschedule' => 'Tawaran sudah kedaluwarsa. Proses refund dilanjutkan dengan batas waktu 48 jam.',
+                ]);
+        }
+
+        if ($result === 'diterima') {
+            return redirect()
+                ->route('student.bookings.index')
+                ->with('success', 'Tawaran jadwal pengganti berhasil diterima. Sesi mentoring kembali dikonfirmasi.');
+        }
+
+        if ($result === 'ditolak_gratis') {
+            return redirect()
+                ->route('student.bookings.index')
+                ->with('success', 'Tawaran ditolak. Sesi gratis tetap dibatalkan tanpa proses refund.');
+        }
+
+        return redirect()
+            ->route('student.bookings.index')
+            ->with('success', 'Tawaran ditolak. Proses refund dilanjutkan dengan batas waktu 48 jam.');
     }
 
     // PATCH - mentor klik "Mulai Sesi"
@@ -1415,6 +1832,12 @@ class MentoringSessionController extends Controller
         $session = MentoringSession::where('mentor_id', Auth::id())
             ->where('id', $id)
             ->where('refund_status', 'menunggu')
+            ->whereDoesntHave('rescheduleRequests', function ($query) {
+                $query
+                    ->where('requested_by', 'mentor')
+                    ->where('request_type', 'refund_reschedule_offer')
+                    ->where('status', 'menunggu_respons');
+            })
             ->firstOrFail();
 
         $proofPath = $request->file('refund_proof')->store('refund-proofs', 'public');
@@ -1429,7 +1852,10 @@ class MentoringSessionController extends Controller
             new RefundProofUploaded(route('student.bookings.index', [], false)),
         );
 
-        return redirect()->route('mentor.dashboard')->with('success', 'Bukti refund berhasil diupload, menunggu konfirmasi mentee');
+        return redirect()->route('mentor.dashboard')->with(
+            'success',
+            'Bukti refund berhasil diupload, menunggu konfirmasi mentee'
+        );
     }
 
     private function hasActiveNoShowReport(int $sessionId): bool

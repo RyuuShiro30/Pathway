@@ -1,40 +1,35 @@
-import { useRef, useState } from 'react';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
-import MentorNavbar from '@/Components/MentorNavbar';
-import {
-    Badge,
-    Button,
-    Card,
-    SectionHeader,
-} from '@/Components/ui';
+import { useRef, useState } from "react";
+import { Head, Link, useForm, usePage } from "@inertiajs/react";
+import MentorNavbar from "@/Components/MentorNavbar";
+import { Badge, Button, Card, SectionHeader } from "@/Components/ui";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
-const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+const ALLOWED_FILE_TYPES = ["image/jpeg", "image/png", "application/pdf"];
 
-const dateTimeFormatter = new Intl.DateTimeFormat('id-ID', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-    timeZone: 'Asia/Jakarta',
+const dateTimeFormatter = new Intl.DateTimeFormat("id-ID", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone: "Asia/Jakarta",
 });
 
-const rupiahFormatter = new Intl.NumberFormat('id-ID', {
+const rupiahFormatter = new Intl.NumberFormat("id-ID", {
     maximumFractionDigits: 0,
 });
 
 function formatDateTime(value) {
     if (!value) {
-        return 'Waktu tidak tersedia';
+        return "Waktu tidak tersedia";
     }
 
     const date = new Date(value);
 
     return Number.isNaN(date.getTime())
-        ? 'Waktu tidak tersedia'
+        ? "Waktu tidak tersedia"
         : `${dateTimeFormatter.format(date)} WIB`;
 }
 
@@ -48,14 +43,14 @@ function formatFileSize(bytes) {
 
 function getInitials(name) {
     return (
-        String(name ?? 'User')
+        String(name ?? "User")
             .trim()
             .split(/\s+/)
             .filter(Boolean)
             .slice(0, 2)
             .map((part) => part[0])
-            .join('')
-            .toUpperCase() || 'U'
+            .join("")
+            .toUpperCase() || "U"
     );
 }
 
@@ -71,26 +66,38 @@ function getPublicStorageUrl(path) {
     }
 
     return `/storage/${value
-        .replace(/^\/+/, '')
-        .replace(/^storage\//, '')
-        .split('/')
+        .replace(/^\/+/, "")
+        .replace(/^storage\//, "")
+        .split("/")
         .map((segment) => encodeURIComponent(segment))
-        .join('/')}`;
+        .join("/")}`;
 }
 
 function getRemainingTime(deadline) {
     if (!deadline) {
-        return { text: 'Batas waktu tidak tersedia', isOverdue: false, isUrgent: false };
+        return {
+            text: "Batas waktu tidak tersedia",
+            isOverdue: false,
+            isUrgent: false,
+        };
     }
 
     const diffMs = new Date(deadline).getTime() - Date.now();
 
     if (Number.isNaN(diffMs)) {
-        return { text: 'Batas waktu tidak tersedia', isOverdue: false, isUrgent: false };
+        return {
+            text: "Batas waktu tidak tersedia",
+            isOverdue: false,
+            isUrgent: false,
+        };
     }
 
     if (diffMs <= 0) {
-        return { text: 'Batas waktu terlewat', isOverdue: true, isUrgent: true };
+        return {
+            text: "Batas waktu terlewat",
+            isOverdue: true,
+            isUrgent: true,
+        };
     }
 
     const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
@@ -104,24 +111,25 @@ function getRemainingTime(deadline) {
     };
 }
 
-export default function RefundProcess({ session }) {
+export default function RefundProcess({ session, hasPreviousOffer }) {
     const { auth } = usePage().props;
 
     const fileInputRef = useRef(null);
     const [isDragging, setIsDragging] = useState(false);
-    const [fileError, setFileError] = useState('');
+    const [fileError, setFileError] = useState("");
 
     const form = useForm({
-        _method: 'patch',
+        _method: "patch",
         refund_proof: null,
     });
 
-    const mentorName = auth?.user?.name ?? 'Mentor';
+    const mentorName = auth?.user?.name ?? "Mentor";
     const student = session.student ?? {};
-    const studentName = student.name ?? 'Student';
+    const studentName = student.name ?? "Mentee";
     const totalPrice = Number(session.price_snapshot ?? 0);
     const refundAmount = totalPrice / 2;
     const remaining = getRemainingTime(session.refund_deadline);
+    const isRefundOverdue = remaining.isOverdue;
     const dpProofUrl = getPublicStorageUrl(session.payment_dp_proof);
     const hasBankAccount =
         student.bank_name &&
@@ -137,27 +145,27 @@ export default function RefundProcess({ session }) {
         }
 
         if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-            setFileError('Format file harus JPG, PNG, atau PDF.');
+            setFileError("Format file harus JPG, PNG, atau PDF.");
             return;
         }
 
         if (file.size > MAX_FILE_SIZE) {
-            setFileError('Ukuran file maksimal 5MB.');
+            setFileError("Ukuran file maksimal 5MB.");
             return;
         }
 
-        setFileError('');
+        setFileError("");
         form.clearErrors();
-        form.setData('refund_proof', file);
+        form.setData("refund_proof", file);
     };
 
     const removeFile = () => {
-        form.setData('refund_proof', null);
+        form.setData("refund_proof", null);
         form.clearErrors();
-        setFileError('');
+        setFileError("");
 
         if (fileInputRef.current) {
-            fileInputRef.current.value = '';
+            fileInputRef.current.value = "";
         }
     };
 
@@ -168,7 +176,7 @@ export default function RefundProcess({ session }) {
     };
 
     const submitRefund = () => {
-        form.post(route('mentor.refund.complete', session.id), {
+        form.post(route("mentor.refund.complete", session.id), {
             forceFormData: true,
         });
     };
@@ -183,7 +191,7 @@ export default function RefundProcess({ session }) {
                 {/* Breadcrumb */}
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <Link
-                        href={route('mentor.dashboard')}
+                        href={route("mentor.dashboard")}
                         className="inline-flex min-h-8 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm transition hover:bg-slate-50"
                     >
                         <svg
@@ -204,10 +212,68 @@ export default function RefundProcess({ session }) {
                     </p>
                 </div>
 
+                {/* Penawaran Jadwal Pengganti */}
+                <Card className="border border-[#D6E5EC] bg-[#F0F7FA]">
+                    <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h2 className="font-bold text-slate-900">
+                                Ingin Menawarkan Jadwal Pengganti?
+                            </h2>
+
+                            <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600">
+                                Sebelum menyelesaikan refund, kamu dapat
+                                menawarkan jadwal mentoring baru kepada mentee.
+                                Mentee memiliki waktu 24 jam untuk merespons
+                                penawaran tersebut.
+                            </p>
+
+                            {isRefundOverdue && (
+                                <p className="mt-2 text-sm font-medium text-red-600">
+                                    Batas waktu refund telah berakhir. Kamu
+                                    tidak dapat menawarkan jadwal pengganti.
+                                    Silakan lanjutkan proses refund.
+                                </p>
+                            )}
+
+                            {!isRefundOverdue && hasPreviousOffer && (
+                                <p className="mt-2 text-sm font-medium text-amber-700">
+                                    Sesi ini sudah pernah ditawarkan jadwal
+                                    pengganti. Penawaran hanya dapat diberikan
+                                    satu kali. Silakan lanjutkan proses refund.
+                                </p>
+                            )}
+                        </div>
+
+                        {isRefundOverdue || hasPreviousOffer ? (
+                            <button
+                                type="button"
+                                disabled
+                                className="inline-flex shrink-0 cursor-not-allowed items-center justify-center rounded-xl bg-slate-300 px-5 py-3 text-sm font-semibold text-slate-500"
+                            >
+                                Tawarkan Jadwal Baru
+                            </button>
+                        ) : (
+                            <Link
+                                href={route(
+                                    "mentor.refund.reschedule-offer.form",
+                                    session.id,
+                                )}
+                                className="inline-flex shrink-0 items-center justify-center rounded-xl bg-[#527D98] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#3E637A]"
+                            >
+                                Tawarkan Jadwal Baru
+                            </Link>
+                        )}
+                    </div>
+                </Card>
+
                 {/* Hero: Judul + Timer */}
                 <div className="flex flex-wrap items-start justify-between gap-5">
                     <div className="max-w-xl">
-                        <Badge variant="danger" size="sm" className="uppercase tracking-wide">
+                        <Badge
+                            variant="danger"
+                            size="sm"
+                            className="uppercase tracking-wide"
+                        >
                             Aksi Diperlukan
                         </Badge>
                         <h1 className="mt-3 text-2xl font-extrabold leading-tight text-slate-900 sm:text-3xl">
@@ -223,8 +289,8 @@ export default function RefundProcess({ session }) {
                     <div
                         className={`rounded-2xl border px-5 py-4 shadow-sm ${
                             remaining.isUrgent
-                                ? 'border-rose-200 bg-rose-50 text-rose-700'
-                                : 'border-amber-200 bg-amber-50 text-amber-800'
+                                ? "border-rose-200 bg-rose-50 text-rose-700"
+                                : "border-amber-200 bg-amber-50 text-amber-800"
                         }`}
                     >
                         <p className="text-[10px] font-bold uppercase tracking-wider">
@@ -234,7 +300,8 @@ export default function RefundProcess({ session }) {
                             {remaining.text}
                         </p>
                         <p className="mt-1 text-xs opacity-80">
-                            Jatuh tempo: {formatDateTime(session.refund_deadline)}
+                            Jatuh tempo:{" "}
+                            {formatDateTime(session.refund_deadline)}
                         </p>
                     </div>
                 </div>
@@ -252,7 +319,13 @@ export default function RefundProcess({ session }) {
                                 stroke="currentColor"
                                 strokeWidth="1.8"
                             >
-                                <rect x="3" y="5" width="18" height="16" rx="2" />
+                                <rect
+                                    x="3"
+                                    y="5"
+                                    width="18"
+                                    height="16"
+                                    rx="2"
+                                />
                                 <path d="M16 3v4M8 3v4M3 10h18" />
                             </svg>
                         }
@@ -268,13 +341,13 @@ export default function RefundProcess({ session }) {
                                     {studentName}
                                 </p>
                                 <p className="truncate text-xs text-slate-500">
-                                    {student.email ?? 'Email tidak tersedia'}
+                                    {student.email ?? "Email tidak tersedia"}
                                 </p>
                             </div>
                         </div>
                         <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                Jadwal Asal
+                                Jadwal Awal
                             </p>
                             <p className="mt-2 text-sm font-semibold leading-6 text-slate-800">
                                 {formatDateTime(session.schedule_time)}
@@ -296,7 +369,7 @@ export default function RefundProcess({ session }) {
                         </p>
                         <p className="mt-2 text-sm leading-6 text-slate-700">
                             {session.cancellation_reason?.trim() ||
-                                'Tidak ada alasan yang dicatat.'}
+                                "Tidak ada alasan yang dicatat."}
                         </p>
                     </div>
                 </Card>
@@ -314,7 +387,13 @@ export default function RefundProcess({ session }) {
                                 stroke="currentColor"
                                 strokeWidth="1.8"
                             >
-                                <rect x="2" y="5" width="20" height="14" rx="2" />
+                                <rect
+                                    x="2"
+                                    y="5"
+                                    width="20"
+                                    height="14"
+                                    rx="2"
+                                />
                                 <path d="M2 10h20" />
                             </svg>
                         }
@@ -336,7 +415,8 @@ export default function RefundProcess({ session }) {
                                     Rp {rupiahFormatter.format(refundAmount)}
                                 </p>
                                 <p className="mt-0.5 text-xs text-slate-400">
-                                    100% Pengembalian DP · Besar harus sesuai nominal diterima
+                                    100% Pengembalian DP · Besar harus sesuai
+                                    nominal diterima
                                 </p>
                                 <dl className="mt-4 space-y-2 border-t border-sky-100 pt-3 text-sm">
                                     <div className="flex justify-between gap-4">
@@ -344,13 +424,19 @@ export default function RefundProcess({ session }) {
                                             Total tarif sesi
                                         </dt>
                                         <dd className="font-medium text-slate-700">
-                                            Rp {rupiahFormatter.format(totalPrice)}
+                                            Rp{" "}
+                                            {rupiahFormatter.format(totalPrice)}
                                         </dd>
                                     </div>
                                     <div className="flex justify-between gap-4 font-semibold">
-                                        <dt className="text-slate-600">DP 50% yang diterima mentor</dt>
+                                        <dt className="text-slate-600">
+                                            DP 50% yang diterima mentor
+                                        </dt>
                                         <dd className="text-[#315F78]">
-                                            Rp {rupiahFormatter.format(refundAmount)}
+                                            Rp{" "}
+                                            {rupiahFormatter.format(
+                                                refundAmount,
+                                            )}
                                         </dd>
                                     </div>
                                 </dl>
@@ -394,7 +480,9 @@ export default function RefundProcess({ session }) {
                                                     Nama Penerima Rekening
                                                 </dt>
                                                 <dd className="mt-1 text-sm font-semibold text-slate-800">
-                                                    {student.bank_account_holder}
+                                                    {
+                                                        student.bank_account_holder
+                                                    }
                                                 </dd>
                                             </div>
                                             {student.bank_branch && (
@@ -411,13 +499,20 @@ export default function RefundProcess({ session }) {
                                     </dl>
                                 ) : (
                                     <div className="mt-3 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                                        <svg aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <svg
+                                            aria-hidden="true"
+                                            className="mt-0.5 h-4 w-4 shrink-0 text-amber-500"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                        >
                                             <circle cx="12" cy="12" r="9" />
                                             <path d="M12 8v4m0 4h.01" />
                                         </svg>
                                         <p className="text-sm leading-6 text-amber-800">
-                                            Mentee belum mengisi data rekening di
-                                            profilnya. Hubungi mentee untuk
+                                            Mentee belum mengisi data rekening
+                                            di profilnya. Hubungi mentee untuk
                                             meminta nomor rekening tujuan.
                                         </p>
                                     </div>
@@ -496,7 +591,10 @@ export default function RefundProcess({ session }) {
                             tabIndex={0}
                             onClick={() => fileInputRef.current?.click()}
                             onKeyDown={(event) => {
-                                if (event.key === 'Enter' || event.key === ' ') {
+                                if (
+                                    event.key === "Enter" ||
+                                    event.key === " "
+                                ) {
                                     event.preventDefault();
                                     fileInputRef.current?.click();
                                 }
@@ -509,8 +607,8 @@ export default function RefundProcess({ session }) {
                             onDrop={handleDrop}
                             className={`cursor-pointer rounded-2xl border-2 border-dashed px-6 py-12 text-center transition-colors focus:outline-none focus:ring-2 focus:ring-[#527D98] focus:ring-offset-2 ${
                                 isDragging
-                                    ? 'border-[#527D98] bg-sky-50'
-                                    : 'border-slate-300 bg-slate-50/60 hover:border-[#527D98]/60 hover:bg-sky-50/40'
+                                    ? "border-[#527D98] bg-sky-50"
+                                    : "border-slate-300 bg-slate-50/60 hover:border-[#527D98]/60 hover:bg-sky-50/40"
                             }`}
                         >
                             <svg
@@ -527,31 +625,42 @@ export default function RefundProcess({ session }) {
                                 <line x1="9" y1="15" x2="15" y2="15" />
                             </svg>
                             <p className="text-sm font-semibold text-slate-700">
-                                Seret file ke sini atau{' '}
+                                Seret file ke sini atau{" "}
                                 <span className="text-[#527D98] underline">
                                     klik untuk upload
                                 </span>
                             </p>
                             <p className="mt-1 text-xs text-slate-400">
-                                Mendukung file: JPG, PNG, atau PDF (Ukuran maksimal 5MB)
+                                Mendukung file: JPG, PNG, atau PDF (Ukuran
+                                maksimal 5MB)
                             </p>
                             <p className="mt-3 inline-block rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs text-[#527D98]">
-                                Pastikan nama penerima &amp; nominal Rp{' '}
-                                {rupiahFormatter.format(refundAmount)} terbaca jelas
+                                Pastikan nama penerima &amp; nominal Rp{" "}
+                                {rupiahFormatter.format(refundAmount)} terbaca
+                                jelas
                             </p>
                             <input
                                 ref={fileInputRef}
                                 type="file"
                                 accept=".jpg,.jpeg,.png,.pdf"
                                 className="hidden"
-                                onChange={(event) => pickFile(event.target.files?.[0])}
+                                onChange={(event) =>
+                                    pickFile(event.target.files?.[0])
+                                }
                             />
                         </div>
 
                         {/* Error */}
                         {uploadError && (
                             <div className="mt-3 flex items-start gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
-                                <svg aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <svg
+                                    aria-hidden="true"
+                                    className="mt-0.5 h-4 w-4 shrink-0 text-rose-500"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                >
                                     <circle cx="12" cy="12" r="9" />
                                     <path d="M12 8v4m0 4h.01" />
                                 </svg>
@@ -565,7 +674,14 @@ export default function RefundProcess({ session }) {
                         {selectedFile && (
                             <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
                                 <div className="flex min-w-0 items-center gap-3">
-                                    <svg aria-hidden="true" className="h-8 w-8 shrink-0 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                                    <svg
+                                        aria-hidden="true"
+                                        className="h-8 w-8 shrink-0 text-emerald-500"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="1.5"
+                                    >
                                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                                         <polyline points="14 2 14 8 20 8" />
                                         <path d="m9 15 2 2 4-4" />
@@ -575,7 +691,8 @@ export default function RefundProcess({ session }) {
                                             {selectedFile.name}
                                         </p>
                                         <p className="text-xs text-emerald-600">
-                                            {formatFileSize(selectedFile.size)} · Siap dikirimkan
+                                            {formatFileSize(selectedFile.size)}{" "}
+                                            · Siap dikirimkan
                                         </p>
                                     </div>
                                 </div>
@@ -589,37 +706,34 @@ export default function RefundProcess({ session }) {
                             </div>
                         )}
 
-                        {/* Catatan untuk Mentee (opsional, dipertahankan dari fitur asli) */}
-                        {form.data.notes !== undefined && (
-                            <div className="mt-5">
-                                <label className="block text-sm font-semibold text-slate-700">
-                                    Catatan untuk Mentee
-                                    <span className="ml-1 font-normal text-slate-400">(Opsional)</span>
-                                </label>
-                                <textarea
-                                    value={form.data.notes ?? ''}
-                                    onChange={(e) => form.setData('notes', e.target.value)}
-                                    rows={3}
-                                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#527D98] focus:outline-none focus:ring-1 focus:ring-[#527D98]"
-                                    placeholder="Pesan akan dikirimkan ke email mentee bersama lampiran bukti transfer..."
-                                />
-                            </div>
-                        )}
-
                         {/* Peringatan overdue */}
                         {remaining.isOverdue && (
                             <div className="mt-5 flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4">
-                                <svg aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <svg
+                                    aria-hidden="true"
+                                    className="mt-0.5 h-5 w-5 shrink-0 text-rose-500"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                >
                                     <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
                                     <line x1="12" y1="9" x2="12" y2="13" />
                                     <line x1="12" y1="17" x2="12.01" y2="17" />
                                 </svg>
                                 <div>
                                     <p className="text-sm font-bold text-rose-700">
-                                        Peringatan Penalti &amp; Kebijakan Komitmen Mentor
+                                        Peringatan Penalti &amp; Kebijakan
+                                        Komitmen Mentor
                                     </p>
                                     <p className="mt-1 text-xs leading-5 text-rose-600">
-                                        Jika refund tidak diselesaikan dalam batas waktu, akun mentor Anda akan ditangguhkan sementara secara otomatis oleh sistem Pathway dan tidak dapat menerima permintaan booking baru sampai seluruh proses pengembalian dana diverifikasi oleh admin.
+                                        Jika refund tidak diselesaikan dalam
+                                        batas waktu, akun mentor Anda akan
+                                        ditangguhkan sementara secara otomatis
+                                        oleh sistem Pathway dan tidak dapat
+                                        menerima permintaan booking baru sampai
+                                        seluruh proses pengembalian dana
+                                        diverifikasi oleh admin.
                                     </p>
                                 </div>
                             </div>
@@ -629,7 +743,8 @@ export default function RefundProcess({ session }) {
                     {/* Footer action bar */}
                     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-5 py-4 sm:px-6">
                         <p className="text-xs leading-5 text-slate-500">
-                            Notifikasi bukti transfer akan diteruskan ke email resmi mentee &amp; tim Pathway.
+                            Notifikasi bukti transfer akan diteruskan ke email
+                            resmi mentee &amp; tim Pathway.
                         </p>
                         <div className="flex shrink-0 gap-3">
                             <Button
@@ -640,11 +755,20 @@ export default function RefundProcess({ session }) {
                                 disabled={!selectedFile || form.processing}
                                 className="bg-[#527D98] hover:bg-[#3E637A]"
                             >
-                                <svg aria-hidden="true" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <svg
+                                    aria-hidden="true"
+                                    className="h-4 w-4"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                >
                                     <path d="M22 2 11 13" />
                                     <path d="m22 2-7 20-4-9-9-4 20-7z" />
                                 </svg>
-                                {form.processing ? 'Mengirim...' : 'Submit Bukti Refund'}
+                                {form.processing
+                                    ? "Mengirim..."
+                                    : "Submit Bukti Refund"}
                             </Button>
                         </div>
                     </div>

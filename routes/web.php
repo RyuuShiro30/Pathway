@@ -280,7 +280,51 @@ Route::middleware('auth')->group(function () {
     Route::patch('/bookings/{id}/refund-confirmation', [MentoringSessionController::class, 'confirmRefund'])
         ->name('student.bookings.refund.confirm');
 
+    Route::patch('/bookings/{id}/refund-reschedule/respond', [MentoringSessionController::class, 'respondRefundRescheduleOffer'])
+        ->name('student.bookings.refund-reschedule.respond');
+
+    // Mentor Booking Requests
+    Route::get('/mentor/requests', [MentoringSessionController::class, 'requests'])
+        ->name('mentor.requests');
+
+    Route::get('/mentor/booking/{id}', [MentoringSessionController::class, 'show'])
+        ->name('mentor.booking.show');
+
+    Route::patch('/mentor/booking/{id}/respond', [MentoringSessionController::class, 'respond'])
+        ->name('mentor.booking.respond');
+
+    Route::patch('/mentor/booking/{id}/reschedule/respond', [MentoringSessionController::class, 'respondReschedule'])
+        ->name('mentor.booking.reschedule.respond');
+
+    // Mentor Session Tracking
+    Route::get('/mentor/session/{id}', [MentoringSessionController::class, 'tracking'])
+        ->name('mentor.session.tracking');
+
+    Route::patch('/mentor/session/{id}/start', [MentoringSessionController::class, 'startSession'])
+        ->name('mentor.session.start');
+
+    Route::patch('/mentor/session/{id}/complete', [MentoringSessionController::class, 'completeSession'])
+        ->name('mentor.session.complete');
+
+    Route::patch('/mentor/session/{id}/cancel', [MentoringSessionController::class, 'cancelSession'])
+        ->name('mentor.session.cancel');
+
     // No-show (dipakai murid dan mentor)
+
+    // Mentor Refund & No Show
+    Route::patch('/mentor/session/{id}/refund', [MentoringSessionController::class, 'completeRefund'])
+        ->name('mentor.refund.complete');
+
+    Route::get('/mentor/session/{id}/refund', [MentoringSessionController::class, 'refundForm'])
+        ->name('mentor.refund.form');
+
+    // Halaman penawaran jadwal pengganti
+    Route::get('/mentor/session/{id}/reschedule-offer', [MentoringSessionController::class, 'rescheduleOfferForm'])
+        ->name('mentor.refund.reschedule-offer.form');
+
+    Route::post('/mentor/session/{id}/refund/reschedule-offer', [MentoringSessionController::class, 'offerRefundReschedule'])
+        ->name('mentor.refund.reschedule-offer');
+
     Route::post('/sessions/{id}/no-show', [NoShowReportController::class, 'store'])
         ->name('no-show.store');
 
@@ -325,6 +369,12 @@ Route::middleware('auth')->group(function () {
         Route::get('/mentor/session/{id}/refund', [MentoringSessionController::class, 'refundForm'])
             ->name('mentor.refund.form');
 
+        // Penawaran jadwal pengganti
+        Route::get('/mentor/session/{id}/reschedule-offer', [MentoringSessionController::class, 'rescheduleOfferForm'])
+            ->name('mentor.refund.reschedule-offer.form');
+
+        Route::post('/mentor/session/{id}/refund/reschedule-offer', [MentoringSessionController::class, 'offerRefundReschedule'])
+            ->name('mentor.refund.reschedule-offer');
     });
 });
 
