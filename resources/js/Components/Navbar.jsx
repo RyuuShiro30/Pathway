@@ -54,19 +54,21 @@ export default function Navbar({ active }) {
             {/* Menu navigasi */}
             <div className="hidden items-center space-x-1 text-sm text-slate-200 lg:flex">
                 {menuItems.map((item) => {
-                    // 2. Cocokkan: aktif jika props 'active' dipanggil secara manual, 
+                    // 2. Cocokkan: aktif jika props 'active' dipanggil secara manual,
                     // ATAU jika URL browser saat ini berawalan dengan href dari menu
-                    const isActive = active === item.key || url.startsWith(item.href);
+                    const isActive =
+                        active === item.key || url.startsWith(item.href);
 
                     return (
                         <Link
                             key={item.key}
                             href={item.href}
                             aria-current={isActive ? "page" : undefined}
-                            className={`rounded-full px-4 py-2 transition ${isActive
-                                ? "bg-[#95d56b] font-bold text-slate-900 shadow-sm"
-                                : "font-medium hover:bg-white/10"
-                                }`}
+                            className={`rounded-full px-4 py-2 transition ${
+                                isActive
+                                    ? "bg-[#95d56b] font-bold text-slate-900 shadow-sm"
+                                    : "font-medium hover:bg-white/10"
+                            }`}
                         >
                             {item.label}
                         </Link>
@@ -93,16 +95,24 @@ export default function Navbar({ active }) {
                     >
                         <div className="hidden text-right leading-tight md:block">
                             <p className="text-sm font-bold text-white">
-                                {user?.name ?? "Triska R."}
+                                Akun Saya
                             </p>
 
                             <p className="text-[10px] text-white/70">
-                                Student Portal
+                                {user?.role === "mentor"
+                                    ? "Mentor Portal"
+                                    : user?.role === "admin"
+                                      ? "Admin Portal"
+                                      : "Student Portal"}
                             </p>
                         </div>
 
                         <img
-                            src={user?.photo_path ?? user?.profile_photo_url ?? "/images/bwa.webp"}
+                            src={
+                                user?.photo_path ??
+                                user?.profile_photo_url ??
+                                "/images/bwa.webp"
+                            }
                             alt="Foto profil"
                             className="h-9 w-9 rounded-full bg-[#6b9bc3] object-cover transition hover:ring-2 hover:ring-white/50"
                         />
