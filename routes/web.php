@@ -170,6 +170,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])
         ->name('profile.destroy');
 
+    Route::patch('/profile/mentor', [ProfileController::class, 'updateMentorProfile'])
+        ->name('profile.mentor.update');
+
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
