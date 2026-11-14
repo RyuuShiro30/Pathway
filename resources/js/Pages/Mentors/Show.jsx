@@ -252,78 +252,12 @@ export default function Show({ mentor }) {
                         </section>
 
                         {/* PORTFOLIO */}
-                        <section className="rounded-2xl border border-[#C9DCE6] bg-[#F4F8FA] p-6 shadow-[0_2px_8px_rgba(38,65,80,0.06)]">
-                            <div className="mb-5 flex items-start gap-4">
-                                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-white text-[#6594B1] shadow-sm">
-                                    <svg
-                                        className="h-5 w-5"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        viewBox="0 0 24 24"
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="1.8"
-                                            d="M13.5 6.5l4-4a2.12 2.12 0 013 3l-4 4M10.5 17.5l-4 4a2.12 2.12 0 01-3-3l4-4M8 16l8-8"
-                                        />
-                                    </svg>
-                                </div>
-
-                                <div>
-                                    <h2 className="text-xl font-bold text-[#172033]">
-                                        Portfolio
-                                    </h2>
-                                    <p className="mt-1 text-sm text-[#7A8B99]">
-                                        Pengalaman dan karya mentor
-                                    </p>
-                                </div>
-                            </div>
-
-                            {mentor.portfolio_url ? (
-                                <a
-                                    href={mentor.portfolio_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="group flex items-center justify-between rounded-xl border border-[#D8E3E9] bg-white p-5 transition hover:border-[#AFC6D4] hover:shadow-sm"
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#E6EFF4] text-[#6594B1]">
-                                            <svg
-                                                className="h-5 w-5"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <circle
-                                                    cx="12"
-                                                    cy="12"
-                                                    r="9"
-                                                    strokeWidth="1.8"
-                                                />
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeWidth="1.8"
-                                                    d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"
-                                                />
-                                            </svg>
-                                        </div>
-
-                                        <div>
-                                            <p className="font-semibold text-[#263748]">
-                                                Portfolio Mentor
-                                            </p>
-                                            <p className="mt-1 text-sm text-[#7A8B99]">
-                                                Lihat portfolio dan pengalaman
-                                                profesional mentor.
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <span className="flex items-center gap-2 text-sm font-semibold text-[#6594B1]">
-                                        Lihat
+                        <section className="rounded-2xl border border-[#DCE7ED] bg-white p-5 shadow-sm">
+                            <div className="mb-4 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EEF4F7] text-[#527F99]">
                                         <svg
-                                            className="h-4 w-4 transition group-hover:translate-x-1"
+                                            className="h-5 w-5"
                                             fill="none"
                                             stroke="currentColor"
                                             viewBox="0 0 24 24"
@@ -332,15 +266,83 @@ export default function Show({ mentor }) {
                                                 strokeLinecap="round"
                                                 strokeLinejoin="round"
                                                 strokeWidth="1.8"
-                                                d="M5 12h14m-6-6 6 6-6 6"
+                                                d="M13.5 6.5l4-4a2.12 2.12 0 013 3l-4 4M10.5 17.5l-4 4a2.12 2.12 0 01-3-3l4-4M8 16l8-8"
                                             />
                                         </svg>
-                                    </span>
-                                </a>
-                            ) : (
-                                <div className="rounded-xl border border-dashed border-[#C9D7DF] bg-white p-6 text-center text-sm text-[#7A8B99]">
-                                    Mentor belum menambahkan portfolio.
+                                    </div>
+
+                                    <div>
+                                        <h2 className="font-bold text-[#263748]">
+                                            Portfolio
+                                        </h2>
+                                        <p className="text-xs text-[#8495A1]">
+                                            Karya dan profil profesional mentor
+                                        </p>
+                                    </div>
                                 </div>
+
+                                {mentor.portfolios?.length > 0 && (
+                                    <span className="rounded-full bg-[#EEF4F7] px-3 py-1 text-xs font-semibold text-[#527F99]">
+                                        {mentor.portfolios.length} Karya
+                                    </span>
+                                )}
+                            </div>
+
+                            {mentor.portfolios?.length > 0 ? (
+                                <div className="divide-y divide-[#E8EEF2]">
+                                    {mentor.portfolios.map((portfolio) => (
+                                        <a
+                                            key={portfolio.id}
+                                            href={portfolio.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="group flex items-center gap-3 py-3 first:pt-1 last:pb-1"
+                                        >
+                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F1F5F8] text-[#527F99] transition group-hover:bg-[#E4EEF4]">
+                                                <svg
+                                                    className="h-5 w-5"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth="1.8"
+                                                        d="M10 13a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1.72 1.72M14 11a5 5 0 00-7.07 0l-3 3A5 5 0 0012 21.07l1.72-1.72"
+                                                    />
+                                                </svg>
+                                            </div>
+
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate text-sm font-semibold text-[#263748] group-hover:text-[#527F99]">
+                                                    {portfolio.title}
+                                                </p>
+                                                <p className="mt-0.5 text-xs text-[#8495A1]">
+                                                    {portfolio.platform}
+                                                </p>
+                                            </div>
+
+                                            <svg
+                                                className="h-4 w-4 shrink-0 text-[#91A8B7] transition group-hover:translate-x-1 group-hover:text-[#527F99]"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth="1.8"
+                                                    d="M7 17L17 7M7 7h10v10"
+                                                />
+                                            </svg>
+                                        </a>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="rounded-xl bg-[#F7F9FA] px-4 py-5 text-center text-sm text-[#8495A1]">
+                                    Mentor belum menambahkan portfolio.
+                                </p>
                             )}
                         </section>
 
