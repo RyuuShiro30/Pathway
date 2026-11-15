@@ -919,7 +919,7 @@ export default function Dashboard({
                             />
 
                             {/* Pill Filters */}
-                            <div className="mt-3 flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none sm:gap-2" style={{ WebkitOverflowScrolling: "touch" }}>
+                            <div className="-mx-2 mt-1 flex items-center gap-1.5 overflow-x-auto px-2 py-2 scrollbar-none sm:gap-2" style={{ WebkitOverflowScrolling: "touch" }}>
                                 {visiblePills.map((pill) => {
                                     const count = sessionPillCounts[pill.value] ?? 0;
                                     const isSelected = sessionPillFilter === pill.value;
@@ -1215,6 +1215,265 @@ export default function Dashboard({
                                     </div>
                                 </div>
                             )}
+                        </Card>
+
+                        {/* 3. MANAJEMEN KETERSEDIAAN MINGGUAN */}
+                        <Card as="section" className="p-5 sm:p-6">
+                            <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-4">
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <div>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <h2 className="text-sm font-bold text-slate-900 sm:text-base">
+                                                Manajemen Ketersediaan Mingguan
+                                            </h2>
+                                            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold text-slate-600">
+                                                Slot 1 Jam (06:00 - 22:00)
+                                            </span>
+                                        </div>
+                                        <p className="mt-1 text-xs text-slate-500">
+                                            Klik sel untuk toggle: Tutup,
+                                            Gratis, atau Berbayar. Jadwal
+                                            mencakup Senin hingga Minggu.
+                                        </p>
+                                    </div>
+
+                                    {/* Legend Pills */}
+                                    <div className="flex flex-wrap items-center gap-3 text-xs">
+                                        <span className="inline-flex items-center gap-1.5 text-[11px] text-slate-600 font-medium">
+                                            <span className="h-2 w-2 rounded-full bg-slate-400" />
+                                            Tutup
+                                        </span>
+                                        <span className="inline-flex items-center gap-1.5 text-[11px] text-emerald-700 font-medium">
+                                            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                                            Gratis (0 IDR)
+                                        </span>
+                                        <span className="inline-flex items-center gap-1.5 text-[11px] text-[#527D98] font-medium">
+                                            <span className="h-2 w-2 rounded-full bg-[#527D98]" />
+                                            Berbayar (Rp)
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Filter Tabs Pagi / Siang / Malam & Tombol Reset */}
+                                <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
+                                    <div className="inline-flex rounded-xl bg-slate-100 p-0.5 text-xs font-medium text-slate-600">
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setSchedulePeriodTab("pagi")
+                                            }
+                                            className={`rounded-lg px-3 py-1 transition ${
+                                                schedulePeriodTab === "pagi"
+                                                    ? "bg-white font-bold text-slate-900 shadow-xs"
+                                                    : "text-slate-500 hover:text-slate-800"
+                                            }`}
+                                        >
+                                            Pagi (06-12)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setSchedulePeriodTab("siang")
+                                            }
+                                            className={`rounded-lg px-3 py-1 transition ${
+                                                schedulePeriodTab === "siang"
+                                                    ? "bg-white font-bold text-slate-900 shadow-xs"
+                                                    : "text-slate-500 hover:text-slate-800"
+                                            }`}
+                                        >
+                                            Siang (12-17)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setSchedulePeriodTab("malam")
+                                            }
+                                            className={`rounded-lg px-3 py-1 transition ${
+                                                schedulePeriodTab === "malam"
+                                                    ? "bg-white font-bold text-slate-900 shadow-xs"
+                                                    : "text-slate-500 hover:text-slate-800"
+                                            }`}
+                                        >
+                                            Malam (17-22)
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setSchedulePeriodTab("semua")
+                                            }
+                                            className={`rounded-lg px-3 py-1 transition ${
+                                                schedulePeriodTab === "semua"
+                                                    ? "bg-white font-bold text-slate-900 shadow-xs"
+                                                    : "text-slate-500 hover:text-slate-800"
+                                            }`}
+                                        >
+                                            Semua
+                                        </button>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleResetAllClosed}
+                                        className="text-xs font-semibold text-slate-500 hover:text-rose-600 transition"
+                                    >
+                                        Reset Tutup Semua
+                                    </button>
+                                </div>
+                            </div>
+
+                            <form onSubmit={saveAvailability}>
+                                <div className="max-h-[460px] overflow-x-auto overflow-y-auto rounded-xl border border-slate-100 p-2">
+                                    <table className="w-full min-w-[740px] table-fixed border-separate border-spacing-1.5 text-left">
+                                        <thead>
+                                            <tr>
+                                                <th className="sticky left-0 top-0 z-30 w-24 bg-white px-2 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                                                    WAKTU
+                                                </th>
+                                                {weekdays.map((day) => (
+                                                    <th
+                                                        key={day.value}
+                                                        scope="col"
+                                                        className="sticky top-0 z-20 min-w-[92px] bg-white px-2 py-2 text-center text-xs font-bold uppercase tracking-wider text-slate-700 border-b border-slate-100"
+                                                    >
+                                                        {day.label}
+                                                    </th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredTimeSlots.map((slot) => (
+                                                <tr
+                                                    key={`${slot.start}-${slot.end}`}
+                                                >
+                                                    <th
+                                                        scope="row"
+                                                        className="sticky left-0 z-10 h-9 rounded-lg bg-slate-50 px-2 text-xs font-semibold text-slate-500"
+                                                    >
+                                                        {slot.start} -{" "}
+                                                        {slot.end}
+                                                    </th>
+                                                    {weekdays.map((day) => {
+                                                        const availability =
+                                                            getAvailability(
+                                                                day.value,
+                                                                slot,
+                                                            );
+                                                        const isPaid =
+                                                            availability?.type ===
+                                                            "berbayar";
+                                                        const isFree =
+                                                            availability &&
+                                                            !isPaid;
+                                                        const isEditorOpen =
+                                                            editorSlot?.day ===
+                                                                day.value &&
+                                                            editorSlot?.start ===
+                                                                slot.start &&
+                                                            editorSlot?.end ===
+                                                                slot.end;
+                                                        const statusLabel =
+                                                            isPaid
+                                                                ? `Rp ${rupiahFormatter.format(availability.price)}`
+                                                                : isFree
+                                                                  ? "Gratis"
+                                                                  : "Tutup";
+
+                                                        return (
+                                                            <td
+                                                                key={`${day.value}-${slot.start}`}
+                                                                className="min-w-[92px]"
+                                                            >
+                                                                <button
+                                                                    type="button"
+                                                                    aria-expanded={
+                                                                        isEditorOpen
+                                                                    }
+                                                                    aria-haspopup="dialog"
+                                                                    aria-label={`${day.label}, ${slot.start} sampai ${slot.end}: ${statusLabel}`}
+                                                                    disabled={
+                                                                        form.processing
+                                                                    }
+                                                                    onClick={(
+                                                                        event,
+                                                                    ) =>
+                                                                        openAvailabilityEditor(
+                                                                            event,
+                                                                            day.value,
+                                                                            slot,
+                                                                        )
+                                                                    }
+                                                                    className={`h-9 w-full truncate rounded-lg border px-2 py-1 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-[#527D98]/50 disabled:cursor-not-allowed disabled:opacity-60 ${
+                                                                        isPaid
+                                                                            ? "border-sky-300 bg-[#E3F2FD] text-[#1565C0] hover:bg-[#BBDEFB]"
+                                                                            : isFree
+                                                                              ? "border-emerald-300 bg-[#E8F5E9] text-[#2E7D32] hover:bg-[#C8E6C9]"
+                                                                              : "border-slate-200 bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                                                                    }`}
+                                                                >
+                                                                    {
+                                                                        statusLabel
+                                                                    }
+                                                                </button>
+                                                            </td>
+                                                        );
+                                                    })}
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-slate-100 pt-4">
+                                    <div
+                                        className="space-y-1"
+                                        aria-live="polite"
+                                    >
+                                        {(flash?.success ||
+                                            form.recentlySuccessful) && (
+                                            <p className="text-xs font-semibold text-emerald-700">
+                                                ✓{" "}
+                                                {flash?.success ||
+                                                    "Jadwal ketersediaan berhasil disimpan."}
+                                            </p>
+                                        )}
+                                        {validationErrors.map(
+                                            (error, index) => (
+                                                <p
+                                                    key={`${error}-${index}`}
+                                                    className="text-xs font-semibold text-rose-600"
+                                                >
+                                                    ⚠ {error}
+                                                </p>
+                                            ),
+                                        )}
+                                    </div>
+
+                                    <Button
+                                        type="submit"
+                                        disabled={form.processing}
+                                        variant="ghost"
+                                        size="md"
+                                        className="!bg-[#91D06C] hover:!bg-[#82C25D] !text-[#1F3D2B] border-transparent font-bold shadow-sm focus:ring-[#91D06C]/40"
+                                    >
+                                        <svg
+                                            className="h-4 w-4 text-[#1F3D2B]"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke="currentColor"
+                                        >
+                                            <path
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                strokeWidth="2"
+                                                d="M5 13l4 4L19 7"
+                                            />
+                                        </svg>
+                                        {form.processing
+                                            ? "Menyimpan..."
+                                            : "Simpan Jadwal Ketersediaan"}
+                                    </Button>
+                                </div>
+                            </form>
                         </Card>
                     </div>
 
