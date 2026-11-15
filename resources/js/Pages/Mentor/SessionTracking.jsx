@@ -164,29 +164,29 @@ export default function SessionTracking({
     const finalProofUrl = getPublicStorageUrl(session.payment_final_proof);
 
     function acceptFinalPayment() {
-        finalPaymentForm
-            .transform(() => ({
-                action: "terima",
-            }))
-            .patch(route("mentor.session.payment-final.verify", session.id), {
-                preserveScroll: true,
-            });
+        finalPaymentForm.transform((data) => ({
+            ...data,
+            action: "terima",
+        }));
+        finalPaymentForm.patch(route("mentor.session.payment-final.verify", session.id), {
+            preserveScroll: true,
+        });
     }
 
     function rejectFinalPayment(event) {
         event.preventDefault();
-        finalPaymentForm
-            .transform(() => ({
-                action: "tolak",
-                rejection_reason: finalPaymentForm.data.rejection_reason,
-            }))
-            .patch(route("mentor.session.payment-final.verify", session.id), {
-                preserveScroll: true,
-                onSuccess: () => {
-                    setIsFinalPaymentRejectModalOpen(false);
-                    finalPaymentForm.reset();
-                },
-            });
+        finalPaymentForm.transform((data) => ({
+            ...data,
+            action: "tolak",
+            rejection_reason: data.rejection_reason,
+        }));
+        finalPaymentForm.patch(route("mentor.session.payment-final.verify", session.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsFinalPaymentRejectModalOpen(false);
+                finalPaymentForm.reset();
+            },
+        });
     }
     const mentorName = auth?.user?.name ?? "Mentor";
     const mentorInitials = getInitials(mentorName);
@@ -203,13 +203,18 @@ export default function SessionTracking({
         ...Object.values(startForm.errors),
         ...Object.values(completeForm.errors),
         ...Object.values(cancelForm.errors),
+        ...Object.values(finalPaymentForm.errors),
     ].filter(Boolean);
     const errorMessages = [
         ...new Set([flash?.error, ...formErrors, copyError].filter(Boolean)),
     ];
 
     useEffect(() => {
-        if (!isNoShowReportModalOpen && !isNoShowRespondModalOpen) {
+        if (
+            !isNoShowReportModalOpen &&
+            !isNoShowRespondModalOpen &&
+            !isFinalPaymentRejectModalOpen
+        ) {
             return;
         }
 
@@ -218,7 +223,9 @@ export default function SessionTracking({
                 return;
             }
 
-            if (isNoShowRespondModalOpen && !noShowRespondForm.processing) {
+            if (isFinalPaymentRejectModalOpen && !finalPaymentForm.processing) {
+                setIsFinalPaymentRejectModalOpen(false);
+            } else if (isNoShowRespondModalOpen && !noShowRespondForm.processing) {
                 setIsNoShowRespondModalOpen(false);
             } else if (
                 isNoShowReportModalOpen &&
@@ -236,8 +243,10 @@ export default function SessionTracking({
     }, [
         isNoShowReportModalOpen,
         isNoShowRespondModalOpen,
+        isFinalPaymentRejectModalOpen,
         noShowReportForm.processing,
         noShowRespondForm.processing,
+        finalPaymentForm.processing,
     ]);
     function startSession() {
         startForm.patch(route("mentor.session.start", session.id), {

@@ -117,7 +117,7 @@ class MentorProfileController extends Controller
 
         $confirmedSessions = MentoringSession::query()
             ->where('mentor_id', Auth::id())
-            ->whereIn('status', ['dikonfirmasi', 'berlangsung'])
+            ->whereIn('status', ['dikonfirmasi', 'berlangsung', 'selesai'])
             ->with(['student:id,name', 'noShowReport'])
             ->orderBy('schedule_time', 'asc')
             ->limit(20)
@@ -135,6 +135,31 @@ class MentorProfileController extends Controller
                     ->toISOString(),
                 'is_free_session' => $session->is_free_session,
                 'no_show_report' => $session->noShowReportPayloadFor((int) Auth::id()),
+                'student' => $session->student ? [
+                    'id' => $session->student->id,
+                    'name' => $session->student->name,
+                ] : null,
+            ])
+            ->values();
+
+        $pendingFinalPayments = MentoringSession::query()
+            ->where('mentor_id', Auth::id())
+            ->where('payment_final_status', 'menunggu_verifikasi')
+            ->with(['student:id,name'])
+            ->orderBy('schedule_time', 'asc')
+            ->get(['id', 'student_id', 'status', 'schedule_time', 'end_time', 'payment_final_status'])
+            ->map(static fn (MentoringSession $session): array => [
+                'id' => $session->id,
+                'status' => $session->status,
+                'schedule_time' => $session->schedule_time
+                    ?->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'end_time' => $session->end_time
+                    ?->copy()
+                    ->setTimezone('UTC')
+                    ->toISOString(),
+                'payment_final_status' => $session->payment_final_status,
                 'student' => $session->student ? [
                     'id' => $session->student->id,
                     'name' => $session->student->name,
@@ -225,6 +250,7 @@ class MentorProfileController extends Controller
             'reportedRefundRequests' => $reportedRefundRequests,
             'studentCancelledSessions' => $studentCancelledSessions,
             'confirmedSessions' => $confirmedSessions,
+            'pendingFinalPayments' => $pendingFinalPayments,
             'pointsBalance' => $pointsBalance,
         ]);
     }

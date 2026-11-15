@@ -24,9 +24,9 @@ class MentorDashboardConfirmedSessionsTest extends TestCase
 
         $later = $this->createSession($mentor, $student, 'dikonfirmasi', now()->addDays(2));
         $sooner = $this->createSession($mentor, $student, 'berlangsung', now()->addDay());
+        $finished = $this->createSession($mentor, $student, 'selesai', now()->subDay());
 
         $this->createSession($mentor, $student, 'diajukan', now()->addDays(3));
-        $this->createSession($mentor, $student, 'selesai', now()->subDay());
         $this->createSession($mentor, $student, 'dibatalkan', now()->addDays(4));
         $this->createSession($otherMentor, $student, 'dikonfirmasi', now()->addDays(2));
 
@@ -35,11 +35,13 @@ class MentorDashboardConfirmedSessionsTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Mentor/Dashboard')
-                ->has('confirmedSessions', 2)
-                ->where('confirmedSessions.0.id', $sooner->id)
-                ->where('confirmedSessions.0.status', 'berlangsung')
-                ->where('confirmedSessions.1.id', $later->id)
-                ->where('confirmedSessions.1.status', 'dikonfirmasi')
+                ->has('confirmedSessions', 3)
+                ->where('confirmedSessions.0.id', $finished->id)
+                ->where('confirmedSessions.0.status', 'selesai')
+                ->where('confirmedSessions.1.id', $sooner->id)
+                ->where('confirmedSessions.1.status', 'berlangsung')
+                ->where('confirmedSessions.2.id', $later->id)
+                ->where('confirmedSessions.2.status', 'dikonfirmasi')
                 ->where('confirmedSessions.0.student.name', $student->name)
                 ->missing('confirmedSessions.0.student.email'));
     }

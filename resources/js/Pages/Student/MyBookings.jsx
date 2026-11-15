@@ -479,6 +479,10 @@ export default function MyBookings({ bookings = [], stats = {} }) {
                         b.refund_status === "menunggu_konfirmasi")
                 );
             }).length,
+            selesai: safeBookings.filter((b) => b.status === "selesai")
+                .length,
+            dibatalkan: safeBookings.filter((b) => b.status === "dibatalkan")
+                .length,
         }),
         [safeBookings, currentTime],
     );
