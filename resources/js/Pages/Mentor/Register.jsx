@@ -1,57 +1,64 @@
 import { Head, Link, router, useForm } from "@inertiajs/react";
 import { useEffect, useRef, useState } from "react";
 
-const expertiseOptions = [
-    "Web Development",
-    "Mobile Development",
-    "UI/UX",
-    "Data",
-    "Cybersecurity",
-    "Game Development",
-    "Bidang IT Lainnya",
-];
-
-export default function Register({ user, mentorProfile }) {
+export default function Register({ user, mentorProfile, expertises = [] }) {
     const existingCertificates = mentorProfile?.certificates ?? [];
+
+    const expertiseOptions = [
+        ...expertises,
+        ...(mentorProfile?.expertise &&
+        !expertises.some(
+            (item) =>
+                item.toLowerCase() === mentorProfile.expertise.toLowerCase(),
+        )
+            ? [mentorProfile.expertise]
+            : []),
+        "Bidang Keahlian Lainnya",
+    ];
 
     const [selectedExpertise, setSelectedExpertise] = useState(
         mentorProfile?.expertise ?? "",
     );
+    const [customExpertise, setCustomExpertise] = useState("");
 
     const [certificates, setCertificates] = useState([]);
+    const [existingCertificateState, setExistingCertificateState] =
+        useState(existingCertificates);
+
+    const platforms = [
+        "GitHub",
+        "LinkedIn",
+        "Website",
+        "Behance",
+        "Figma",
+        "Instagram",
+        "Lainnya",
+    ];
+
+    const [openPortfolioIndex, setOpenPortfolioIndex] = useState(null);
+    const [photoPreview, setPhotoPreview] = useState(user?.photo_path ?? null);
+
+    const fileInputRef = useRef(null);
+
+    const { data, setData, post, processing, errors } = useForm({
+        name: user?.name ?? "",
+        photo: null,
+        expertise: mentorProfile?.expertise ?? "",
+        bio: mentorProfile?.bio ?? "",
+        portofolio: mentorProfile?.portfolios ?? [],
+        certificates: [],
+    });
 
     const [savedData, setSavedData] = useState({
         name: user?.name ?? "",
         expertise: mentorProfile?.expertise ?? "",
         bio: mentorProfile?.bio ?? "",
-        portfolio_url: mentorProfile?.portfolio_url ?? "",
-        mentor_type: mentorProfile?.mentor_type ?? "free",
-        price_per_session: mentorProfile?.price_per_session ?? "",
-        is_available: mentorProfile?.is_available ?? true,
+        portofolio: mentorProfile?.portfolios ?? [],
     });
-
-    const [existingCertificateState, setExistingCertificateState] =
-        useState(existingCertificates);
-
-    const [photoPreview, setPhotoPreview] = useState(user?.photo_path ?? null);
-
-    const fileInputRef = useRef(null);
 
     useEffect(() => {
         setExistingCertificateState(existingCertificates);
     }, [mentorProfile]);
-
-    const { data, setData, post, processing, errors, reset } = useForm({
-        name: user?.name ?? "",
-        photo: null,
-        expertise: mentorProfile?.expertise ?? "",
-        bio: mentorProfile?.bio ?? "",
-        portfolio_url: mentorProfile?.portfolio_url ?? "",
-        mentor_type: mentorProfile?.mentor_type ?? "free",
-        price_per_session: mentorProfile?.price_per_session ?? "",
-        is_available: mentorProfile?.is_available ?? true,
-        certificates: [],
-    });
 
     const hasMentorProfile = !!mentorProfile;
     const isRejected = mentorProfile?.verification_status === "rejected";
@@ -60,12 +67,59 @@ export default function Register({ user, mentorProfile }) {
         data.name !== savedData.name ||
         data.expertise !== savedData.expertise ||
         data.bio !== savedData.bio ||
-        data.portfolio_url !== savedData.portfolio_url ||
-        data.mentor_type !== savedData.mentor_type ||
-        data.price_per_session !== savedData.price_per_session ||
-        data.is_available !== savedData.is_available ||
+        JSON.stringify(data.portofolio) !==
+            JSON.stringify(savedData.portofolio) ||
         data.photo !== null ||
         certificates.length > 0;
+
+    const handleExpertiseChange = (expertise) => {
+        setSelectedExpertise(expertise);
+
+        if (expertise === "Bidang Keahlian Lainnya") {
+            setData("expertise", customExpertise);
+        } else {
+            setData("expertise", expertise);
+            setCustomExpertise("");
+        }
+    };
+
+    const addPortfolio = () => {
+        const updated = [
+            ...data.portofolio,
+            {
+                platform: "GitHub",
+                title: "",
+                url: "",
+            },
+        ];
+
+        setData("portofolio", updated);
+        setOpenPortfolioIndex(updated.length - 1);
+    };
+
+    const updatePortfolio = (index, field, value) => {
+        const updated = [...data.portofolio];
+
+        updated[index] = {
+            ...updated[index],
+            [field]: value,
+        };
+
+        setData("portofolio", updated);
+    };
+
+    const removePortfolio = (index) => {
+        setData(
+            "portofolio",
+            data.portofolio.filter((_, i) => i !== index),
+        );
+
+        if (openPortfolioIndex === index) {
+            setOpenPortfolioIndex(null);
+        } else if (openPortfolioIndex > index) {
+            setOpenPortfolioIndex(openPortfolioIndex - 1);
+        }
+    };
 
     const handlePhotoChange = (event) => {
         const file = event.target.files?.[0];
@@ -78,11 +132,6 @@ export default function Register({ user, mentorProfile }) {
 
         const previewUrl = URL.createObjectURL(file);
         setPhotoPreview(previewUrl);
-    };
-
-    const handleExpertiseChange = (expertise) => {
-        setSelectedExpertise(expertise);
-        setData("expertise", expertise);
     };
 
     const handleCertificateChange = (event) => {
@@ -189,10 +238,7 @@ export default function Register({ user, mentorProfile }) {
                     name: data.name,
                     expertise: data.expertise,
                     bio: data.bio,
-                    portfolio_url: data.portfolio_url,
-                    mentor_type: data.mentor_type,
-                    price_per_session: data.price_per_session,
-                    is_available: data.is_available,
+                    portofolio: data.portofolio,
                 });
 
                 setCertificates([]);
@@ -446,6 +492,44 @@ export default function Register({ user, mentorProfile }) {
                                         )}
                                     </div>
 
+                                    {selectedExpertise ===
+                                        "Bidang Keahlian Lainnya" && (
+                                        <div className="mt-4 rounded-xl border border-[#C9DCE4] bg-[#F8FBFC] p-4">
+                                            <label
+                                                htmlFor="custom_expertise"
+                                                className="mb-2 block text-sm font-semibold text-slate-700"
+                                            >
+                                                Masukkan Bidang Keahlian
+                                            </label>
+
+                                            <input
+                                                id="custom_expertise"
+                                                type="text"
+                                                value={customExpertise}
+                                                onChange={(e) => {
+                                                    const value = e.target.value
+                                                        .toLowerCase()
+                                                        .replace(
+                                                            /\b\w/g,
+                                                            (char) =>
+                                                                char.toUpperCase(),
+                                                        );
+
+                                                    setCustomExpertise(value);
+                                                    setData("expertise", value);
+                                                }}
+                                                className="w-full rounded-xl border border-[#C9DCE4] bg-white px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#6594B1] focus:ring-2 focus:ring-[#6594B1]/20"
+                                                placeholder="Contoh: Artificial Intelligence"
+                                                maxLength={255}
+                                            />
+
+                                            <p className="mt-2 text-xs text-slate-500">
+                                                Masukkan bidang keahlian yang
+                                                sesuai dengan kemampuanmu.
+                                            </p>
+                                        </div>
+                                    )}
+
                                     {/* Bio */}
                                     <div>
                                         <div className="mb-2 flex items-center justify-between">
@@ -481,31 +565,272 @@ export default function Register({ user, mentorProfile }) {
                                     </div>
 
                                     {/* Portfolio */}
-                                    <div>
-                                        <label
-                                            htmlFor="portfolio_url"
-                                            className="mb-2 block text-sm font-semibold text-slate-700"
-                                        >
-                                            Portfolio
-                                        </label>
+                                    <div className="border-t border-[#E7EEF1] pt-6">
+                                        <div className="flex flex-wrap items-center justify-between gap-3">
+                                            <div>
+                                                <h3 className="text-sm font-semibold text-slate-700">
+                                                    Portofolio
+                                                </h3>
+                                                <p className="mt-1 text-xs text-slate-500">
+                                                    Tambahkan minimal satu link
+                                                    portofolio sebagai bukti
+                                                    keahlian untuk verifikasi
+                                                    admin.
+                                                </p>
+                                            </div>
 
-                                        <input
-                                            id="portfolio_url"
-                                            type="url"
-                                            value={data.portfolio_url}
-                                            onChange={(e) =>
-                                                setData(
-                                                    "portfolio_url",
-                                                    e.target.value,
-                                                )
-                                            }
-                                            className="w-full rounded-xl border border-[#C9DCE4] bg-[#F8FBFC] px-4 py-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#6594B1] focus:bg-white focus:ring-2 focus:ring-[#6594B1]/20"
-                                            placeholder="https://portfolio-kamu.com"
-                                        />
+                                            <button
+                                                type="button"
+                                                onClick={addPortfolio}
+                                                className="inline-flex items-center gap-2 rounded-lg bg-[#E6EFF4] px-4 py-2.5 text-sm font-medium text-[#6594B1] transition hover:bg-[#d7e7ef]"
+                                            >
+                                                <span className="text-lg leading-none">
+                                                    +
+                                                </span>
+                                                Tambah Link
+                                            </button>
+                                        </div>
 
-                                        {errors.portfolio_url && (
+                                        <div className="mt-5 space-y-3">
+                                            {data.portofolio.map(
+                                                (portfolio, index) => {
+                                                    const isOpen =
+                                                        openPortfolioIndex ===
+                                                        index;
+
+                                                    return (
+                                                        <div
+                                                            key={
+                                                                portfolio.id ??
+                                                                `new-${index}`
+                                                            }
+                                                            className="overflow-hidden rounded-xl border border-[#DCE5EA] bg-[#F8FAFB]"
+                                                        >
+                                                            {/* Header Accordion */}
+                                                            <div className="flex items-center justify-between gap-3 p-4">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        setOpenPortfolioIndex(
+                                                                            isOpen
+                                                                                ? null
+                                                                                : index,
+                                                                        )
+                                                                    }
+                                                                    className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                                                                >
+                                                                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#E6EFF4] text-xs font-semibold text-[#6594B1]">
+                                                                        {index +
+                                                                            1}
+                                                                    </span>
+
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <h4 className="truncate text-sm font-semibold text-slate-700">
+                                                                            {portfolio.title ||
+                                                                                `Portofolio ${index + 1}`}
+                                                                        </h4>
+
+                                                                        <p className="mt-1 truncate text-xs text-slate-500">
+                                                                            {portfolio.platform ||
+                                                                                "Pilih platform"}
+                                                                            {portfolio.url
+                                                                                ? ` · ${portfolio.url}`
+                                                                                : ""}
+                                                                        </p>
+                                                                    </div>
+
+                                                                    <svg
+                                                                        className={`h-5 w-5 shrink-0 text-slate-500 transition-transform ${
+                                                                            isOpen
+                                                                                ? "rotate-180"
+                                                                                : ""
+                                                                        }`}
+                                                                        fill="none"
+                                                                        viewBox="0 0 24 24"
+                                                                        stroke="currentColor"
+                                                                        strokeWidth={
+                                                                            2
+                                                                        }
+                                                                    >
+                                                                        <path
+                                                                            strokeLinecap="round"
+                                                                            strokeLinejoin="round"
+                                                                            d="M19 9l-7 7-7-7"
+                                                                        />
+                                                                    </svg>
+                                                                </button>
+
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        removePortfolio(
+                                                                            index,
+                                                                        )
+                                                                    }
+                                                                    className="shrink-0 rounded-lg px-3 py-2 text-xs font-medium text-red-500 transition hover:bg-red-50 hover:text-red-700"
+                                                                >
+                                                                    Hapus
+                                                                </button>
+                                                            </div>
+
+                                                            {/* Detail Accordion */}
+                                                            {isOpen && (
+                                                                <div className="space-y-4 border-t border-[#DCE5EA] bg-white p-4">
+                                                                    <div>
+                                                                        <label className="block text-sm font-medium text-slate-700">
+                                                                            Platform
+                                                                        </label>
+
+                                                                        <select
+                                                                            value={
+                                                                                portfolio.platform
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updatePortfolio(
+                                                                                    index,
+                                                                                    "platform",
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                            className="mt-2 block w-full rounded-lg border border-[#DCE5EA] bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-[#6594B1] focus:ring-2 focus:ring-[#6594B1]/20"
+                                                                        >
+                                                                            {platforms.map(
+                                                                                (
+                                                                                    platform,
+                                                                                ) => (
+                                                                                    <option
+                                                                                        key={
+                                                                                            platform
+                                                                                        }
+                                                                                        value={
+                                                                                            platform
+                                                                                        }
+                                                                                    >
+                                                                                        {
+                                                                                            platform
+                                                                                        }
+                                                                                    </option>
+                                                                                ),
+                                                                            )}
+                                                                        </select>
+
+                                                                        {errors[
+                                                                            `portofolio.${index}.platform`
+                                                                        ] && (
+                                                                            <p className="mt-2 text-xs text-red-600">
+                                                                                {
+                                                                                    errors[
+                                                                                        `portofolio.${index}.platform`
+                                                                                    ]
+                                                                                }
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <label className="block text-sm font-medium text-slate-700">
+                                                                            Judul
+                                                                            Portofolio
+                                                                        </label>
+
+                                                                        <input
+                                                                            type="text"
+                                                                            value={
+                                                                                portfolio.title
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updatePortfolio(
+                                                                                    index,
+                                                                                    "title",
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                            className="mt-2 block w-full rounded-lg border border-[#DCE5EA] bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-[#6594B1] focus:ring-2 focus:ring-[#6594B1]/20"
+                                                                            placeholder="Contoh: Proyek Website"
+                                                                        />
+
+                                                                        {errors[
+                                                                            `portofolio.${index}.title`
+                                                                        ] && (
+                                                                            <p className="mt-2 text-xs text-red-600">
+                                                                                {
+                                                                                    errors[
+                                                                                        `portofolio.${index}.title`
+                                                                                    ]
+                                                                                }
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+
+                                                                    <div>
+                                                                        <label className="block text-sm font-medium text-slate-700">
+                                                                            URL
+                                                                            Portofolio
+                                                                        </label>
+
+                                                                        <input
+                                                                            type="url"
+                                                                            value={
+                                                                                portfolio.url
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) =>
+                                                                                updatePortfolio(
+                                                                                    index,
+                                                                                    "url",
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                                )
+                                                                            }
+                                                                            className="mt-2 block w-full rounded-lg border border-[#DCE5EA] bg-white px-4 py-3 text-sm text-slate-700 outline-none focus:border-[#6594B1] focus:ring-2 focus:ring-[#6594B1]/20"
+                                                                            placeholder="https://..."
+                                                                        />
+
+                                                                        {errors[
+                                                                            `portofolio.${index}.url`
+                                                                        ] && (
+                                                                            <p className="mt-2 text-xs text-red-600">
+                                                                                {
+                                                                                    errors[
+                                                                                        `portofolio.${index}.url`
+                                                                                    ]
+                                                                                }
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                },
+                                            )}
+
+                                            {data.portofolio.length === 0 && (
+                                                <div className="rounded-xl border border-dashed border-[#C8D8E1] bg-[#F8FAFB] px-5 py-8 text-center">
+                                                    <p className="text-sm font-medium text-slate-600">
+                                                        Belum ada portofolio
+                                                    </p>
+                                                    <p className="mt-1 text-xs text-slate-400">
+                                                        Klik Tambah Link untuk
+                                                        menambahkan portofolio.
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {errors.portofolio && (
                                             <p className="mt-2 text-xs text-red-600">
-                                                {errors.portfolio_url}
+                                                {errors.portofolio}
                                             </p>
                                         )}
                                     </div>
@@ -675,161 +1000,6 @@ export default function Register({ user, mentorProfile }) {
                                         {errors["certificates.0"] && (
                                             <p className="mt-2 text-xs text-red-600">
                                                 {errors["certificates.0"]}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {/* Mentor Type */}
-                                    <div>
-                                        <label className="mb-3 block text-sm font-semibold text-slate-700">
-                                            Tipe Mentor
-                                        </label>
-
-                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    setData(
-                                                        "mentor_type",
-                                                        "free",
-                                                    )
-                                                }
-                                                className={`rounded-2xl border p-4 text-left transition ${
-                                                    data.mentor_type === "free"
-                                                        ? "border-[#6594B1] bg-[#EAF3F6] ring-2 ring-[#6594B1]/20"
-                                                        : "border-[#D7E4E9] bg-white hover:border-[#AFC8D4]"
-                                                }`}
-                                            >
-                                                <div className="mb-2 flex items-center justify-between">
-                                                    <span className="text-sm font-bold text-slate-800">
-                                                        Gratis
-                                                    </span>
-
-                                                    <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-700">
-                                                        FREE
-                                                    </span>
-                                                </div>
-
-                                                <p className="text-xs leading-5 text-slate-500">
-                                                    Sesi mentoring tanpa biaya.
-                                                </p>
-                                            </button>
-
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    setData(
-                                                        "mentor_type",
-                                                        "paid",
-                                                    )
-                                                }
-                                                className={`rounded-2xl border p-4 text-left transition ${
-                                                    data.mentor_type === "paid"
-                                                        ? "border-[#6594B1] bg-[#EAF3F6] ring-2 ring-[#6594B1]/20"
-                                                        : "border-[#D7E4E9] bg-white hover:border-[#AFC8D4]"
-                                                }`}
-                                            >
-                                                <div className="mb-2 flex items-center justify-between">
-                                                    <span className="text-sm font-bold text-slate-800">
-                                                        Berbayar
-                                                    </span>
-
-                                                    <span className="rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700">
-                                                        PAID
-                                                    </span>
-                                                </div>
-
-                                                <p className="text-xs leading-5 text-slate-500">
-                                                    Sesi mentoring dengan tarif
-                                                    per sesi.
-                                                </p>
-                                            </button>
-                                        </div>
-
-                                        {errors.mentor_type && (
-                                            <p className="mt-2 text-xs text-red-600">
-                                                {errors.mentor_type}
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    {/* Price */}
-                                    {data.mentor_type === "paid" && (
-                                        <div>
-                                            <label
-                                                htmlFor="price_per_session"
-                                                className="mb-2 block text-sm font-semibold text-slate-700"
-                                            >
-                                                Harga per Sesi
-                                            </label>
-
-                                            <div className="flex">
-                                                <span className="flex items-center rounded-l-xl border border-r-0 border-[#C9DCE4] bg-[#EAF3F6] px-4 text-sm font-semibold text-[#527F99]">
-                                                    Rp
-                                                </span>
-
-                                                <input
-                                                    id="price_per_session"
-                                                    type="number"
-                                                    min="0"
-                                                    value={
-                                                        data.price_per_session
-                                                    }
-                                                    onChange={(e) =>
-                                                        setData(
-                                                            "price_per_session",
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    className="w-full rounded-r-xl border border-[#C9DCE4] bg-[#F8FBFC] px-4 py-3 text-sm text-slate-700 outline-none transition focus:border-[#6594B1] focus:bg-white focus:ring-2 focus:ring-[#6594B1]/20"
-                                                    placeholder="50000"
-                                                />
-                                            </div>
-
-                                            {errors.price_per_session && (
-                                                <p className="mt-2 text-xs text-red-600">
-                                                    {errors.price_per_session}
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    {/* Availability */}
-                                    <div>
-                                        <label className="mb-3 block text-sm font-semibold text-slate-700">
-                                            Ketersediaan Mentor
-                                        </label>
-
-                                        <label className="flex cursor-pointer items-center justify-between rounded-2xl border border-[#D7E4E9] bg-[#F8FBFC] p-4 transition hover:border-[#AFC8D4]">
-                                            <div>
-                                                <p className="text-sm font-semibold text-slate-800">
-                                                    {data.is_available
-                                                        ? "Tersedia untuk mentoring"
-                                                        : "Tidak tersedia"}
-                                                </p>
-
-                                                <p className="mt-1 text-xs text-slate-500">
-                                                    Kamu dapat mengubah status
-                                                    ini kapan saja.
-                                                </p>
-                                            </div>
-
-                                            <input
-                                                type="checkbox"
-                                                checked={data.is_available}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        "is_available",
-                                                        e.target.checked,
-                                                    )
-                                                }
-                                                className="h-5 w-5 rounded border-slate-300 text-[#6594B1] focus:ring-[#6594B1]"
-                                            />
-                                        </label>
-
-                                        {errors.is_available && (
-                                            <p className="mt-2 text-xs text-red-600">
-                                                {errors.is_available}
                                             </p>
                                         )}
                                     </div>

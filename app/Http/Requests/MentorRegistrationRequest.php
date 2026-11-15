@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class MentorRegistrationRequest extends FormRequest
 {
@@ -35,34 +36,33 @@ class MentorRegistrationRequest extends FormRequest
 
             'bio' => ['nullable', 'string', 'max:300'],
 
-            'portfolio_url' => [
+            'portofolio' => ['required', 'array', 'min:1'],
+
+            'portofolio.*.id' => ['nullable', 'integer'],
+
+            'portofolio.*.platform' => [
                 'required',
-                'url',
-                'max:255',
+                'string',
+                Rule::in([
+                    'GitHub',
+                    'LinkedIn',
+                    'Website',
+                    'Behance',
+                    'Figma',
+                    'Instagram',
+                    'Lainnya',
+                ]),
             ],
+
+            'portofolio.*.title' => ['required', 'string', 'max:255'],
+
+            'portofolio.*.url' => ['required', 'url', 'max:2048'],
 
             'certificates' => ['nullable', 'array', 'max:10'],
             'certificates.*' => [
                 'file',
                 'mimes:pdf,jpg,jpeg,png,webp',
                 'max:5120',
-            ],
-
-            'mentor_type' => [
-                'required',
-                'in:free,paid',
-            ],
-
-            'price_per_session' => [
-                'required_if:mentor_type,paid',
-                'nullable',
-                'numeric',
-                'min:0',
-            ],
-
-            'is_available' => [
-                'required',
-                'boolean',
             ],
         ];
     }

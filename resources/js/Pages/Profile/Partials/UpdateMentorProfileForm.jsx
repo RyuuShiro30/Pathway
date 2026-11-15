@@ -11,6 +11,10 @@ const platforms = [
     "Lainnya",
 ];
 
+const toTitleCase = (text) => {
+    return text.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
 const inputClass =
     "mt-2 block w-full rounded-lg border border-[#DCE5EA] bg-white px-4 py-3 text-sm text-slate-700 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-[#6594B1] focus:ring-2 focus:ring-[#6594B1]/20";
 
@@ -18,10 +22,34 @@ const labelClass = "block text-sm font-medium text-slate-700";
 
 export default function UpdateMentorProfileForm({
     mentorProfile,
+    expertises = [],
     className = "",
 }) {
     const [openPortfolioIndex, setOpenPortfolioIndex] = useState(null);
+    const [isExpertiseOpen, setIsExpertiseOpen] = useState(false);
 
+    const expertiseOptions = [...expertises, "Lainnya"];
+    const initialExpertise = mentorProfile?.expertise || "";
+
+    const isPresetExpertise = expertises.some(
+        (item) => item.toLowerCase() === initialExpertise.toLowerCase(),
+    );
+
+    const [selectedExpertise, setSelectedExpertise] = useState(
+        initialExpertise
+            ? isPresetExpertise
+                ? initialExpertise
+                : "Lainnya"
+            : "",
+    );
+
+    const [customExpertise, setCustomExpertise] = useState(
+        isPresetExpertise ? "" : initialExpertise,
+    );
+
+    const isDuplicateExpertise = expertises.some(
+        (item) => item.toLowerCase() === customExpertise.trim().toLowerCase(),
+    );
     const { data, setData, patch, processing, errors, recentlySuccessful } =
         useForm({
             expertise: mentorProfile?.expertise || "",
@@ -113,18 +141,136 @@ export default function UpdateMentorProfileForm({
             <form onSubmit={submit} className="mt-6 space-y-7">
                 {/* Keahlian */}
                 <div>
-                    <label htmlFor="expertise" className={labelClass}>
-                        Bidang Keahlian
-                    </label>
+                    <label className={labelClass}>Bidang Keahlian</label>
 
-                    <input
-                        id="expertise"
-                        type="text"
-                        value={data.expertise}
-                        onChange={(e) => setData("expertise", e.target.value)}
-                        className={inputClass}
-                        placeholder="Contoh: Web Development"
-                    />
+                    <div className="relative mt-2">
+                        {/* Tombol Dropdown */}
+                        <button
+                            type="button"
+                            onClick={() => setIsExpertiseOpen(!isExpertiseOpen)}
+                            className={`${inputClass} mt-0 flex items-center justify-between text-left`}
+                        >
+                            <span>
+                                {selectedExpertise === "Lainnya"
+                                    ? customExpertise || "Lainnya"
+                                    : selectedExpertise ||
+                                      "Pilih bidang keahlian"}
+                            </span>
+
+                            <svg
+                                className={`h-4 w-4 text-slate-500 transition-transform ${
+                                    isExpertiseOpen ? "rotate-180" : ""
+                                }`}
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2}
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="m19 9-7 7-7-7"
+                                />
+                            </svg>
+                        </button>
+
+                        {/* Isi Dropdown */}
+                        {isExpertiseOpen && (
+                            <div className="absolute z-20 mt-1 w-full overflow-hidden rounded-lg border border-[#DCE5EA] bg-white shadow-lg">
+                                {/* Daftar Pilihan */}
+                                {expertiseOptions.map((expertise) => (
+                                    <button
+                                        key={expertise}
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedExpertise(expertise);
+
+                                            if (expertise === "Lainnya") {
+                                                setData(
+                                                    "expertise",
+                                                    customExpertise,
+                                                );
+                                            } else {
+                                                setData("expertise", expertise);
+                                                setIsExpertiseOpen(false);
+                                            }
+                                        }}
+                                        className={`block w-full px-4 py-3 text-left text-sm transition hover:bg-[#E6EFF4] ${
+                                            selectedExpertise === expertise
+                                                ? "bg-[#E6EFF4] font-medium text-[#6594B1]"
+                                                : "text-slate-700"
+                                        }`}
+                                    >
+                                        {expertise}
+                                    </button>
+                                ))}
+
+                                {/* Input Lainnya */}
+                                {selectedExpertise === "Lainnya" && (
+                                    <div className="border-t border-[#DCE5EA] bg-[#F8FAFB] p-4">
+                                        <label
+                                            htmlFor="custom_expertise"
+                                            className={labelClass}
+                                        >
+                                            Tuliskan Bidang Keahlian
+                                        </label>
+
+                                        <div className="mt-2 flex items-center gap-2">
+                                            <input
+                                                id="custom_expertise"
+                                                type="text"
+                                                value={customExpertise}
+                                                onChange={(e) => {
+                                                    const value = toTitleCase(
+                                                        e.target.value,
+                                                    );
+
+                                                    setCustomExpertise(value);
+                                                    setData("expertise", value);
+                                                }}
+                                                className={`${inputClass} mt-0 flex-1`}
+                                                placeholder="Contoh: Cyber Security"
+                                                autoFocus
+                                            />
+
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (
+                                                        !customExpertise.trim() ||
+                                                        isDuplicateExpertise
+                                                    ) {
+                                                        return;
+                                                    }
+
+                                                    setData(
+                                                        "expertise",
+                                                        customExpertise.trim(),
+                                                    );
+                                                    setIsExpertiseOpen(false);
+                                                }}
+                                                disabled={
+                                                    !customExpertise.trim() ||
+                                                    isDuplicateExpertise
+                                                }
+                                                className="shrink-0 rounded-lg bg-[#6594B1] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#56839F] disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                Pilih
+                                            </button>
+                                        </div>
+
+                                        {/* Pesan Duplikat */}
+                                        {isDuplicateExpertise && (
+                                            <p className="mt-2 text-xs text-red-600">
+                                                Bidang keahlian sudah tersedia.
+                                                Silakan pilih dari daftar.
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
 
                     {errors.expertise && (
                         <p className="mt-2 text-sm text-red-600">

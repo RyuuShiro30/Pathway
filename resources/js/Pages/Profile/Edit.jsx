@@ -5,7 +5,13 @@ import UpdatePasswordForm from "./Partials/UpdatePasswordForm";
 import UpdateMentorProfileForm from "./Partials/UpdateMentorProfileForm";
 import UpdateProfileInformationForm from "./Partials/UpdateProfileInformationForm";
 
-export default function Edit({ mustVerifyEmail, status, mentorProfile }) {
+export default function Edit({
+    auth,
+    mustVerifyEmail,
+    status,
+    mentorProfile,
+    expertises = [],
+}) {
     return (
         <AuthenticatedLayout
             header={
@@ -44,6 +50,7 @@ export default function Edit({ mustVerifyEmail, status, mentorProfile }) {
                         </svg>
                         Kembali ke Dashboard
                     </Link>
+
                     {/* Hero Profile */}
                     <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#6594B1] to-[#7FA9C1] px-7 py-8 text-white shadow-md sm:px-10">
                         <div className="relative z-10 max-w-2xl">
@@ -104,12 +111,13 @@ export default function Edit({ mustVerifyEmail, status, mentorProfile }) {
 
                             <UpdateMentorProfileForm
                                 mentorProfile={mentorProfile}
+                                expertises={expertises}
                                 className="w-full"
                             />
                         </section>
                     )}
 
-                    {/* Ubah Password */}
+                    {/* Keamanan Akun */}
                     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                         <div className="border-b border-slate-100 bg-[#E6EFF4] px-6 py-4 sm:px-8">
                             <h3 className="font-semibold text-slate-800">
