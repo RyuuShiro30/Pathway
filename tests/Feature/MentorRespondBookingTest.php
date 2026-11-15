@@ -274,6 +274,23 @@ class MentorRespondBookingTest extends TestCase
         $this->assertSame($originalAttributes, $session->fresh()->getRawOriginal());
     }
 
+    public function test_mentor_without_profile_cannot_accept_booking_and_receives_validation_error(): void
+    {
+        $mentor = User::factory()->mentor()->create();
+        $student = User::factory()->create();
+        $session = $this->createBooking($student, $mentor, false);
+
+        $response = $this->actingAs($mentor)
+            ->from(route('mentor.booking.show', $session->id))
+            ->patch(route('mentor.booking.respond', $session->id), [
+                'action' => 'terima',
+            ]);
+
+        $response->assertRedirect(route('mentor.booking.show', $session->id));
+        $response->assertSessionHasErrors('message');
+        $this->assertEquals('diajukan', $session->fresh()->status);
+    }
+
     private function createMentor(): User
     {
         $mentor = User::factory()->mentor()->create();

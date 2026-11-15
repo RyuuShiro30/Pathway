@@ -31,8 +31,8 @@ class SuspendedMentorAccessTest extends TestCase
         $response->assertOk();
         $response->assertInertia(fn (AssertableInertia $page) => $page
             ->component('Mentors/Index')
-            ->has('mentors', 1)
-            ->where('mentors.0.user.id', $activeMentor->id)
+            ->has('mentors.data', 1)
+            ->where('mentors.data.0.user.id', $activeMentor->id)
         );
     }
 

@@ -54,7 +54,7 @@ class DashboardController extends Controller
         // Jadwal bimbingan terdekat yang belum selesai
         $lastBooking = MentoringSession::with('mentor')
             ->where('student_id', $user->id)
-            ->whereIn('status', ['pending', 'confirmed'])
+            ->whereIn('status', ['diajukan', 'dikonfirmasi'])
             ->orderBy('schedule_time', 'asc')
             ->first();
 

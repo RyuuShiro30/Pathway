@@ -111,7 +111,7 @@ function getRemainingTime(deadline) {
     };
 }
 
-export default function RefundProcess({ session, hasPreviousOffer }) {
+export default function RefundProcess({ session, hasPreviousOffer, refund_amount }) {
     const { auth } = usePage().props;
 
     const fileInputRef = useRef(null);
@@ -127,7 +127,9 @@ export default function RefundProcess({ session, hasPreviousOffer }) {
     const student = session.student ?? {};
     const studentName = student.name ?? "Mentee";
     const totalPrice = Number(session.price_snapshot ?? 0);
-    const refundAmount = totalPrice / 2;
+    const refundAmount = Number(
+        refund_amount ?? session.refund_amount ?? Math.ceil(totalPrice * 0.5)
+    );
     const remaining = getRemainingTime(session.refund_deadline);
     const isRefundOverdue = remaining.isOverdue;
     const dpProofUrl = getPublicStorageUrl(session.payment_dp_proof);

@@ -19,6 +19,8 @@ const weekdays = [
     { value: "rabu", label: "Rabu" },
     { value: "kamis", label: "Kamis" },
     { value: "jumat", label: "Jumat" },
+    { value: "sabtu", label: "Sabtu" },
+    { value: "minggu", label: "Minggu" },
 ];
 
 const timeSlots = Array.from({ length: 16 }, (_, index) => {
@@ -217,7 +219,8 @@ export default function Dashboard({
     const popoverRef = useRef(null);
 
     // Filter tabs state
-    const [sessionFilterTab, setSessionFilterTab] = useState("semua"); // 'semua' | 'hari_ini'
+    const [sessionPillFilter, setSessionPillFilter] = useState("semua");
+    const [sessionPage, setSessionPage] = useState(1);
     const [schedulePeriodTab, setSchedulePeriodTab] = useState("pagi"); // 'pagi' | 'siang' | 'malam' | 'semua'
     const [showAllRefunds, setShowAllRefunds] = useState(false);
 
@@ -447,22 +450,51 @@ export default function Dashboard({
     const hasUrgentActions =
         safeRefundRequests.length > 0 || activeNoShowDisputesCount > 0;
 
-    // Filter Sesi Terjadwal berdasarkan tab (Semua / Hari Ini)
+    // Pill filter counts for Sesi Terjadwal
+    const sessionPillCounts = {
+        semua: safeConfirmedSessions.length,
+        dikonfirmasi: safeConfirmedSessions.filter((s) => s.status === "dikonfirmasi").length,
+        berlangsung: safeConfirmedSessions.filter((s) => s.status === "berlangsung").length,
+        no_show: safeConfirmedSessions.filter(
+            (s) => s.no_show_report && ["menunggu_respons", "disanggah"].includes(s.no_show_report.status),
+        ).length,
+        gratis: safeConfirmedSessions.filter((s) => s.is_free_session).length,
+        berbayar: safeConfirmedSessions.filter((s) => !s.is_free_session).length,
+    };
+
+    const sessionPillDefs = [
+        { value: "semua", label: "Semua", always: true },
+        { value: "dikonfirmasi", label: "Dikonfirmasi" },
+        { value: "berlangsung", label: "Berlangsung" },
+        { value: "no_show", label: "Ada Laporan No-Show" },
+        { value: "gratis", label: "Gratis" },
+        { value: "berbayar", label: "Berbayar" },
+    ];
+
+    const visiblePills = sessionPillDefs.filter(
+        (p) => p.always || sessionPillCounts[p.value] > 0,
+    );
+
+    // Filter Sesi Terjadwal berdasarkan pill
     const filteredConfirmedSessions = safeConfirmedSessions.filter(
         (session) => {
-            if (sessionFilterTab === "hari_ini") {
-                if (!session.schedule_time) return false;
-                const sessionDate = new Date(session.schedule_time);
-                const now = new Date();
-                return (
-                    sessionDate.getDate() === now.getDate() &&
-                    sessionDate.getMonth() === now.getMonth() &&
-                    sessionDate.getFullYear() === now.getFullYear()
-                );
-            }
+            if (sessionPillFilter === "dikonfirmasi") return session.status === "dikonfirmasi";
+            if (sessionPillFilter === "berlangsung") return session.status === "berlangsung";
+            if (sessionPillFilter === "no_show")
+                return session.no_show_report && ["menunggu_respons", "disanggah"].includes(session.no_show_report.status);
+            if (sessionPillFilter === "gratis") return session.is_free_session;
+            if (sessionPillFilter === "berbayar") return !session.is_free_session;
             return true;
         },
     );
+
+    // Pagination for Sesi Terjadwal (5 per page)
+    const SESSION_PAGE_SIZE = 5;
+    const sessionTotalPages = Math.max(1, Math.ceil(filteredConfirmedSessions.length / SESSION_PAGE_SIZE));
+    const sessionCurrentPage = Math.min(Math.max(1, sessionPage), sessionTotalPages);
+    const sessionStartIdx = (sessionCurrentPage - 1) * SESSION_PAGE_SIZE;
+    const sessionEndIdx = Math.min(sessionStartIdx + SESSION_PAGE_SIZE, filteredConfirmedSessions.length);
+    const paginatedSessions = filteredConfirmedSessions.slice(sessionStartIdx, sessionEndIdx);
 
     // Filter timeSlots berdasarkan tab waktu (Pagi, Siang, Malam, Semua)
     const filteredTimeSlots = timeSlots.filter((slot) => {
@@ -884,41 +916,47 @@ export default function Dashboard({
                                         {safeConfirmedSessions.length} Sesi
                                     </Badge>
                                 }
-                                rightAction={
-                                    <div className="inline-flex rounded-xl bg-slate-100 p-0.5 text-xs font-medium text-slate-600">
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setSessionFilterTab("semua")
-                                            }
-                                            className={`rounded-lg px-3 py-1 transition ${
-                                                sessionFilterTab === "semua"
-                                                    ? "bg-white font-bold text-slate-900 shadow-xs"
-                                                    : "text-slate-500 hover:text-slate-800"
-                                            }`}
-                                        >
-                                            Semua
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                setSessionFilterTab("hari_ini")
-                                            }
-                                            className={`rounded-lg px-3 py-1 transition ${
-                                                sessionFilterTab === "hari_ini"
-                                                    ? "bg-white font-bold text-slate-900 shadow-xs"
-                                                    : "text-slate-500 hover:text-slate-800"
-                                            }`}
-                                        >
-                                            Hari Ini
-                                        </button>
-                                    </div>
-                                }
                             />
 
-                            {filteredConfirmedSessions.length > 0 ? (
-                                <div className="space-y-3">
-                                    {filteredConfirmedSessions.map(
+                            {/* Pill Filters */}
+                            <div className="-mx-2 mt-1 flex items-center gap-1.5 overflow-x-auto px-2 py-2 scrollbar-none sm:gap-2" style={{ WebkitOverflowScrolling: "touch" }}>
+                                {visiblePills.map((pill) => {
+                                    const count = sessionPillCounts[pill.value] ?? 0;
+                                    const isSelected = sessionPillFilter === pill.value;
+
+                                    return (
+                                        <button
+                                            key={pill.value}
+                                            type="button"
+                                            aria-pressed={isSelected}
+                                            onClick={() => {
+                                                setSessionPillFilter(pill.value);
+                                                setSessionPage(1);
+                                            }}
+                                            className={`inline-flex shrink-0 min-h-9 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs sm:text-sm font-semibold transition focus:outline-none focus:ring-2 focus:ring-[#527D98] focus:ring-offset-1 ${
+                                                isSelected
+                                                    ? "bg-[#527D98] text-white shadow-xs"
+                                                    : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                                            }`}
+                                        >
+                                            {pill.label}
+                                            <span
+                                                className={`rounded-full px-1.5 py-0.5 text-[11px] font-bold ${
+                                                    isSelected
+                                                        ? "bg-white/20 text-white"
+                                                        : "bg-slate-100 text-slate-600"
+                                                }`}
+                                            >
+                                                {count}
+                                            </span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {paginatedSessions.length > 0 ? (
+                                <div className="mt-3 space-y-3">
+                                    {paginatedSessions.map(
                                         (session) => {
                                             const isOngoing =
                                                 session.status ===
@@ -1130,11 +1168,52 @@ export default function Dashboard({
                             ) : (
                                 <EmptyState
                                     message={
-                                        sessionFilterTab === "hari_ini"
-                                            ? "Tidak ada sesi terjadwal untuk hari ini."
+                                        sessionPillFilter !== "semua"
+                                            ? "Tidak ada sesi yang cocok dengan filter ini."
                                             : "Belum ada sesi terjadwal saat ini."
                                     }
                                 />
+                            )}
+
+                            {/* Pagination */}
+                            {filteredConfirmedSessions.length > SESSION_PAGE_SIZE && (
+                                <div className="mt-4 flex flex-col gap-2 border-t border-slate-100 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <p className="text-xs text-slate-500">
+                                        Menampilkan {sessionStartIdx + 1} - {sessionEndIdx} dari {filteredConfirmedSessions.length} sesi
+                                    </p>
+                                    <div className="flex items-center gap-1">
+                                        <button
+                                            type="button"
+                                            disabled={sessionCurrentPage <= 1}
+                                            onClick={() => setSessionPage(sessionCurrentPage - 1)}
+                                            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                        >
+                                            Sebelumnya
+                                        </button>
+                                        {Array.from({ length: sessionTotalPages }, (_, i) => i + 1).map((page) => (
+                                            <button
+                                                key={page}
+                                                type="button"
+                                                onClick={() => setSessionPage(page)}
+                                                className={`min-w-[28px] rounded-lg px-2 py-1 text-xs font-semibold transition ${
+                                                    page === sessionCurrentPage
+                                                        ? "bg-[#527D98] text-white shadow-xs"
+                                                        : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                                                }`}
+                                            >
+                                                {page}
+                                            </button>
+                                        ))}
+                                        <button
+                                            type="button"
+                                            disabled={sessionCurrentPage >= sessionTotalPages}
+                                            onClick={() => setSessionPage(sessionCurrentPage + 1)}
+                                            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                                        >
+                                            Selanjutnya
+                                        </button>
+                                    </div>
+                                </div>
                             )}
                         </Card>
 
@@ -1154,7 +1233,7 @@ export default function Dashboard({
                                         <p className="mt-1 text-xs text-slate-500">
                                             Klik sel untuk toggle: Tutup,
                                             Gratis, atau Berbayar. Jadwal
-                                            mencakup Senin hingga Jumat.
+                                            mencakup Senin hingga Minggu.
                                         </p>
                                     </div>
 
@@ -1243,18 +1322,18 @@ export default function Dashboard({
                             </div>
 
                             <form onSubmit={saveAvailability}>
-                                <div className="max-h-[460px] overflow-auto rounded-xl border border-slate-100 p-2">
-                                    <table className="w-full min-w-[580px] table-fixed border-separate border-spacing-1.5 text-left">
+                                <div className="max-h-[460px] overflow-x-auto overflow-y-auto rounded-xl border border-slate-100 p-2">
+                                    <table className="w-full min-w-[740px] table-fixed border-separate border-spacing-1.5 text-left">
                                         <thead>
                                             <tr>
-                                                <th className="sticky left-0 top-0 z-30 w-28 bg-white px-2 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                                                <th className="sticky left-0 top-0 z-30 w-24 bg-white px-2 py-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 border-b border-slate-100">
                                                     WAKTU
                                                 </th>
                                                 {weekdays.map((day) => (
                                                     <th
                                                         key={day.value}
                                                         scope="col"
-                                                        className="sticky top-0 z-20 bg-white px-2 py-2 text-center text-xs font-bold uppercase tracking-wider text-slate-700 border-b border-slate-100"
+                                                        className="sticky top-0 z-20 min-w-[92px] bg-white px-2 py-2 text-center text-xs font-bold uppercase tracking-wider text-slate-700 border-b border-slate-100"
                                                     >
                                                         {day.label}
                                                     </th>
@@ -1268,7 +1347,7 @@ export default function Dashboard({
                                                 >
                                                     <th
                                                         scope="row"
-                                                        className="sticky left-0 z-10 h-9 rounded-lg bg-slate-50 px-2 text-[11px] font-semibold text-slate-500"
+                                                        className="sticky left-0 z-10 h-9 rounded-lg bg-slate-50 px-2 text-xs font-semibold text-slate-500"
                                                     >
                                                         {slot.start} -{" "}
                                                         {slot.end}
@@ -1302,6 +1381,7 @@ export default function Dashboard({
                                                         return (
                                                             <td
                                                                 key={`${day.value}-${slot.start}`}
+                                                                className="min-w-[92px]"
                                                             >
                                                                 <button
                                                                     type="button"
@@ -1322,7 +1402,7 @@ export default function Dashboard({
                                                                             slot,
                                                                         )
                                                                     }
-                                                                    className={`h-9 w-full truncate rounded-lg border px-2 py-1 text-[11px] font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-[#527D98]/50 disabled:cursor-not-allowed disabled:opacity-60 ${
+                                                                    className={`h-9 w-full truncate rounded-lg border px-2 py-1 text-xs font-semibold transition-all focus:outline-none focus:ring-2 focus:ring-[#527D98]/50 disabled:cursor-not-allowed disabled:opacity-60 ${
                                                                         isPaid
                                                                             ? "border-sky-300 bg-[#E3F2FD] text-[#1565C0] hover:bg-[#BBDEFB]"
                                                                             : isFree

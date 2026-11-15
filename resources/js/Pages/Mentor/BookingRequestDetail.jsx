@@ -61,7 +61,7 @@ export default function BookingRequestDetail({ session }) {
             .join("")
             .toUpperCase() || "M";
     const totalPrice = Number(session.price_snapshot ?? 0);
-    const dpAmount = totalPrice * 0.5;
+    const dpAmount = Math.ceil(totalPrice * 0.5);
     const proofPath = session.payment_dp_proof
         ? String(session.payment_dp_proof).replace(/^\/+/, "")
         : null;

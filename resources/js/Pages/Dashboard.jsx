@@ -137,7 +137,8 @@ export default function Dashboard() {
                                         </p>
                                     </div>
 
-                                    {lastBooking.status === 'confirmed' &&
+                                    {(lastBooking.status === 'dikonfirmasi' ||
+                                        lastBooking.status === 'confirmed') &&
                                     lastBooking.discord_link ? (
                                         <a
                                             href={lastBooking.discord_link}

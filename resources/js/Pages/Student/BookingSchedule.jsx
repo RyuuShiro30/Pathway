@@ -8,6 +8,7 @@ import {
     EmptyState,
     themeTokens,
 } from '@/Components/ui';
+import Navbar from '@/Components/Navbar';
 
 const weekdayByUtcDay = [
     'minggu',
@@ -584,75 +585,7 @@ export default function BookingSchedule({
             `}</style>
 
             {/* TOP NAVIGATION BAR */}
-            <header className="sticky top-0 z-40 bg-[#548299] text-white shadow-md">
-                <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 sm:px-6 lg:px-8">
-                    <div className="flex shrink-0 items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 text-xl font-extrabold text-white shadow-inner">
-                            P
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xl font-black tracking-tight">
-                                Pathway
-                            </span>
-                            <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-bold tracking-wider text-white">
-                                Mentee Portal
-                            </span>
-                        </div>
-                    </div>
-
-                    <nav
-                        aria-label="Navigasi mentee"
-                        className="order-4 flex w-full items-center gap-1.5 overflow-x-auto whitespace-nowrap text-sm font-medium xl:order-none xl:w-auto"
-                    >
-                        <span className="rounded-full px-4 py-1.5 text-white/80 transition hover:bg-white/10 hover:text-white cursor-pointer">
-                            Dashboard
-                        </span>
-                        <span className="rounded-full px-4 py-1.5 text-white/80 transition hover:bg-white/10 hover:text-white cursor-pointer">
-                            Cari Mentor
-                        </span>
-                        <span
-                            aria-current="page"
-                            className="rounded-full bg-[#3E637A] px-4 py-1.5 font-semibold text-white shadow-sm"
-                        >
-                            Booking Mentoring
-                        </span>
-                        <span className="rounded-full px-4 py-1.5 text-white/80 transition hover:bg-white/10 hover:text-white cursor-pointer">
-                            Materi &amp; Modul
-                        </span>
-                    </nav>
-
-                    <div className="flex shrink-0 items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full text-white/80 hover:bg-white/10 hover:text-white transition cursor-pointer">
-                            <svg
-                                className="h-5 w-5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                                />
-                            </svg>
-                        </div>
-                        <div className="flex items-center gap-2.5 rounded-full bg-white/10 py-1 pl-1 pr-3">
-                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#E5ECDD] text-xs font-bold text-[#34443D] shadow-sm">
-                                {studentInitials}
-                            </div>
-                            <div className="hidden text-left sm:block">
-                                <p className="max-w-[130px] truncate text-xs font-semibold leading-tight text-white">
-                                    {studentName}
-                                </p>
-                                <p className="text-[10px] text-white/70">
-                                    Mentee Reguler
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            <Navbar />
 
             <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
                 {/* BREADCRUMBS */}

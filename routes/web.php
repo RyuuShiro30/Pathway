@@ -62,6 +62,7 @@ Route::get('/mentors', [MentorDirectoryController::class, 'index'])
     ->name('mentors.index');
 
 Route::get('/mentors/{id}', [MentorDirectoryController::class, 'show'])
+    ->whereNumber('id')
     ->name('mentors.show');
 
 // Sharing Journey - halaman publik
@@ -110,6 +111,7 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         ->name('merchandise-orders.index');
 
     Route::put('/merchandise-orders/{order}', [AdminMerchandiseOrderController::class, 'update'])
+        ->whereNumber('order')
         ->name('merchandise-orders.update');
 
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])
@@ -117,10 +119,13 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::get('/refund-reports', [AdminRefundReportController::class, 'index'])
         ->name('refund-reports.index');
     Route::get('/refund-reports/{session}', [AdminRefundReportController::class, 'show'])
+        ->whereNumber('session')
         ->name('refund-reports.show');
     Route::patch('/refund-reports/{session}/decide', [AdminRefundReportController::class, 'decide'])
+        ->whereNumber('session')
         ->name('refund-reports.decide');
     Route::post('/refund-reports/{session}/remind', [AdminRefundReportController::class, 'remind'])
+        ->whereNumber('session')
         ->name('refund-reports.remind');
 
     Route::get('/payment-reminders', [AdminPaymentReminderController::class, 'index'])
@@ -128,15 +133,19 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::post('/payment-reminders/remind-all', [AdminPaymentReminderController::class, 'remindAll'])
         ->name('payment-reminders.remind-all');
     Route::match(['post', 'patch'], '/payment-reminders/{session}/remind', [AdminPaymentReminderController::class, 'remind'])
+        ->whereNumber('session')
         ->name('payment-reminders.remind');
 
     Route::get('/mentors', [AdminMentorController::class, 'index'])
         ->name('mentors.index');
     Route::patch('/mentors/{mentorProfile}/verify', [AdminMentorController::class, 'verify'])
+        ->whereNumber('mentorProfile')
         ->name('mentors.verify');
     Route::post('/mentors/{mentorProfile}/suspend', [AdminMentorController::class, 'suspend'])
+        ->whereNumber('mentorProfile')
         ->name('mentors.suspend');
     Route::post('/mentors/{mentorProfile}/unsuspend', [AdminMentorController::class, 'unsuspend'])
+        ->whereNumber('mentorProfile')
         ->name('mentors.unsuspend');
 });
 
@@ -153,6 +162,7 @@ Route::middleware('auth')->group(function () {
         ->name('courses.learn');
 
     Route::post('/courses/{slug}/materials/{materialId}/complete', [CourseController::class, 'markAsCompleted'])
+        ->whereNumber('materialId')
         ->name('courses.materials.complete');
 
     // Forum Diskusi Kelas
@@ -209,9 +219,11 @@ Route::middleware('auth')->group(function () {
 
     // Rating & Ulasan Mentor
     Route::get('/sessions/{session}/review', [ReviewController::class, 'create'])
+        ->whereNumber('session')
         ->name('reviews.create');
 
     Route::post('/sessions/{session}/review', [ReviewController::class, 'store'])
+        ->whereNumber('session')
         ->name('reviews.store');
 
     // Riwayat Transaksi Mentoring
@@ -247,6 +259,7 @@ Route::middleware('auth')->group(function () {
             ->name('mentor.badges.index');
 
         Route::post('/mentor/badges/{id}/redeem', [BadgeController::class, 'redeem'])
+            ->whereNumber('id')
             ->name('mentor.badges.redeem');
 
         // Merchandise
@@ -254,6 +267,7 @@ Route::middleware('auth')->group(function () {
             ->name('mentor.merchandise.index');
 
         Route::post('/mentor/merchandise/{id}/redeem', [MerchandiseController::class, 'redeem'])
+            ->whereNumber('id')
             ->name('mentor.merchandise.redeem');
 
         Route::get('/mentor/merchandise/history', [MerchandiseController::class, 'history'])
@@ -274,9 +288,11 @@ Route::middleware('auth')->group(function () {
         ->name('student.bookings.index');
 
     Route::get('/bookings/{id}/reschedule', [MentoringSessionController::class, 'rescheduleForm'])
+        ->whereNumber('id')
         ->name('student.bookings.reschedule');
 
     Route::post('/bookings/{id}/reschedule', [MentoringSessionController::class, 'requestReschedule'])
+        ->whereNumber('id')
         ->name('student.bookings.reschedule.store');
 
     Route::get('/notifications', [NotificationController::class, 'index'])
@@ -289,18 +305,23 @@ Route::middleware('auth')->group(function () {
         ->name('notifications.read');
 
     Route::patch('/bookings/{id}/cancel', [MentoringSessionController::class, 'cancelBooking'])
+        ->whereNumber('id')
         ->name('student.bookings.cancel');
 
     Route::patch('/bookings/{id}/cancel-confirmed', [MentoringSessionController::class, 'cancelConfirmedBooking'])
+        ->whereNumber('id')
         ->name('student.bookings.cancel-confirmed');
 
     Route::patch('/bookings/{id}/refund-confirmation', [MentoringSessionController::class, 'confirmRefund'])
+        ->whereNumber('id')
         ->name('student.bookings.refund.confirm');
 
     Route::patch('/bookings/{id}/refund-reschedule/respond', [MentoringSessionController::class, 'respondRefundRescheduleOffer'])
+        ->whereNumber('id')
         ->name('student.bookings.refund-reschedule.respond');
 
     Route::post('/bookings/{id}/payment-final', [MentoringSessionController::class, 'uploadFinalPaymentProof'])
+        ->whereNumber('id')
         ->name('student.bookings.payment-final.upload');
 
     // Mentor Booking Requests
@@ -308,50 +329,64 @@ Route::middleware('auth')->group(function () {
         ->name('mentor.requests');
 
     Route::get('/mentor/booking/{id}', [MentoringSessionController::class, 'show'])
+        ->whereNumber('id')
         ->name('mentor.booking.show');
 
     Route::patch('/mentor/booking/{id}/respond', [MentoringSessionController::class, 'respond'])
+        ->whereNumber('id')
         ->name('mentor.booking.respond');
 
     Route::patch('/mentor/booking/{id}/reschedule/respond', [MentoringSessionController::class, 'respondReschedule'])
+        ->whereNumber('id')
         ->name('mentor.booking.reschedule.respond');
 
     // Mentor Session Tracking
     Route::get('/mentor/session/{id}', [MentoringSessionController::class, 'tracking'])
+        ->whereNumber('id')
         ->name('mentor.session.tracking');
 
     Route::patch('/mentor/session/{id}/start', [MentoringSessionController::class, 'startSession'])
+        ->whereNumber('id')
         ->name('mentor.session.start');
 
     Route::patch('/mentor/session/{id}/complete', [MentoringSessionController::class, 'completeSession'])
+        ->whereNumber('id')
         ->name('mentor.session.complete');
 
     Route::patch('/mentor/session/{id}/cancel', [MentoringSessionController::class, 'cancelSession'])
+        ->whereNumber('id')
         ->name('mentor.session.cancel');
 
     // No-show (dipakai murid dan mentor)
 
     // Mentor Refund & No Show
     Route::patch('/mentor/session/{id}/refund', [MentoringSessionController::class, 'completeRefund'])
+        ->whereNumber('id')
         ->name('mentor.refund.complete');
 
     Route::get('/mentor/session/{id}/refund', [MentoringSessionController::class, 'refundForm'])
+        ->whereNumber('id')
         ->name('mentor.refund.form');
 
     // Halaman penawaran jadwal pengganti
     Route::get('/mentor/session/{id}/reschedule-offer', [MentoringSessionController::class, 'rescheduleOfferForm'])
+        ->whereNumber('id')
         ->name('mentor.refund.reschedule-offer.form');
 
     Route::post('/mentor/session/{id}/refund/reschedule-offer', [MentoringSessionController::class, 'offerRefundReschedule'])
+        ->whereNumber('id')
         ->name('mentor.refund.reschedule-offer');
 
     Route::post('/sessions/{id}/no-show', [NoShowReportController::class, 'store'])
+        ->whereNumber('id')
         ->name('no-show.store');
 
     Route::patch('/no-show-reports/{id}/respond', [NoShowReportController::class, 'respond'])
+        ->whereNumber('id')
         ->name('no-show.respond');
 
     Route::get('/no-show-reports/{id}/evidence/{type}', [NoShowReportController::class, 'evidence'])
+        ->whereNumber('id')
         ->where('type', 'report|response')
         ->name('no-show.evidence');
 
@@ -361,48 +396,62 @@ Route::middleware('auth')->group(function () {
             ->name('mentor.requests');
 
         Route::get('/mentor/booking/{id}', [MentoringSessionController::class, 'show'])
+            ->whereNumber('id')
             ->name('mentor.booking.show');
 
         Route::patch('/mentor/booking/{id}/respond', [MentoringSessionController::class, 'respond'])
+            ->whereNumber('id')
             ->name('mentor.booking.respond');
 
         Route::patch('/mentor/booking/{id}/reschedule/respond', [MentoringSessionController::class, 'respondReschedule'])
+            ->whereNumber('id')
             ->name('mentor.booking.reschedule.respond');
 
         // Mentor Session Tracking
         Route::get('/mentor/session/{id}', [MentoringSessionController::class, 'tracking'])
+            ->whereNumber('id')
             ->name('mentor.session.tracking');
 
         Route::patch('/mentor/session/{id}/start', [MentoringSessionController::class, 'startSession'])
+            ->whereNumber('id')
             ->name('mentor.session.start');
 
         Route::patch('/mentor/session/{id}/complete', [MentoringSessionController::class, 'completeSession'])
+            ->whereNumber('id')
             ->name('mentor.session.complete');
 
         Route::patch('/mentor/session/{id}/cancel', [MentoringSessionController::class, 'cancelSession'])
+            ->whereNumber('id')
             ->name('mentor.session.cancel');
 
         Route::patch('/mentor/session/{id}/payment-final', [MentoringSessionController::class, 'verifyFinalPayment'])
+            ->whereNumber('id')
             ->name('mentor.session.payment-final.verify');
 
         Route::patch('/mentor/session/{id}/payment-final/accept', [MentoringSessionController::class, 'acceptFinalPayment'])
+            ->whereNumber('id')
             ->name('mentor.session.payment-final.accept');
 
         Route::patch('/mentor/session/{id}/payment-final/reject', [MentoringSessionController::class, 'rejectFinalPayment'])
+            ->whereNumber('id')
             ->name('mentor.session.payment-final.reject');
 
         // Mentor Refund & No Show
         Route::patch('/mentor/session/{id}/refund', [MentoringSessionController::class, 'completeRefund'])
+            ->whereNumber('id')
             ->name('mentor.refund.complete');
 
         Route::get('/mentor/session/{id}/refund', [MentoringSessionController::class, 'refundForm'])
+            ->whereNumber('id')
             ->name('mentor.refund.form');
 
         // Penawaran jadwal pengganti
         Route::get('/mentor/session/{id}/reschedule-offer', [MentoringSessionController::class, 'rescheduleOfferForm'])
+            ->whereNumber('id')
             ->name('mentor.refund.reschedule-offer.form');
 
         Route::post('/mentor/session/{id}/refund/reschedule-offer', [MentoringSessionController::class, 'offerRefundReschedule'])
+            ->whereNumber('id')
             ->name('mentor.refund.reschedule-offer');
     });
 });

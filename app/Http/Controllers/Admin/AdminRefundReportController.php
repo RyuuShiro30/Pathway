@@ -170,7 +170,7 @@ class AdminRefundReportController extends Controller
             'refund_status' => $session->refund_status,
             'schedule_time' => $session->schedule_time?->format('d M Y, H:i'),
             'price_snapshot' => $session->price_snapshot,
-            'dp_amount' => $session->price_snapshot ? (float) $session->price_snapshot * 0.5 : 0,
+            'dp_amount' => $session->price_snapshot ? (int) ceil(((float) $session->price_snapshot) * 0.5) : 0,
             'cancelled_by' => $session->cancelled_by,
             'cancellation_reason' => $session->cancellation_reason,
             'payment_dp_proof' => $this->resolveFileUrl($session->payment_dp_proof),
