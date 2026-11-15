@@ -1,6 +1,104 @@
 import React, { useState } from "react";
-import { useForm } from "@inertiajs/react";
+import { Link, useForm } from "@inertiajs/react";
 import Navbar from "@/Components/Navbar";
+
+const dayNames = [
+    "minggu",
+    "senin",
+    "selasa",
+    "rabu",
+    "kamis",
+    "jumat",
+    "sabtu",
+];
+
+const getMentorMentoringInfo = (mentor) => {
+    const schedule = Array.isArray(mentor.availability_schedule)
+        ? mentor.availability_schedule
+        : [];
+
+    const validSchedule = schedule.filter(
+        (slot) =>
+            dayNames.includes(String(slot.day).toLowerCase()) &&
+            ["gratis", "berbayar"].includes(slot.type),
+    );
+
+    const hasFreeSlots = validSchedule.some((slot) => slot.type === "gratis");
+
+    const paidPrices = validSchedule
+        .filter((slot) => slot.type === "berbayar")
+        .map((slot) => Number(slot.price))
+        .filter((price) => Number.isFinite(price) && price > 0);
+
+    const hasPaidSlots = paidPrices.length > 0;
+
+    const now = new Date();
+    const currentDay = now.getDay();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const upcomingSchedule = validSchedule
+        .map((slot) => {
+            const slotDay = dayNames.indexOf(String(slot.day).toLowerCase());
+
+            const [hours, minutes] = String(slot.start).split(":").map(Number);
+
+            const startMinutes = hours * 60 + minutes;
+            const dayDistance = (slotDay - currentDay + 7) % 7;
+
+            return {
+                ...slot,
+                dayDistance,
+                startMinutes,
+            };
+        })
+        .filter(
+            (slot) =>
+                slot.dayDistance > 0 || slot.startMinutes > currentMinutes,
+        )
+        .sort((a, b) => {
+            if (a.dayDistance !== b.dayDistance) {
+                return a.dayDistance - b.dayDistance;
+            }
+
+            return a.startMinutes - b.startMinutes;
+        });
+
+    const isAvailable = upcomingSchedule.length > 0;
+
+    const nearestDay = isAvailable
+        ? dayNames[
+              upcomingSchedule[0].dayDistance === 0
+                  ? currentDay
+                  : (currentDay + upcomingSchedule[0].dayDistance) % 7
+          ]
+        : null;
+
+    const minPrice = hasPaidSlots ? Math.min(...paidPrices) : 0;
+    const maxPrice = hasPaidSlots ? Math.max(...paidPrices) : 0;
+
+    const formatRupiah = (price) => Number(price).toLocaleString("id-ID");
+
+    let priceLabel = "Belum diatur";
+
+    if (hasFreeSlots && hasPaidSlots) {
+        priceLabel = `Gratis & Rp ${formatRupiah(minPrice)}${
+            minPrice !== maxPrice ? ` - Rp ${formatRupiah(maxPrice)}` : ""
+        } / sesi`;
+    } else if (hasFreeSlots) {
+        priceLabel = "Gratis";
+    } else if (hasPaidSlots) {
+        priceLabel =
+            minPrice === maxPrice
+                ? `Rp ${formatRupiah(minPrice)} / sesi`
+                : `Rp ${formatRupiah(minPrice)} - Rp ${formatRupiah(maxPrice)} / sesi`;
+    }
+
+    return {
+        isAvailable,
+        nearestDay,
+        priceLabel,
+    };
+};
 
 export default function Index({
     mentors,
@@ -141,7 +239,7 @@ export default function Index({
                                     </button>
 
                                     {openFilter === "expertise" && (
-                                        <div className="absolute left-0 top-full z-30 mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                                        <div className="absolute left-0 top-full z-30 mt-2 max-h-72 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white py-1 shadow-xl">
                                             <button
                                                 type="button"
                                                 onClick={() => {
@@ -168,9 +266,9 @@ export default function Index({
                                                         );
                                                         setOpenFilter(null);
                                                     }}
-                                                    className={`block w-full px-4 py-3 text-left text-sm transition ${
+                                                    className={`block min-h-10 w-full whitespace-normal break-words px-4 py-2.5 text-left text-sm leading-5 transition-colors ${
                                                         data.expertise === item
-                                                            ? "bg-slate-50 font-semibold text-slate-800"
+                                                            ? "bg-[#E6EFF4] font-semibold text-[#6594B1]"
                                                             : "text-slate-700 hover:bg-[#E6EFF4] hover:text-[#6594B1]"
                                                     }`}
                                                 >
@@ -597,111 +695,153 @@ export default function Index({
                         </div>
 
                         <span className="text-sm text-slate-500">
-                            {mentors.length} mentor
+                            {mentors.total} mentor
                         </span>
                     </div>
 
-                    {mentors.length > 0 ? (
-                        <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-                            {mentors.map((mentor) => (
-                                <article
-                                    key={mentor.id}
-                                    className="group flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl"
-                                >
-                                    {/* Mentor Header */}
-                                    <div className="flex items-center gap-3.5">
-                                        <div className="h-[52px] w-[52px] shrink-0 overflow-hidden rounded-xl bg-[#E6EFF4]">
-                                            {mentor.user?.photo_path ? (
-                                                <img
-                                                    src={mentor.user.photo_path}
-                                                    alt={`Foto ${mentor.user.name}`}
-                                                    className="h-full w-full object-cover"
-                                                />
-                                            ) : (
-                                                <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-[#6594B1]">
-                                                    {mentor.user?.name
-                                                        ?.charAt(0)
-                                                        .toUpperCase() || "M"}
-                                                </div>
-                                            )}
-                                        </div>
+                    {mentors.data.length > 0 ? (
+                        <>
+                            <div className="mt-5 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                                {mentors.data.map((mentor) => {
+                                    const mentoringInfo =
+                                        getMentorMentoringInfo(mentor);
 
-                                        <div className="min-w-0 flex-1">
-                                            <h3 className="truncate text-base font-semibold text-slate-800">
-                                                {mentor.user.name}
-                                            </h3>
-
-                                            <p className="mt-0.5 line-clamp-2 text-[13px] leading-5 text-[#6594B1]">
-                                                {mentor.expertise}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {/* Verification & Availability */}
-                                    <div className="flex items-center justify-between gap-3">
-                                        <span className="inline-flex items-center gap-1.5 rounded-full bg-[#EAF5E1] px-3 py-1 text-xs font-semibold text-[#5C6F2B]">
-                                            ✓ Terverifikasi
-                                        </span>
-
-                                        <span
-                                            className={`inline-flex items-center gap-1.5 text-[13px] font-semibold ${
-                                                mentor.is_available
-                                                    ? "text-[#5C6F2B]"
-                                                    : "text-slate-500"
-                                            }`}
+                                    return (
+                                        <article
+                                            key={mentor.id}
+                                            className="group flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl"
                                         >
-                                            <span className="h-2 w-2 rounded-full bg-current" />
+                                            {/* Mentor Header */}
+                                            <div className="flex items-center gap-3.5">
+                                                <div className="h-[52px] w-[52px] shrink-0 overflow-hidden rounded-xl bg-[#E6EFF4]">
+                                                    {mentor.user?.photo_path ? (
+                                                        <img
+                                                            src={
+                                                                mentor.user
+                                                                    .photo_path
+                                                            }
+                                                            alt={`Foto ${mentor.user.name}`}
+                                                            className="h-full w-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-[#6594B1]">
+                                                            {mentor.user?.name
+                                                                ?.charAt(0)
+                                                                .toUpperCase() ||
+                                                                "M"}
+                                                        </div>
+                                                    )}
+                                                </div>
 
-                                            {mentor.is_available
-                                                ? "Tersedia"
-                                                : "Tidak tersedia"}
-                                        </span>
-                                    </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <h3 className="truncate text-base font-semibold text-slate-800">
+                                                        {mentor.user.name}
+                                                    </h3>
 
-                                    <div className="h-px bg-slate-200" />
+                                                    <p className="mt-0.5 line-clamp-2 text-[13px] leading-5 text-[#6594B1]">
+                                                        {mentor.expertise}
+                                                    </p>
+                                                </div>
+                                            </div>
 
-                                    {/* Rating & Price */}
-                                    <div className="flex items-center justify-between gap-4">
-                                        <div className="flex items-center gap-1.5">
-                                            <span className="text-[#5C6F2B]">
-                                                ⭐
-                                            </span>
-
-                                            <span className="font-medium text-slate-800">
-                                                {mentor.avg_rating > 0
-                                                    ? mentor.avg_rating
-                                                    : "Baru"}
-                                            </span>
-                                        </div>
-
-                                        {mentor.mentor_type === "free" ? (
-                                            <span className="rounded-full bg-[#F8EEF6] px-3 py-1 text-[13px] font-semibold text-[#8A4A80]">
-                                                Gratis
-                                            </span>
-                                        ) : (
-                                            <span className="font-semibold text-slate-800">
-                                                Rp{" "}
-                                                {Number(
-                                                    mentor.price_per_session,
-                                                ).toLocaleString("id-ID")}
-                                                <span className="font-normal text-slate-500">
-                                                    {" "}
-                                                    / sesi
+                                            {/* Verification & Availability */}
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#EAF5E1] px-3 py-1 text-xs font-semibold text-[#5C6F2B]">
+                                                    ✓ Terverifikasi
                                                 </span>
-                                            </span>
-                                        )}
-                                    </div>
 
-                                    {/* Button */}
-                                    <a
-                                        href={`/mentors/${mentor.id}`}
-                                        className="mt-1 flex h-11 w-full items-center justify-center rounded-lg bg-[#E6EFF4] text-sm font-semibold text-[#6594B1] shadow-sm transition-all duration-200 group-hover:bg-[#6594B1] group-hover:text-white hover:-translate-y-0.5 hover:shadow-md"
-                                    >
-                                        Lihat Profil
-                                    </a>
-                                </article>
-                            ))}
-                        </div>
+                                                <span
+                                                    className={`inline-flex items-center gap-1.5 text-[13px] font-semibold ${
+                                                        mentoringInfo.isAvailable
+                                                            ? "text-[#5C6F2B]"
+                                                            : "text-slate-500"
+                                                    }`}
+                                                >
+                                                    <span className="h-2 w-2 rounded-full bg-current" />
+
+                                                    {mentoringInfo.isAvailable
+                                                        ? "Tersedia"
+                                                        : "Tidak tersedia"}
+                                                </span>
+                                            </div>
+
+                                            <div className="h-px bg-slate-200" />
+
+                                            {/* Rating & Price */}
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-[#5C6F2B]">
+                                                        ⭐
+                                                    </span>
+
+                                                    <span className="font-medium text-slate-800">
+                                                        {mentor.avg_rating > 0
+                                                            ? mentor.avg_rating
+                                                            : "Baru"}
+                                                    </span>
+                                                </div>
+
+                                                {mentoringInfo.priceLabel ===
+                                                "Gratis" ? (
+                                                    <span className="rounded-full bg-[#F8EEF6] px-3 py-1 text-[13px] font-semibold text-[#8A4A80]">
+                                                        Gratis
+                                                    </span>
+                                                ) : mentoringInfo.priceLabel !==
+                                                  "Belum diatur" ? (
+                                                    <span className="text-right text-sm font-semibold text-slate-800">
+                                                        {
+                                                            mentoringInfo.priceLabel
+                                                        }
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-right text-xs text-slate-500">
+                                                        Harga belum diatur
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            {/* Button */}
+                                            <a
+                                                href={`/mentors/${mentor.id}`}
+                                                className="mt-1 flex h-11 w-full items-center justify-center rounded-lg bg-[#E6EFF4] text-sm font-semibold text-[#6594B1] shadow-sm transition-all duration-200 group-hover:bg-[#6594B1] group-hover:text-white hover:-translate-y-0.5 hover:shadow-md"
+                                            >
+                                                Lihat Profil
+                                            </a>
+                                        </article>
+                                    );
+                                })}
+                            </div>
+                            <div className="mt-5 text-sm text-slate-500">
+                                Menampilkan {mentors.from}–{mentors.to} dari{" "}
+                                {mentors.total} mentor
+                            </div>
+                            {mentors.last_page > 1 && (
+                                <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+                                    {mentors.links.map((link, index) => (
+                                        <Link
+                                            key={index}
+                                            href={link.url || "#"}
+                                            preserveScroll
+                                            className={`rounded-lg px-4 py-2 text-sm font-medium transition ${
+                                                link.active
+                                                    ? "bg-[#6594B1] text-white"
+                                                    : link.url
+                                                      ? "border border-slate-200 bg-white text-slate-700 hover:bg-[#E6EFF4]"
+                                                      : "cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400"
+                                            }`}
+                                            onClick={(e) => {
+                                                if (!link.url)
+                                                    e.preventDefault();
+                                            }}
+                                        >
+                                            {link.label
+                                                .replace("&laquo;", "«")
+                                                .replace("&raquo;", "»")}
+                                        </Link>
+                                    ))}
+                                </div>
+                            )}
+                        </>
                     ) : (
                         <div className="mt-5 flex flex-col items-center rounded-2xl border border-slate-200 bg-white px-6 py-14 text-center shadow-sm">
                             <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[#DDAED3] text-xl text-white shadow-sm">

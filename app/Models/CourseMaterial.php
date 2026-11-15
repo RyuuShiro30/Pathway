@@ -9,7 +9,6 @@ class CourseMaterial extends Model
 {
     use HasFactory;
 
-    // Sesuaikan dengan struktur kolom di tabel course_materials
     protected $fillable = [
         'course_id',
         'section_name',

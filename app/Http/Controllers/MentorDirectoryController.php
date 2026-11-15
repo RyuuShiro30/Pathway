@@ -62,21 +62,25 @@ class MentorDirectoryController extends Controller
                     );
                 }
             })
-            ->get()
-            ->map(function ($mentor) {
-                $mentor->avg_rating = $mentor->reviews_avg_rating !== null
-                    ? round((float) $mentor->reviews_avg_rating, 1)
-                    : (float) ($mentor->avg_rating ?? 0);
+            ->paginate(6)
+            ->withQueryString();
 
-                return $mentor;
-            });
+        $mentors->through(function ($mentor) {
+            $mentor->avg_rating = $mentor->reviews_avg_rating !== null
+                ? round((float) $mentor->reviews_avg_rating, 1)
+                : (float) ($mentor->avg_rating ?? 0);
 
-        $expertises = MentorProfile::where('verification_status', 'verified')
-            ->where('is_suspended', false)
-            ->select('expertise')
-            ->distinct()
-            ->orderBy('expertise')
-            ->pluck('expertise');
+            return $mentor;
+        });
+
+       $expertises = MentorProfile::where('verification_status', 'verified')
+        ->where('is_suspended', false)
+        ->whereNotNull('expertise')
+        ->whereRaw("TRIM(expertise) != ''")
+        ->selectRaw('MIN(TRIM(expertise)) as expertise')
+        ->groupByRaw('LOWER(TRIM(expertise))')
+        ->orderBy('expertise')
+        ->pluck('expertise');
 
         return Inertia::render('Mentors/Index', [
             'mentors' => $mentors,

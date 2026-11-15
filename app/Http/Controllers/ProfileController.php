@@ -14,6 +14,7 @@ use App\Models\MentorPortfolio;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\DB;
 use Cloudinary\Cloudinary;
+use App\Models\MentorProfile; 
 
 class ProfileController extends Controller
 {
@@ -25,17 +26,35 @@ class ProfileController extends Controller
         $user = $request->user();
 
         $mentorProfile = null;
+        $expertises = collect();
 
         if ($user->isMentor()) {
             $mentorProfile = $user->mentorProfile()
                 ->with('portfolios')
                 ->first();
-        }
 
+            $expertises = MentorProfile::where('verification_status', 'verified')
+                ->where('is_suspended', false)
+                ->whereNotNull('expertise')
+                ->whereRaw("TRIM(expertise) != ''")
+                ->pluck('expertise')
+                ->map(fn ($item) => trim($item));
+
+            // Pastikan keahlian milik mentor yang sedang diedit tetap tersedia.
+            if ($mentorProfile && $mentorProfile->expertise) {
+                $expertises->push(trim($mentorProfile->expertise));
+            }
+
+            $expertises = $expertises
+                ->unique(fn ($item) => mb_strtolower($item))
+                ->sort()
+                ->values();
+        }
         return Inertia::render('Profile/Edit', [
             'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => session('status'),
             'mentorProfile' => $mentorProfile,
+            'expertises' => $expertises,
         ]);
     }
 

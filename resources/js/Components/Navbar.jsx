@@ -95,7 +95,7 @@ export default function Navbar({ active }) {
                     >
                         <div className="hidden text-right leading-tight md:block">
                             <p className="text-sm font-bold text-white">
-                                Akun Saya
+                                {user?.name ?? "Pengguna"}
                             </p>
 
                             <p className="text-[10px] text-white/70">

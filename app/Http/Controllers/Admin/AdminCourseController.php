@@ -70,6 +70,15 @@ class AdminCourseController extends Controller
         return redirect()->route('admin.courses.index');
     }
 
+    public function toggleStatus(Course $course)
+    {
+        $course->update([
+            'is_published' => ! $course->is_published,
+        ]);
+
+        return back();
+    }
+
     public function destroy(Course $course)
     {
         $course->delete();
