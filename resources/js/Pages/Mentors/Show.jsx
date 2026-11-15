@@ -5,6 +5,101 @@ export default function Show({ mentor }) {
     const averageRating = Number(mentor.avg_rating || 0);
     const reviewCount = Number(mentor.reviews_count || reviews.length);
 
+    const availabilitySchedule = Array.isArray(mentor.availability_schedule)
+        ? mentor.availability_schedule
+        : [];
+
+    const dayNames = [
+        "minggu",
+        "senin",
+        "selasa",
+        "rabu",
+        "kamis",
+        "jumat",
+        "sabtu",
+    ];
+
+    const validSchedule = availabilitySchedule.filter(
+        (slot) =>
+            dayNames.includes(String(slot.day).toLowerCase()) &&
+            ["gratis", "berbayar"].includes(slot.type),
+    );
+
+    const hasFreeSlots = validSchedule.some((slot) => slot.type === "gratis");
+
+    const paidPrices = validSchedule
+        .filter((slot) => slot.type === "berbayar")
+        .map((slot) => Number(slot.price))
+        .filter((price) => Number.isFinite(price) && price > 0);
+
+    const hasPaidSlots = paidPrices.length > 0;
+
+    const mentoringType =
+        hasFreeSlots && hasPaidSlots
+            ? "Gratis & Berbayar"
+            : hasFreeSlots
+              ? "Gratis"
+              : hasPaidSlots
+                ? "Berbayar"
+                : "Belum diatur";
+
+    const minPaidPrice = hasPaidSlots ? Math.min(...paidPrices) : 0;
+    const maxPaidPrice = hasPaidSlots ? Math.max(...paidPrices) : 0;
+
+    const formatRupiah = (price) => Number(price).toLocaleString("id-ID");
+
+    const priceLabel =
+        minPaidPrice === maxPaidPrice
+            ? `Rp ${formatRupiah(minPaidPrice)}`
+            : `Rp ${formatRupiah(minPaidPrice)} - Rp ${formatRupiah(maxPaidPrice)}`;
+
+    // Mencari jadwal terdekat berdasarkan hari dan jam saat ini
+    const now = new Date();
+    const currentDay = now.getDay();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const upcomingSchedule = validSchedule
+        .map((slot) => {
+            const slotDay = dayNames.indexOf(String(slot.day).toLowerCase());
+
+            const [hours, minutes] = String(slot.start).split(":").map(Number);
+
+            const startMinutes = hours * 60 + minutes;
+            const dayDistance = (slotDay - currentDay + 7) % 7;
+
+            return {
+                ...slot,
+                dayDistance,
+                startMinutes,
+            };
+        })
+        .filter(
+            (slot) =>
+                slot.dayDistance > 0 || slot.startMinutes > currentMinutes,
+        )
+        .sort((a, b) => {
+            if (a.dayDistance !== b.dayDistance) {
+                return a.dayDistance - b.dayDistance;
+            }
+
+            return a.startMinutes - b.startMinutes;
+        });
+
+    const nearestDay =
+        upcomingSchedule.length > 0
+            ? dayNames[
+                  upcomingSchedule[0].dayDistance === 0
+                      ? currentDay
+                      : (currentDay + upcomingSchedule[0].dayDistance) % 7
+              ]
+            : null;
+
+    const nearestDayLabel = nearestDay
+        ? nearestDay.charAt(0).toUpperCase() + nearestDay.slice(1)
+        : null;
+
+    const isMentorAvailable = upcomingSchedule.length > 0;
+
     const mentorName = mentor.user?.name || "Mentor";
     const mentorInitial = mentorName.charAt(0).toUpperCase();
 
@@ -31,13 +126,17 @@ export default function Show({ mentor }) {
     return (
         <div className="min-h-screen bg-[#F4F7F9] text-[#172033]">
             <div className="mx-auto max-w-7xl px-6 py-8 lg:px-8">
-
                 {/* BACK */}
                 <a
                     href="/mentors"
                     className="mb-7 inline-flex items-center gap-2 text-sm font-medium text-[#6594B1] transition hover:text-[#4F7F9B]"
                 >
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg
+                        className="h-4 w-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
                         <path
                             strokeLinecap="round"
                             strokeLinejoin="round"
@@ -54,7 +153,6 @@ export default function Show({ mentor }) {
 
                     <div className="p-6 lg:p-8">
                         <div className="flex flex-col gap-6 sm:flex-row sm:items-center">
-
                             {/* FOTO */}
                             <div className="flex-shrink-0">
                                 {mentor.user?.photo_path ? (
@@ -76,7 +174,12 @@ export default function Show({ mentor }) {
                                     <div className="mb-3">
                                         <span className="inline-flex items-center gap-1.5 rounded-full bg-[#EAF5E1] px-3 py-1.5 text-xs font-semibold text-[#5C6F2B]">
                                             <span className="flex h-4 w-4 items-center justify-center rounded-full bg-[#91D06C] text-[#30451A]">
-                                                <svg className="h-2.5 w-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg
+                                                    className="h-2.5 w-2.5"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
                                                     <path
                                                         strokeLinecap="round"
                                                         strokeLinejoin="round"
@@ -109,15 +212,18 @@ export default function Show({ mentor }) {
 
                 {/* MAIN CONTENT */}
                 <div className="grid grid-cols-1 gap-7 lg:grid-cols-3">
-
                     {/* LEFT COLUMN */}
                     <div className="space-y-7 lg:col-span-2">
-
                         {/* TENTANG MENTOR */}
                         <section className="rounded-2xl border border-[#D8E3E9] bg-white p-6 shadow-[0_2px_8px_rgba(38,65,80,0.06)]">
                             <div className="mb-5 flex items-start gap-4">
                                 <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-[#E6EFF4] text-[#6594B1]">
-                                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg
+                                        className="h-5 w-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
                                         <path
                                             strokeLinecap="round"
                                             strokeLinejoin="round"
@@ -146,75 +252,97 @@ export default function Show({ mentor }) {
                         </section>
 
                         {/* PORTFOLIO */}
-                        <section className="rounded-2xl border border-[#C9DCE6] bg-[#F4F8FA] p-6 shadow-[0_2px_8px_rgba(38,65,80,0.06)]">
-                            <div className="mb-5 flex items-start gap-4">
-                                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-white text-[#6594B1] shadow-sm">
-                                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            strokeWidth="1.8"
-                                            d="M13.5 6.5l4-4a2.12 2.12 0 013 3l-4 4M10.5 17.5l-4 4a2.12 2.12 0 01-3-3l4-4M8 16l8-8"
-                                        />
-                                    </svg>
-                                </div>
-
-                                <div>
-                                    <h2 className="text-xl font-bold text-[#172033]">
-                                        Portfolio
-                                    </h2>
-                                    <p className="mt-1 text-sm text-[#7A8B99]">
-                                        Pengalaman dan karya mentor
-                                    </p>
-                                </div>
-                            </div>
-
-                            {mentor.portfolio_url ? (
-                                <a
-                                    href={mentor.portfolio_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="group flex items-center justify-between rounded-xl border border-[#D8E3E9] bg-white p-5 transition hover:border-[#AFC6D4] hover:shadow-sm"
-                                >
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-[#E6EFF4] text-[#6594B1]">
-                                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
-                                                <path
-                                                    strokeLinecap="round"
-                                                    strokeWidth="1.8"
-                                                    d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"
-                                                />
-                                            </svg>
-                                        </div>
-
-                                        <div>
-                                            <p className="font-semibold text-[#263748]">
-                                                Portfolio Mentor
-                                            </p>
-                                            <p className="mt-1 text-sm text-[#7A8B99]">
-                                                Lihat portfolio dan pengalaman
-                                                profesional mentor.
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <span className="flex items-center gap-2 text-sm font-semibold text-[#6594B1]">
-                                        Lihat
-                                        <svg className="h-4 w-4 transition group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <section className="rounded-2xl border border-[#DCE7ED] bg-white p-5 shadow-sm">
+                            <div className="mb-4 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#EEF4F7] text-[#527F99]">
+                                        <svg
+                                            className="h-5 w-5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
                                             <path
                                                 strokeLinecap="round"
                                                 strokeLinejoin="round"
                                                 strokeWidth="1.8"
-                                                d="M5 12h14m-6-6 6 6-6 6"
+                                                d="M13.5 6.5l4-4a2.12 2.12 0 013 3l-4 4M10.5 17.5l-4 4a2.12 2.12 0 01-3-3l4-4M8 16l8-8"
                                             />
                                         </svg>
-                                    </span>
-                                </a>
-                            ) : (
-                                <div className="rounded-xl border border-dashed border-[#C9D7DF] bg-white p-6 text-center text-sm text-[#7A8B99]">
-                                    Mentor belum menambahkan portfolio.
+                                    </div>
+
+                                    <div>
+                                        <h2 className="font-bold text-[#263748]">
+                                            Portfolio
+                                        </h2>
+                                        <p className="text-xs text-[#8495A1]">
+                                            Karya dan profil profesional mentor
+                                        </p>
+                                    </div>
                                 </div>
+
+                                {mentor.portfolios?.length > 0 && (
+                                    <span className="rounded-full bg-[#EEF4F7] px-3 py-1 text-xs font-semibold text-[#527F99]">
+                                        {mentor.portfolios.length} Karya
+                                    </span>
+                                )}
+                            </div>
+
+                            {mentor.portfolios?.length > 0 ? (
+                                <div className="divide-y divide-[#E8EEF2]">
+                                    {mentor.portfolios.map((portfolio) => (
+                                        <a
+                                            key={portfolio.id}
+                                            href={portfolio.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="group flex items-center gap-3 py-3 first:pt-1 last:pb-1"
+                                        >
+                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F1F5F8] text-[#527F99] transition group-hover:bg-[#E4EEF4]">
+                                                <svg
+                                                    className="h-5 w-5"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth="1.8"
+                                                        d="M10 13a5 5 0 007.07 0l3-3a5 5 0 00-7.07-7.07l-1.72 1.72M14 11a5 5 0 00-7.07 0l-3 3A5 5 0 0012 21.07l1.72-1.72"
+                                                    />
+                                                </svg>
+                                            </div>
+
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate text-sm font-semibold text-[#263748] group-hover:text-[#527F99]">
+                                                    {portfolio.title}
+                                                </p>
+                                                <p className="mt-0.5 text-xs text-[#8495A1]">
+                                                    {portfolio.platform}
+                                                </p>
+                                            </div>
+
+                                            <svg
+                                                className="h-4 w-4 shrink-0 text-[#91A8B7] transition group-hover:translate-x-1 group-hover:text-[#527F99]"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    strokeWidth="1.8"
+                                                    d="M7 17L17 7M7 7h10v10"
+                                                />
+                                            </svg>
+                                        </a>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="rounded-xl bg-[#F7F9FA] px-4 py-5 text-center text-sm text-[#8495A1]">
+                                    Mentor belum menambahkan portfolio.
+                                </p>
                             )}
                         </section>
 
@@ -222,7 +350,12 @@ export default function Show({ mentor }) {
                         <section className="rounded-2xl border border-[#D8E3E9] bg-white p-6 shadow-[0_2px_8px_rgba(38,65,80,0.06)]">
                             <div className="mb-6 flex items-start gap-4">
                                 <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-[#F8EEF6] text-[#8A4A80]">
-                                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg
+                                        className="h-5 w-5"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        viewBox="0 0 24 24"
+                                    >
                                         <path
                                             strokeLinecap="round"
                                             strokeLinejoin="round"
@@ -286,7 +419,9 @@ export default function Show({ mentor }) {
                                             review.user?.name ||
                                             "Mahasiswa";
 
-                                        const rating = Number(review.rating || 0);
+                                        const rating = Number(
+                                            review.rating || 0,
+                                        );
 
                                         return (
                                             <div
@@ -296,7 +431,9 @@ export default function Show({ mentor }) {
                                                 <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                                                     <div className="flex items-center gap-3">
                                                         <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-[#E6EFF4] font-semibold text-[#6594B1]">
-                                                            {studentName.charAt(0).toUpperCase()}
+                                                            {studentName
+                                                                .charAt(0)
+                                                                .toUpperCase()}
                                                         </div>
 
                                                         <div>
@@ -308,17 +445,23 @@ export default function Show({ mentor }) {
                                                                 <p className="mt-0.5 text-xs text-[#9AA7B1]">
                                                                     {new Date(
                                                                         review.created_at,
-                                                                    ).toLocaleDateString("id-ID", {
-                                                                        day: "numeric",
-                                                                        month: "long",
-                                                                        year: "numeric",
-                                                                    })}
+                                                                    ).toLocaleDateString(
+                                                                        "id-ID",
+                                                                        {
+                                                                            day: "numeric",
+                                                                            month: "long",
+                                                                            year: "numeric",
+                                                                        },
+                                                                    )}
                                                                 </p>
                                                             )}
                                                         </div>
                                                     </div>
 
-                                                    {renderStars(rating, "h-4 w-4")}
+                                                    {renderStars(
+                                                        rating,
+                                                        "h-4 w-4",
+                                                    )}
                                                 </div>
 
                                                 {review.feedback && (
@@ -333,7 +476,12 @@ export default function Show({ mentor }) {
                             ) : (
                                 <div className="rounded-xl border border-dashed border-[#C9D7DF] bg-[#F7FAFB] p-8 text-center">
                                     <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-[#E6EFF4] text-[#6594B1]">
-                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg
+                                            className="h-5 w-5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
                                             <path
                                                 strokeLinecap="round"
                                                 strokeLinejoin="round"
@@ -358,13 +506,22 @@ export default function Show({ mentor }) {
                     {/* RIGHT COLUMN */}
                     <aside className="lg:col-span-1">
                         <div className="sticky top-6 overflow-hidden rounded-2xl border border-[#C9DCE6] bg-white shadow-[0_3px_12px_rgba(38,65,80,0.09)]">
-
                             {/* HEADER */}
                             <div className="border-b border-[#C9DCE6] bg-[#E6EFF4] px-6 py-6">
                                 <div className="flex items-center gap-3">
                                     <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-[#6594B1] shadow-sm">
-                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <circle cx="12" cy="12" r="9" strokeWidth="1.8" />
+                                        <svg
+                                            className="h-5 w-5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
+                                            <circle
+                                                cx="12"
+                                                cy="12"
+                                                r="9"
+                                                strokeWidth="1.8"
+                                            />
                                             <path
                                                 strokeLinecap="round"
                                                 strokeWidth="1.8"
@@ -385,11 +542,15 @@ export default function Show({ mentor }) {
                             </div>
 
                             <div className="px-6 pb-6">
-
-                                {/* JENIS */}
+                                {/* JENIS MENTORING */}
                                 <div className="flex gap-4 border-b border-[#EDF1F3] py-5">
                                     <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-[#E6EFF4] text-[#6594B1]">
-                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg
+                                            className="h-5 w-5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
                                             <rect
                                                 x="3"
                                                 y="5"
@@ -411,18 +572,21 @@ export default function Show({ mentor }) {
                                             Jenis Mentoring
                                         </p>
                                         <p className="mt-1 font-semibold text-[#263748]">
-                                            {mentor.mentor_type === "free"
-                                                ? "Gratis"
-                                                : "Berbayar"}
+                                            {mentoringType}
                                         </p>
                                     </div>
                                 </div>
 
-                                {/* HARGA */}
-                                {mentor.mentor_type === "paid" && (
+                                {/* HARGA MENTORING */}
+                                {hasPaidSlots && (
                                     <div className="flex gap-4 border-b border-[#EDF1F3] py-5">
                                         <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-[#EAF5E1] text-[#5C6F2B]">
-                                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg
+                                                className="h-5 w-5"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
                                                 <rect
                                                     x="3"
                                                     y="5"
@@ -441,25 +605,27 @@ export default function Show({ mentor }) {
 
                                         <div>
                                             <p className="text-xs font-medium uppercase tracking-wide text-[#91A0AA]">
-                                                Harga per sesi
+                                                Harga Mentoring
                                             </p>
                                             <p className="mt-1 text-lg font-bold text-[#263748]">
-                                                Rp{" "}
-                                                {Number(
-                                                    mentor.price_per_session || 0,
-                                                ).toLocaleString("id-ID")}
-                                                <span className="ml-1 text-sm font-normal text-[#7A8B99]">
-                                                    / sesi
-                                                </span>
+                                                {priceLabel}
+                                            </p>
+                                            <p className="text-xs text-[#7A8B99]">
+                                                Per sesi berbayar
                                             </p>
                                         </div>
                                     </div>
                                 )}
 
-                                {/* KETERSEDIAAN */}
+                                {/* JADWAL TERDEKAT */}
                                 <div className="flex gap-4 py-5">
                                     <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-[#F0F1FA] text-[#6874A5]">
-                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg
+                                            className="h-5 w-5"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            viewBox="0 0 24 24"
+                                        >
                                             <rect
                                                 x="3"
                                                 y="5"
@@ -478,34 +644,41 @@ export default function Show({ mentor }) {
 
                                     <div>
                                         <p className="text-xs font-medium uppercase tracking-wide text-[#91A0AA]">
-                                            Ketersediaan
+                                            Jadwal Terdekat
                                         </p>
 
-                                        <div className="mt-2">
-                                            {mentor.is_available ? (
-                                                <span className="inline-flex items-center gap-2 rounded-full bg-[#EAF5E1] px-3 py-1.5 text-sm font-semibold text-[#5C6F2B]">
+                                        {isMentorAvailable ? (
+                                            <>
+                                                <p className="mt-1 font-semibold text-[#263748]">
+                                                    {nearestDayLabel}
+                                                </p>
+                                                <span className="mt-2 inline-flex items-center gap-2 rounded-full bg-[#EAF5E1] px-3 py-1.5 text-sm font-semibold text-[#5C6F2B]">
                                                     <span className="h-2 w-2 rounded-full bg-[#91D06C]" />
                                                     Tersedia
                                                 </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-2 rounded-full bg-[#F0F2F3] px-3 py-1.5 text-sm font-semibold text-[#697983]">
-                                                    <span className="h-2 w-2 rounded-full bg-[#9BA8AF]" />
-                                                    Tidak tersedia
-                                                </span>
-                                            )}
-                                        </div>
+                                            </>
+                                        ) : (
+                                            <p className="mt-1 text-sm font-semibold text-[#697983]">
+                                                Belum ada jadwal tersedia
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
                                 {/* CTA */}
                                 <div className="border-t border-[#EDF1F3] pt-5">
-                                    {mentor.is_available ? (
+                                    {isMentorAvailable ? (
                                         <a
                                             href={`/mentors/${mentor.user_id}/booking`}
                                             className="group flex w-full items-center justify-center gap-2 rounded-xl bg-[#91D06C] px-5 py-3.5 text-sm font-bold text-[#30451A] shadow-sm transition hover:bg-[#86C761] hover:shadow-md"
                                         >
                                             Pilih Mentor
-                                            <svg className="h-4 w-4 transition group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg
+                                                className="h-4 w-4 transition group-hover:translate-x-1"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
                                                 <path
                                                     strokeLinecap="round"
                                                     strokeLinejoin="round"
@@ -524,7 +697,8 @@ export default function Show({ mentor }) {
                                     )}
 
                                     <p className="mt-3 text-center text-xs leading-5 text-[#95A2AA]">
-                                        Lanjutkan untuk memilih jadwal mentoring.
+                                        Lihat jadwal ketersediaan selengkapnya
+                                        setelah memilih mentor.
                                     </p>
                                 </div>
                             </div>

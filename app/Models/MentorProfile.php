@@ -6,6 +6,7 @@ use App\Models\Review;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\MentorPortfolio;
 
 class MentorProfile extends Model
 {
@@ -40,6 +41,11 @@ class MentorProfile extends Model
     public function certificates(): HasMany
     {
         return $this->hasMany(MentorCertificate::class);
+    }
+
+    public function portfolios(): HasMany
+    {
+        return $this->hasMany(MentorPortfolio::class);
     }
 
     public function mentoringSessions(): HasMany

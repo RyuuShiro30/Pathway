@@ -97,6 +97,7 @@ class MentorDirectoryController extends Controller
             'user',
             'certificates',
             'reviews.student',
+            'portfolios',
         ])
             ->withCount('reviews')
             ->withAvg('reviews', 'rating')
