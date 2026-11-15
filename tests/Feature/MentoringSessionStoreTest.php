@@ -908,6 +908,50 @@ class MentoringSessionStoreTest extends TestCase
         ]);
     }
 
+    public function test_paid_booking_without_payment_dp_proof_is_rejected_with_validation_error_on_field(): void
+    {
+        [$mentor] = $this->createMentorWithAvailability([
+            ['day' => 'senin', 'start' => '09:00', 'end' => '11:00', 'type' => 'berbayar', 'price' => 50000],
+        ]);
+        Storage::fake('public');
+
+        $response = $this->submitBooking($mentor, [
+            'duration_hours' => 1,
+        ]);
+
+        $response->assertSessionHasErrors(['payment_dp_proof']);
+        $this->assertDatabaseMissing('mentoring_sessions', [
+            'mentor_id' => $mentor->id,
+        ]);
+    }
+
+    public function test_stored_dp_proof_is_deleted_if_session_creation_fails(): void
+    {
+        [$mentor] = $this->createMentorWithAvailability([
+            ['day' => 'senin', 'start' => '09:00', 'end' => '11:00', 'type' => 'berbayar', 'price' => 50000],
+        ]);
+        Storage::fake('public');
+
+        MentoringSession::creating(function () {
+            throw new \RuntimeException('Database failure during session creation');
+        });
+
+        try {
+            $this->submitBooking($mentor, [
+                'duration_hours' => 1,
+                'payment_dp_proof' => UploadedFile::fake()->image('payment.png'),
+            ]);
+        } catch (\RuntimeException $e) {
+            // expected exception rethrown
+        }
+
+        $files = Storage::disk('public')->allFiles('payment-proofs');
+        $this->assertEmpty($files);
+        $this->assertDatabaseMissing('mentoring_sessions', [
+            'mentor_id' => $mentor->id,
+        ]);
+    }
+
     /**
      * @param  array<int, array<string, int|string|null>>  $availability
      * @return array{0: User, 1: MentorProfile}

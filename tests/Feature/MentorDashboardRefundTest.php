@@ -312,4 +312,25 @@ class MentorDashboardRefundTest extends TestCase
             'refund_deadline' => now()->addHours(48),
         ], $overrides));
     }
+
+    public function test_mentor_refund_process_receives_ceil_half_refund_amount_for_odd_prices(): void
+    {
+        $mentor = $this->createMentor();
+        $student = User::factory()->create();
+
+        $session = $this->createSession($mentor, $student, [
+            'price_snapshot' => 75001,
+            'refund_status' => 'menunggu',
+            'refund_deadline' => now()->addHours(24),
+        ]);
+
+        $this->actingAs($mentor)
+            ->get(route('mentor.refund.form', $session->id))
+            ->assertOk()
+            ->assertInertia(fn (AssertableInertia $page) => $page
+                ->component('Mentor/RefundProcess')
+                ->where('refund_amount', 37501)
+                ->where('session.id', $session->id)
+            );
+    }
 }

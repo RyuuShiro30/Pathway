@@ -15,6 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
@@ -822,24 +823,32 @@ class MentoringSessionController extends Controller
                 $dpProofPath = $request->file('payment_dp_proof')->store('payment-proofs', 'public');
             }
 
-            $session = MentoringSession::create([
-                'student_id' => Auth::id(),
-                'mentor_id' => $validated['mentor_id'],
-                'status' => 'diajukan',
-                'schedule_time' => $booking['schedule_time'],
-                'end_time' => $booking['end_time'],
-                'duration_hours' => $validated['duration_hours'],
-                'notes_from_student' => $validated['notes_from_student'] ?? null,
-                'is_free_session' => $booking['is_free_session'],
-                'price_snapshot' => $booking['total_price'],
-                'payment_dp_proof' => $dpProofPath,
-                'payment_dp_status' => $booking['is_free_session']
-                    ? 'tidak_berlaku'
-                    : 'menunggu_verifikasi',
-                'payment_final_status' => $booking['is_free_session']
-                    ? 'tidak_berlaku'
-                    : 'belum_dibayar',
-            ]);
+            try {
+                $session = MentoringSession::create([
+                    'student_id' => Auth::id(),
+                    'mentor_id' => $validated['mentor_id'],
+                    'status' => 'diajukan',
+                    'schedule_time' => $booking['schedule_time'],
+                    'end_time' => $booking['end_time'],
+                    'duration_hours' => $validated['duration_hours'],
+                    'notes_from_student' => $validated['notes_from_student'] ?? null,
+                    'is_free_session' => $booking['is_free_session'],
+                    'price_snapshot' => $booking['total_price'],
+                    'payment_dp_proof' => $dpProofPath,
+                    'payment_dp_status' => $booking['is_free_session']
+                        ? 'tidak_berlaku'
+                        : 'menunggu_verifikasi',
+                    'payment_final_status' => $booking['is_free_session']
+                        ? 'tidak_berlaku'
+                        : 'belum_dibayar',
+                ]);
+            } catch (\Throwable $e) {
+                if ($dpProofPath) {
+                    Storage::disk('public')->delete($dpProofPath);
+                }
+
+                throw $e;
+            }
 
             $session->mentor?->notify(new SessionEvent('Ada pengajuan booking baru dari student.', '/mentor/dashboard'));
 
@@ -1127,11 +1136,17 @@ class MentoringSessionController extends Controller
             }
 
             // Action: terima
-            $mentorProfile = $session->mentor->mentorProfile;
+            $mentorProfile = $session->mentor?->mentorProfile;
+
+            if (! $mentorProfile) {
+                return redirect()->back()->withErrors([
+                    'message' => 'Profil mentor tidak ditemukan. Silakan lengkapi profil mentor Anda terlebih dahulu.',
+                ]);
+            }
 
             $session->update([
                 'status' => 'dikonfirmasi',
-                'discord_link' => $mentorProfile->discord_room_link,
+                'discord_link' => $mentorProfile?->discord_room_link,
                 'payment_dp_status' => $session->is_free_session ? 'tidak_berlaku' : 'terverifikasi',
             ]);
 
@@ -1400,9 +1415,12 @@ class MentoringSessionController extends Controller
             ->where('request_type', 'refund_reschedule_offer')
             ->exists();
 
+        $refundAmount = (int) ceil(((float) $session->price_snapshot) * 0.5);
+
         return Inertia::render('Mentor/RefundProcess', [
             'session' => $session,
             'hasPreviousOffer' => $hasPreviousOffer,
+            'refund_amount' => $refundAmount,
         ]);
     }
 
