@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\MentorProfile;
 use App\Services\MentorSuspensionService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class AdminMentorController extends Controller
@@ -29,10 +30,10 @@ class AdminMentorController extends Controller
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
-                $q->where('expertise', 'like', "%{$search}%")
+                $q->where('expertise', 'ilike', "%{$search}%")
                   ->orWhereHas('user', function ($uq) use ($search) {
-                      $uq->where('name', 'like', "%{$search}%")
-                         ->orWhere('email', 'like', "%{$search}%");
+                      $uq->where('name', 'ilike', "%{$search}%")
+                         ->orWhere('email', 'ilike', "%{$search}%");
                   });
             });
         }
@@ -64,12 +65,23 @@ class AdminMentorController extends Controller
     public function verify(Request $request, MentorProfile $mentorProfile)
     {
         $validated = $request->validate([
-            'verification_status' => ['required', 'in:approved,rejected'],
+            'verification_status' => ['required', 'in:approved,verified,rejected'],
         ]);
 
-        $mentorProfile->update([
-            'verification_status' => $validated['verification_status'],
-        ]);
+        $status = $validated['verification_status'] === 'approved'
+            ? 'verified'
+            : $validated['verification_status'];
+
+        DB::transaction(function () use ($mentorProfile, $status) {
+            $mentorProfile->update([
+                'verification_status' => $status,
+            ]);
+
+            if ($status === 'verified' && $mentorProfile->user) {
+                $mentorProfile->user->role = 'mentor';
+                $mentorProfile->user->save();
+            }
+        });
 
         return back()->with('success', 'Status verifikasi mentor berhasil diperbarui.');
     }
