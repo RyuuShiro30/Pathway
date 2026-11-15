@@ -89,7 +89,7 @@ class AdminMaterialController extends Controller
 
     private function getExistingSections(Course $course): array
     {
-        return $course->courseMaterials()
+        return \App\Models\CourseMaterial::where('course_id', $course->id)
             ->whereNotNull('section_name')
             ->where('section_name', '!=', '')
             ->distinct()
