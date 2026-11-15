@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\MentoringSession;
+use App\Notifications\SessionEvent;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -14,14 +15,19 @@ class AdminRefundReportController extends Controller
         $statusFilter = $request->query('status', 'dilaporkan');
 
         $query = MentoringSession::with(['student', 'mentor'])
-            ->whereIn('refund_status', ['dilaporkan', 'menunggu', 'selesai']);
+            ->whereIn('refund_status', ['dilaporkan', 'menunggu_konfirmasi', 'menunggu', 'selesai']);
 
         if ($statusFilter !== 'semua') {
             $query->where('refund_status', $statusFilter);
         }
 
         $reports = $query
-            ->orderByRaw("CASE WHEN refund_status = 'dilaporkan' THEN 0 WHEN refund_status = 'menunggu' THEN 1 ELSE 2 END")
+            ->orderByRaw("CASE 
+                WHEN refund_status = 'dilaporkan' THEN 0 
+                WHEN refund_status = 'menunggu_konfirmasi' THEN 1 
+                WHEN refund_status = 'menunggu' THEN 2 
+                ELSE 3 
+            END")
             ->latest('updated_at')
             ->get()
             ->map(fn (MentoringSession $session) => $this->formatSession($session));
@@ -31,6 +37,7 @@ class AdminRefundReportController extends Controller
             'currentStatus' => $statusFilter,
             'counts' => [
                 'dilaporkan' => MentoringSession::where('refund_status', 'dilaporkan')->count(),
+                'menunggu_konfirmasi' => MentoringSession::where('refund_status', 'menunggu_konfirmasi')->count(),
                 'menunggu' => MentoringSession::where('refund_status', 'menunggu')->count(),
                 'selesai' => MentoringSession::where('refund_status', 'selesai')->count(),
             ],
@@ -80,9 +87,82 @@ class AdminRefundReportController extends Controller
             ->with('success', $message);
     }
 
+    public function remind(Request $request, MentoringSession $session)
+    {
+        if ($session->refund_status !== 'menunggu_konfirmasi') {
+            $errorMessage = 'Sesi refund ini tidak berstatus menunggu konfirmasi.';
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'message' => $errorMessage,
+                    'errors' => ['session' => [$errorMessage]],
+                ], 422);
+            }
+
+            return back()
+                ->with('error', $errorMessage)
+                ->withErrors(['session' => $errorMessage]);
+        }
+
+        $canRemind = $session->refund_reminded_at === null
+            || $session->refund_reminded_at->lte(now()->subHours(24));
+
+        if (! $canRemind) {
+            $errorMessage = 'Pengingat refund hanya dapat dikirim sekali dalam 24 jam.';
+
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'message' => $errorMessage,
+                    'errors' => ['session' => [$errorMessage]],
+                ], 422);
+            }
+
+            return back()
+                ->with('error', $errorMessage)
+                ->withErrors(['session' => $errorMessage]);
+        }
+
+        $session->loadMissing('student');
+
+        $message = 'Pengingat: mentor sudah mengirim bukti refund DP kamu. Silakan konfirmasi di halaman Booking. Refund akan otomatis dikonfirmasi jika tidak ada respons.';
+        $session->student?->notify(new SessionEvent($message, '/bookings'));
+
+        $session->update([
+            'refund_reminded_at' => now(),
+        ]);
+
+        return back()->with('success', 'Pengingat refund berhasil dikirim ke mentee.');
+    }
+
     private function formatSession(MentoringSession $session): array
     {
         $studentData = $session->student ? $session->student->toArray() : [];
+
+        $canRemind = $session->refund_status === 'menunggu_konfirmasi'
+            && ($session->refund_reminded_at === null || $session->refund_reminded_at->lte(now()->subHours(24)));
+
+        $remainingTime = null;
+        $autoConfirmAt = null;
+
+        if ($session->refund_status === 'menunggu_konfirmasi' && $session->refund_proof_uploaded_at) {
+            $autoConfirmAt = $session->refund_proof_uploaded_at->copy()->addHours(48);
+            $now = now();
+
+            if ($now->greaterThanOrEqualTo($autoConfirmAt)) {
+                $remainingTime = '0 jam (waktu habis)';
+            } else {
+                $diffHours = (int) $now->diffInHours($autoConfirmAt);
+                $diffMinutes = (int) ($now->diffInMinutes($autoConfirmAt) % 60);
+
+                if ($diffHours > 0) {
+                    $remainingTime = $diffMinutes > 0
+                        ? "{$diffHours} jam {$diffMinutes} menit"
+                        : "{$diffHours} jam";
+                } else {
+                    $remainingTime = "{$diffMinutes} menit";
+                }
+            }
+        }
 
         return [
             'id' => $session->id,
@@ -99,6 +179,11 @@ class AdminRefundReportController extends Controller
             'refund_deadline' => $session->refund_deadline?->format('d M Y, H:i'),
             'refund_admin_note' => $session->refund_admin_note,
             'refund_reviewed_at' => $session->refund_reviewed_at?->format('d M Y, H:i'),
+            'refund_reminded_at' => $session->refund_reminded_at?->format('d M Y, H:i'),
+            'can_remind' => $canRemind,
+            'remaining_time' => $remainingTime,
+            'auto_confirm_remaining' => $remainingTime,
+            'auto_confirm_deadline' => $autoConfirmAt?->format('d M Y, H:i'),
             'student' => [
                 'id' => $session->student?->id,
                 'name' => $session->student?->name ?? '-',
@@ -127,6 +212,6 @@ class AdminRefundReportController extends Controller
             return $path;
         }
 
-        return '/storage/' . ltrim($path, '/');
+        return '/storage/'.ltrim($path, '/');
     }
 }

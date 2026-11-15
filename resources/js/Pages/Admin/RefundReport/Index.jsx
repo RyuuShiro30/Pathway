@@ -1,19 +1,61 @@
-import React from "react";
-import { Head, Link, router } from "@inertiajs/react";
+import React, { useState } from "react";
+import { Head, Link, router, usePage } from "@inertiajs/react";
 import AdminLayout from "@/Layouts/AdminLayout";
+import Button from "@/Components/ui/Button";
+import Badge from "@/Components/ui/Badge";
+import EmptyState from "@/Components/ui/EmptyState";
 
-export default function RefundReportIndex({ reports, currentStatus, counts }) {
+export default function RefundReportIndex({ reports = [], currentStatus = "dilaporkan", counts = {} }) {
+    const { flash, errors } = usePage().props;
+    const [processingId, setProcessingId] = useState(null);
+
     const tabs = [
-        { key: "dilaporkan", label: `Perlu Ditinjau (${counts.dilaporkan})` },
-        { key: "menunggu", label: `Menunggu Upload Ulang (${counts.menunggu})` },
-        { key: "selesai", label: `Selesai (${counts.selesai})` },
+        { key: "dilaporkan", label: `Perlu Ditinjau (${counts?.dilaporkan ?? 0})` },
+        { key: "menunggu_konfirmasi", label: `Menunggu Konfirmasi (${counts?.menunggu_konfirmasi ?? 0})` },
+        { key: "menunggu", label: `Menunggu Upload Ulang (${counts?.menunggu ?? 0})` },
+        { key: "selesai", label: `Selesai (${counts?.selesai ?? 0})` },
         { key: "semua", label: "Semua" },
     ];
 
-    const badgeStyle = (status) => {
-        if (status === "dilaporkan") return "bg-red-50 text-red-700 border-red-200";
-        if (status === "menunggu") return "bg-amber-50 text-amber-700 border-amber-200";
-        return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    const getStatusBadge = (status) => {
+        if (status === "dilaporkan") {
+            return (
+                <Badge variant="danger" size="md" className="capitalize">
+                    {status}
+                </Badge>
+            );
+        }
+        if (status === "menunggu_konfirmasi") {
+            return (
+                <Badge variant="primary" size="md">
+                    Menunggu Konfirmasi
+                </Badge>
+            );
+        }
+        if (status === "menunggu") {
+            return (
+                <Badge variant="warning" size="md" className="capitalize">
+                    {status}
+                </Badge>
+            );
+        }
+        return (
+            <Badge variant="success" size="md" className="capitalize">
+                {status}
+            </Badge>
+        );
+    };
+
+    const handleRemind = (sessionId) => {
+        setProcessingId(sessionId);
+        router.post(
+            `/admin/refund-reports/${sessionId}/remind`,
+            {},
+            {
+                preserveScroll: true,
+                onFinish: () => setProcessingId(null),
+            }
+        );
     };
 
     return (
@@ -34,11 +76,23 @@ export default function RefundReportIndex({ reports, currentStatus, counts }) {
 
                         <Link
                             href="/admin/dashboard"
-                            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100"
+                            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 transition"
                         >
                             ← Kembali ke Dasbor
                         </Link>
                     </div>
+
+                    {flash?.success && (
+                        <div className="mb-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-800">
+                            {flash.success}
+                        </div>
+                    )}
+
+                    {(flash?.error || errors?.session) && (
+                        <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-medium text-rose-800">
+                            {flash?.error || errors?.session}
+                        </div>
+                    )}
 
                     <div className="mb-6 flex flex-wrap gap-2">
                         {tabs.map((tab) => (
@@ -79,8 +133,8 @@ export default function RefundReportIndex({ reports, currentStatus, counts }) {
                             <tbody className="divide-y divide-slate-100">
                                 {reports.length === 0 ? (
                                     <tr>
-                                        <td colSpan="7" className="px-6 py-10 text-center text-slate-400">
-                                            Tidak ada data laporan refund pada kategori ini.
+                                        <td colSpan="7" className="px-6 py-12">
+                                            <EmptyState message="Tidak ada data laporan refund pada kategori ini." />
                                         </td>
                                     </tr>
                                 ) : (
@@ -101,24 +155,61 @@ export default function RefundReportIndex({ reports, currentStatus, counts }) {
                                                 Rp {Number(item.dp_amount).toLocaleString("id-ID")}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span
-                                                    className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold capitalize ${badgeStyle(
-                                                        item.refund_status
-                                                    )}`}
-                                                >
-                                                    {item.refund_status}
-                                                </span>
+                                                {getStatusBadge(item.refund_status)}
                                             </td>
                                             <td className="px-6 py-4 text-xs text-slate-500">
-                                                {item.refund_deadline ?? "-"}
+                                                {item.refund_status === "menunggu_konfirmasi" ? (
+                                                    <div className="flex flex-col">
+                                                        <span className="font-semibold text-slate-800">
+                                                            {item.remaining_time ? `Sisa: ${item.remaining_time}` : "-"}
+                                                        </span>
+                                                        <span className="text-[11px] text-slate-400">
+                                                            Auto-konfirmasi 48 jam
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    item.refund_deadline ?? "-"
+                                                )}
                                             </td>
                                             <td className="px-6 py-4 text-right">
-                                                <Link
-                                                    href={`/admin/refund-reports/${item.id}`}
-                                                    className="inline-flex items-center rounded-lg bg-[#6594B1] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#557F99]"
-                                                >
-                                                    Periksa Bukti →
-                                                </Link>
+                                                <div className="flex items-center justify-end gap-2">
+                                                    {item.refund_status === "menunggu_konfirmasi" && (
+                                                        item.can_remind ? (
+                                                            <Button
+                                                                type="button"
+                                                                variant="primary"
+                                                                size="xs"
+                                                                onClick={() => handleRemind(item.id)}
+                                                                disabled={processingId === item.id}
+                                                            >
+                                                                {processingId === item.id ? "Mengirim..." : "Ingatkan Mentee"}
+                                                            </Button>
+                                                        ) : (
+                                                            <div className="inline-flex flex-col items-end">
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="secondary"
+                                                                    size="xs"
+                                                                    disabled
+                                                                    title="Pengingat sudah dikirim dalam 24 jam terakhir"
+                                                                >
+                                                                    Ingatkan Mentee
+                                                                </Button>
+                                                                <span className="mt-0.5 text-[10px] font-medium text-amber-600">
+                                                                    Belum 24 jam
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    )}
+
+                                                    <Button
+                                                        href={`/admin/refund-reports/${item.id}`}
+                                                        variant="secondary"
+                                                        size="xs"
+                                                    >
+                                                        Periksa Bukti →
+                                                    </Button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))

@@ -736,6 +736,58 @@ class MentoringWorkflowSeeder extends Seeder
             ]
         );
 
+        // Skenario 31: Sesi refund menunggu konfirmasi (bukti diunggah 5 jam lalu)
+        MentoringSession::updateOrCreate(
+            [
+                'student_id' => $mainStudent->id,
+                'mentor_id' => $mainMentor->id,
+                'notes_from_student' => 'SKENARIO-31: Refactoring Clean Architecture (Refund Menunggu Konfirmasi - Upload 5 Jam Lalu)',
+            ],
+            [
+                'status' => 'dibatalkan',
+                'schedule_time' => $now->copy()->subDays(2)->setTime(9, 0),
+                'end_time' => $now->copy()->subDays(2)->setTime(10, 0),
+                'duration_hours' => 1,
+                'is_free_session' => false,
+                'price_snapshot' => 100000,
+                'payment_dp_proof' => 'payment-proofs/sample-dp.png',
+                'payment_dp_status' => 'terverifikasi',
+                'cancelled_by' => 'mentor',
+                'cancellation_reason' => 'Mentor berhalangan hadir mendadak karena urusan darurat.',
+                'refund_proof' => 'refund-proofs/sample-refund.png',
+                'refund_status' => 'menunggu_konfirmasi',
+                'refund_deadline' => $now->copy()->addHours(43),
+                'refund_proof_uploaded_at' => $now->copy()->subHours(5),
+                'refund_reminded_at' => null,
+            ]
+        );
+
+        // Skenario 32: Sesi refund menunggu konfirmasi (sudah diingatkan 2 jam lalu)
+        MentoringSession::updateOrCreate(
+            [
+                'student_id' => $mainStudent->id,
+                'mentor_id' => $mainMentor->id,
+                'notes_from_student' => 'SKENARIO-32: Optimasi Database PostgreSQL (Refund Menunggu Konfirmasi - Diingatkan 2 Jam Lalu)',
+            ],
+            [
+                'status' => 'dibatalkan',
+                'schedule_time' => $now->copy()->subDays(3)->setTime(14, 0),
+                'end_time' => $now->copy()->subDays(3)->setTime(15, 0),
+                'duration_hours' => 1,
+                'is_free_session' => false,
+                'price_snapshot' => 100000,
+                'payment_dp_proof' => 'payment-proofs/sample-dp.png',
+                'payment_dp_status' => 'terverifikasi',
+                'cancelled_by' => 'mentor',
+                'cancellation_reason' => 'Ada kendala koneksi internet jaringan fiber optik.',
+                'refund_proof' => 'refund-proofs/sample-refund.png',
+                'refund_status' => 'menunggu_konfirmasi',
+                'refund_deadline' => $now->copy()->addHours(38),
+                'refund_proof_uploaded_at' => $now->copy()->subHours(10),
+                'refund_reminded_at' => $now->copy()->subHours(2),
+            ]
+        );
+
         $this->command->info('MentoringWorkflowSeeder berhasil dijalankan: 19 skenario alur mentoring siap ditest.');
     }
 }
