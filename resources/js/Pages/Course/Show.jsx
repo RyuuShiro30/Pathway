@@ -1,8 +1,101 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 
-export default function Show({ course, materials = [], dbProgress }) {
+function MaterialContent({ content }) {
+    const [copiedIndex, setCopiedIndex] = useState(null);
 
+    if (!content) {
+        return (
+            <div className="text-slate-600 text-lg leading-relaxed space-y-6">
+                <p>Materi sedang disiapkan oleh mentor.</p>
+            </div>
+        );
+    }
+
+    const isHtml = /<\/?[a-z][\s\S]*>/i.test(content);
+    if (isHtml) {
+        return (
+            <div
+                className="text-slate-600 text-lg leading-relaxed space-y-6 prose prose-emerald max-w-none"
+                dangerouslySetInnerHTML={{ __html: content }}
+            />
+        );
+    }
+
+    const sqlStarterRegex = /^(CREATE|SELECT|INSERT|UPDATE|DELETE|ALTER|DROP|WITH|GRANT|REVOKE|BEGIN|COMMIT|ROLLBACK)\b/i;
+
+    const handleCopy = (text, idx) => {
+        navigator.clipboard.writeText(text);
+        setCopiedIndex(idx);
+        setTimeout(() => setCopiedIndex(null), 2000);
+    };
+
+    const blocks = content.trim().split(/\n\s*\n/);
+
+    return (
+        <div className="text-slate-600 text-[17px] leading-relaxed space-y-6">
+            {blocks.map((block, index) => {
+                const lines = block.split('\n');
+                const firstLine = lines[0].trim();
+
+                // Cek apakah seluruh blok adalah kueri SQL
+                const isPureCode = sqlStarterRegex.test(firstLine);
+
+                // Cek apakah baris pertama adalah label/judul (diakhiri ':') dan baris berikutnya adalah SQL
+                const hasHeadingAndCode =
+                    lines.length > 1 &&
+                    firstLine.endsWith(':') &&
+                    sqlStarterRegex.test(lines[1].trim());
+
+                if (isPureCode || hasHeadingAndCode) {
+                    const heading = hasHeadingAndCode ? firstLine : null;
+                    const codeText = hasHeadingAndCode ? lines.slice(1).join('\n') : block;
+
+                    return (
+                        <div key={index} className="space-y-2.5">
+                            {heading && (
+                                <p className="font-bold text-slate-800">{heading}</p>
+                            )}
+                            <div className="relative group rounded-2xl bg-slate-900 text-slate-100 p-5 overflow-x-auto border border-slate-800 shadow-sm">
+                                <button
+                                    type="button"
+                                    onClick={() => handleCopy(codeText, index)}
+                                    className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition"
+                                >
+                                    {copiedIndex === index ? 'Tersalin!' : 'Salin'}
+                                </button>
+                                <pre className="font-mono text-sm leading-relaxed text-emerald-300 pr-14">
+                                    <code>{codeText}</code>
+                                </pre>
+                            </div>
+                        </div>
+                    );
+                }
+
+                // Cek jika blok berisi subjudul di baris pertama diikuti poin-poin daftar
+                if (lines.length > 1 && (firstLine.endsWith(':') || firstLine.endsWith('?'))) {
+                    return (
+                        <div key={index} className="space-y-2">
+                            <h3 className="font-bold text-slate-900 text-lg">{firstLine}</h3>
+                            <div className="whitespace-pre-line text-slate-600 space-y-1.5">
+                                {lines.slice(1).join('\n')}
+                            </div>
+                        </div>
+                    );
+                }
+
+                // Paragraf biasa dengan mempertahankan baris baru
+                return (
+                    <p key={index} className="whitespace-pre-line">
+                        {block}
+                    </p>
+                );
+            })}
+        </div>
+    );
+}
+
+export default function Show({ course, materials = [], dbProgress }) {
     const [modules, setModules] = useState(materials);
 
     // Set default awal menggunakan modul pertama yang belum selesai
@@ -15,8 +108,6 @@ export default function Show({ course, materials = [], dbProgress }) {
         if (materials && materials.length > 0) {
             setModules(materials);
 
-            // Jika activeModuleId belum ada atau modul yang aktif saat ini ternyata sudah berstatus completed,
-            // geser otomatis ke materi uncompleted (belum selesai) pertama.
             const currentActive = materials.find(m => m.id === activeModuleId);
             if (!activeModuleId || (currentActive && currentActive.is_completed)) {
                 const uncompleted = materials.find(m => !m.is_completed);
@@ -54,8 +145,7 @@ export default function Show({ course, materials = [], dbProgress }) {
 
         router.post(`/courses/${course.slug}/materials/${activeModule.id}/complete`, {}, {
             preserveScroll: true,
-            onSuccess: (page) => {
-
+            onSuccess: () => {
                 if (!isLast) {
                     setActiveModuleId(modules[activeIndex + 1].id);
                 }
@@ -201,13 +291,7 @@ export default function Show({ course, materials = [], dbProgress }) {
                         )}
 
                         {/* Isi Materi Teks */}
-                        {activeModule?.content_body ? (
-                            <div className="text-slate-600 text-lg leading-relaxed space-y-6 prose prose-emerald max-w-none" dangerouslySetInnerHTML={{ __html: activeModule.content_body }} />
-                        ) : (
-                            <div className="text-slate-600 text-lg leading-relaxed space-y-6">
-                                <p>Materi sedang disiapkan oleh mentor.</p>
-                            </div>
-                        )}
+                        <MaterialContent content={activeModule?.content_body} />
                     </article>
 
                     {/* Navigasi Bawah */}
