@@ -9,6 +9,8 @@ use Cloudinary\Cloudinary;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
+use Illuminate\Support\Facades\DB;
+use App\Models\MentorPortfolio;
 
 class MentorRegistrationController extends Controller
 {
@@ -17,9 +19,37 @@ class MentorRegistrationController extends Controller
      */
     public function create(): Response
     {
+        $user = auth()->user();
+
+        $expertises = MentorProfile::where('verification_status', 'verified')
+            ->where('is_suspended', false)
+            ->whereNotNull('expertise')
+            ->whereRaw("TRIM(expertise) != ''")
+            ->pluck('expertise')
+            ->map(fn ($item) => trim($item))
+            ->unique(fn ($item) => mb_strtolower($item))
+            ->sort()
+            ->values();
+
+        $mentorProfile = $user->mentorProfile?->load([
+            'certificates',
+            'portfolios',
+        ]);
+
+        // Pertahankan keahlian mentor yang sudah tersimpan.
+        if ($mentorProfile && $mentorProfile->expertise) {
+            $expertises->push(trim($mentorProfile->expertise));
+
+            $expertises = $expertises
+                ->unique(fn ($item) => mb_strtolower($item))
+                ->sort()
+                ->values();
+        }
+
         return Inertia::render('Mentor/Register', [
-            'user' => auth()->user(),
-            'mentorProfile' => auth()->user()->mentorProfile?->load('certificates'),
+            'user' => $user,
+            'mentorProfile' => $mentorProfile,
+            'expertises' => $expertises,
         ]);
     }
 
@@ -73,14 +103,9 @@ class MentorRegistrationController extends Controller
         $mentorData = [
             'expertise' => $request->expertise,
             'bio' => $request->bio,
-            'portfolio_url' => $request->portfolio_url,
-            'mentor_type' => $request->mentor_type,
-            'price_per_session' => $request->mentor_type === 'paid'
-                ? $request->price_per_session
-                : 0,
-            'is_available' => $request->is_available,
         ];
 
+        // 1. Buat atau update profil mentor
         if ($mentorProfile) {
             if ($isResubmission) {
                 $mentorData['verification_status'] = 'pending';
@@ -90,13 +115,45 @@ class MentorRegistrationController extends Controller
         } else {
             $mentorData['user_id'] = $user->id;
             $mentorData['verification_status'] = 'pending';
+            $mentorData['mentor_type'] = 'free';
+            $mentorData['price_per_session'] = 0;
+            $mentorData['is_available'] = false;
 
             $mentorProfile = MentorProfile::create($mentorData);
         }
 
-        /*
-         * Upload sertifikat ke Cloudinary.
-         */
+        // 2. Simpan portofolio mentor
+        DB::transaction(function () use ($mentorProfile, $request) {
+            $submittedIds = [];
+
+            foreach ($request->portofolio as $portfolio) {
+                $savedPortfolio = null;
+
+                if (!empty($portfolio['id'])) {
+                    $savedPortfolio = $mentorProfile->portfolios()
+                        ->whereKey($portfolio['id'])
+                        ->first();
+                }
+
+                if (!$savedPortfolio) {
+                    $savedPortfolio = new MentorPortfolio();
+                }
+
+                $savedPortfolio->platform = $portfolio['platform'];
+                $savedPortfolio->title = $portfolio['title'];
+                $savedPortfolio->url = $portfolio['url'];
+
+                $mentorProfile->portfolios()->save($savedPortfolio);
+
+                $submittedIds[] = $savedPortfolio->id;
+            }
+
+            $mentorProfile->portfolios()
+                ->whereNotIn('id', $submittedIds)
+                ->delete();
+        });
+
+        // 3. Simpan sertifikat mentor
         if ($request->hasFile('certificates')) {
             foreach ($request->file('certificates') as $certificate) {
                 $uploadResult = $cloudinary->uploadApi()->upload(

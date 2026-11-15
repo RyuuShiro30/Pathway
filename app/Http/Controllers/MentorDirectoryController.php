@@ -71,12 +71,14 @@ class MentorDirectoryController extends Controller
                 return $mentor;
             });
 
-        $expertises = MentorProfile::where('verification_status', 'verified')
-            ->where('is_suspended', false)
-            ->select('expertise')
-            ->distinct()
-            ->orderBy('expertise')
-            ->pluck('expertise');
+       $expertises = MentorProfile::where('verification_status', 'verified')
+        ->where('is_suspended', false)
+        ->whereNotNull('expertise')
+        ->whereRaw("TRIM(expertise) != ''")
+        ->selectRaw('MIN(TRIM(expertise)) as expertise')
+        ->groupByRaw('LOWER(TRIM(expertise))')
+        ->orderBy('expertise')
+        ->pluck('expertise');
 
         return Inertia::render('Mentors/Index', [
             'mentors' => $mentors,
