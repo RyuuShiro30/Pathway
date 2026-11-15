@@ -614,6 +614,78 @@ class MentoringWorkflowSeeder extends Seeder
             ]
         );
 
+        // Skenario 26: Sesi berbayar selesai belum dilunasi
+        MentoringSession::updateOrCreate(
+            [
+                'student_id' => $mainStudent->id,
+                'mentor_id' => $mainMentor->id,
+                'notes_from_student' => 'SKENARIO-26: Persiapan interview technical lead (Selesai Belum Dilunasi)',
+            ],
+            [
+                'status' => 'selesai',
+                'schedule_time' => $now->copy()->subDays(1)->setTime(13, 0),
+                'end_time' => $now->copy()->subDays(1)->setTime(14, 0),
+                'duration_hours' => 1,
+                'notes_from_mentor' => 'Diskusi arsitektur dan leadership berjalan lancar.',
+                'proof_file' => 'session-proofs/sample-session.png',
+                'is_free_session' => false,
+                'price_snapshot' => 100000,
+                'payment_dp_proof' => 'payment-proofs/sample-dp.png',
+                'payment_dp_status' => 'terverifikasi',
+                'payment_final_proof' => null,
+                'payment_final_status' => 'belum_dibayar',
+                'discord_link' => 'https://discord.gg/pathway-budi',
+            ]
+        );
+
+        // Skenario 27: Sesi berbayar menunggu verifikasi pelunasan
+        MentoringSession::updateOrCreate(
+            [
+                'student_id' => $mainStudent->id,
+                'mentor_id' => $mainMentor->id,
+                'notes_from_student' => 'SKENARIO-27: Konsultasi migrasi cloud GCP (Menunggu Verifikasi Pelunasan)',
+            ],
+            [
+                'status' => 'selesai',
+                'schedule_time' => $now->copy()->subDays(2)->setTime(16, 0),
+                'end_time' => $now->copy()->subDays(2)->setTime(17, 0),
+                'duration_hours' => 1,
+                'notes_from_mentor' => 'Mentee sudah memahami konsep IAM dan networking GCP.',
+                'proof_file' => 'session-proofs/sample-session.png',
+                'is_free_session' => false,
+                'price_snapshot' => 100000,
+                'payment_dp_proof' => 'payment-proofs/sample-dp.png',
+                'payment_dp_status' => 'terverifikasi',
+                'payment_final_proof' => 'payment-proofs/sample-final-payment.png',
+                'payment_final_status' => 'menunggu_verifikasi',
+                'discord_link' => 'https://discord.gg/pathway-budi',
+            ]
+        );
+
+        // Skenario 28: Sesi berbayar yang pelunasannya ditolak
+        MentoringSession::updateOrCreate(
+            [
+                'student_id' => $mainStudent->id,
+                'mentor_id' => $mainMentor->id,
+                'notes_from_student' => 'SKENARIO-28: Optimasi CI/CD GitHub Actions (Pelunasan Ditolak)',
+            ],
+            [
+                'status' => 'selesai',
+                'schedule_time' => $now->copy()->subDays(3)->setTime(11, 0),
+                'end_time' => $now->copy()->subDays(3)->setTime(12, 0),
+                'duration_hours' => 1,
+                'notes_from_mentor' => 'Mentee memahami caching dan matrix build pada GitHub Actions.',
+                'proof_file' => 'session-proofs/sample-session.png',
+                'is_free_session' => false,
+                'price_snapshot' => 100000,
+                'payment_dp_proof' => 'payment-proofs/sample-dp.png',
+                'payment_dp_status' => 'terverifikasi',
+                'payment_final_proof' => 'payment-proofs/sample-final-payment-rejected.png',
+                'payment_final_status' => 'ditolak',
+                'discord_link' => 'https://discord.gg/pathway-budi',
+            ]
+        );
+
         $this->command->info('MentoringWorkflowSeeder berhasil dijalankan: 19 skenario alur mentoring siap ditest.');
     }
 }

@@ -289,6 +289,9 @@ Route::middleware('auth')->group(function () {
     Route::patch('/bookings/{id}/refund-reschedule/respond', [MentoringSessionController::class, 'respondRefundRescheduleOffer'])
         ->name('student.bookings.refund-reschedule.respond');
 
+    Route::post('/bookings/{id}/payment-final', [MentoringSessionController::class, 'uploadFinalPaymentProof'])
+        ->name('student.bookings.payment-final.upload');
+
     // Mentor Booking Requests
     Route::get('/mentor/requests', [MentoringSessionController::class, 'requests'])
         ->name('mentor.requests');
@@ -367,6 +370,15 @@ Route::middleware('auth')->group(function () {
 
         Route::patch('/mentor/session/{id}/cancel', [MentoringSessionController::class, 'cancelSession'])
             ->name('mentor.session.cancel');
+
+        Route::patch('/mentor/session/{id}/payment-final', [MentoringSessionController::class, 'verifyFinalPayment'])
+            ->name('mentor.session.payment-final.verify');
+
+        Route::patch('/mentor/session/{id}/payment-final/accept', [MentoringSessionController::class, 'acceptFinalPayment'])
+            ->name('mentor.session.payment-final.accept');
+
+        Route::patch('/mentor/session/{id}/payment-final/reject', [MentoringSessionController::class, 'rejectFinalPayment'])
+            ->name('mentor.session.payment-final.reject');
 
         // Mentor Refund & No Show
         Route::patch('/mentor/session/{id}/refund', [MentoringSessionController::class, 'completeRefund'])
