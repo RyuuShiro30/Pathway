@@ -95,6 +95,9 @@ Route::middleware('guest')->prefix('admin')->name('admin.')->group(function () {
 Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('courses', AdminCourseController::class);
     Route::resource('courses.materials', AdminMaterialController::class)->shallow();
+    
+    Route::patch('/courses/{course}/toggle-status', [AdminCourseController::class, 'toggleStatus'])
+        ->name('courses.toggle-status');
 
     // Redeem Point - Badge
     Route::resource('badges', AdminBadgeController::class)->except(['show']);

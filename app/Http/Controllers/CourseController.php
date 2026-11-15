@@ -13,51 +13,51 @@ class CourseController extends Controller
 {
     public function index()
     {
-        // Ambil semua course yang sudah di-publish
+        // Hanya tampilkan course yang berstatus Published
         $courses = Course::where('is_published', true)->latest()->get();
 
-        // Lempar datanya ke file resources/js/Pages/Course/Courses.jsx
         return Inertia::render('Course/Courses', [
-            'courses' => $courses
+            'courses' => $courses,
         ]);
     }
-    
+
     public function show(string $slug)
     {
-        $course = Course::where('slug', $slug)->firstOrFail(); 
-        
-        // Ubah dari courseMaterials biasa menjadi paginate(5)
+        $course = Course::where('slug', $slug)
+            ->where('is_published', true)
+            ->firstOrFail();
+
         $materials = $course->courseMaterials()->paginate(5);
-        
+
         return Inertia::render('Course/Window', [
             'course' => $course,
-            'materials' => $materials // Ini sekarang berupa objek pagination Laravel
+            'materials' => $materials,
         ]);
     }
 
-    // Ruang Baca Materi (File Show.jsx)
     public function learn(string $slug)
     {
-        $course = Course::with('courseMaterials')->where('slug', $slug)->firstOrFail(); 
+        $course = Course::with('courseMaterials')
+            ->where('slug', $slug)
+            ->where('is_published', true)
+            ->firstOrFail();
+
         $user = Auth::user();
 
-        // 1. Otomatis buat data Enrollment jika user baru pertama kali masuk kelas
         $enrollment = UserEnrollment::firstOrCreate([
             'user_id' => $user->id,
-            'course_id' => $course->id
+            'course_id' => $course->id,
         ], [
             'status' => 'in_progress',
             'progress_percentage' => 0,
-            'enrolled_at' => now()
+            'enrolled_at' => now(),
         ]);
 
-        // 2. Ambil ID materi yang sudah pernah dicentang selesai oleh user dari tabel user_progress
         $completedMaterialIds = $enrollment->userProgress()
             ->where('is_completed', true)
             ->pluck('material_id')
             ->toArray();
 
-        // 3. Sisipkan properti is_completed ke setiap item materi
         $materials = $course->courseMaterials->map(function ($material) use ($completedMaterialIds) {
             $material->is_completed = in_array($material->id, $completedMaterialIds);
             return $material;
@@ -66,45 +66,43 @@ class CourseController extends Controller
         return Inertia::render('Course/Show', [
             'course' => $course,
             'materials' => $materials,
-            'dbProgress' => (float) $enrollment->progress_percentage
+            'dbProgress' => (float) $enrollment->progress_percentage,
         ]);
     }
 
-    // Memproses penyimpan modul selesai dari tombol "Selesai & Lanjut"
     public function markAsCompleted(Request $request, string $slug, $materialId)
     {
-        $course = Course::where('slug', $slug)->firstOrFail();
+        $course = Course::where('slug', $slug)
+            ->where('is_published', true)
+            ->firstOrFail();
+
         $user = Auth::user();
 
-        // 1. Ambil enrollment user di course ini
         $enrollment = UserEnrollment::where('user_id', $user->id)
             ->where('course_id', $course->id)
             ->firstOrFail();
 
-        // 2. Catat progress modul ke tabel user_progress
         UserProgress::updateOrCreate(
             [
-                'enrollment_id' => $enrollment->id, 
-                'material_id' => $materialId
+                'enrollment_id' => $enrollment->id,
+                'material_id' => $materialId,
             ],
             [
-                'is_completed' => true, 
-                'completed_at' => now()
+                'is_completed' => true,
+                'completed_at' => now(),
             ]
         );
 
-        // 3. Hitung persentase progres terbaru
         $totalMaterials = $course->courseMaterials()->count();
         $completedCount = $enrollment->userProgress()->where('is_completed', true)->count();
-        
+
         $percentage = $totalMaterials > 0 ? round(($completedCount / $totalMaterials) * 100, 2) : 0;
         $isFinished = $percentage >= 100;
 
-        // 4. Update persentase dan status di tabel user_enrollments
         $enrollment->update([
             'progress_percentage' => $percentage,
             'status' => $isFinished ? 'completed' : 'in_progress',
-            'completed_at' => $isFinished ? now() : $enrollment->completed_at
+            'completed_at' => $isFinished ? now() : $enrollment->completed_at,
         ]);
 
         return back();
