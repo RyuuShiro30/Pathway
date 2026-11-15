@@ -120,6 +120,8 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         ->name('refund-reports.show');
     Route::patch('/refund-reports/{session}/decide', [AdminRefundReportController::class, 'decide'])
         ->name('refund-reports.decide');
+    Route::post('/refund-reports/{session}/remind', [AdminRefundReportController::class, 'remind'])
+        ->name('refund-reports.remind');
 
     Route::get('/payment-reminders', [AdminPaymentReminderController::class, 'index'])
         ->name('payment-reminders.index');

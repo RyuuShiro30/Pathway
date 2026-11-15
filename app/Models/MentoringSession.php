@@ -35,6 +35,7 @@ class MentoringSession extends Model
         'refund_proof_uploaded_at',
         'refund_admin_note',
         'refund_reviewed_at',
+        'refund_reminded_at',
     ];
 
     protected $casts = [
@@ -44,6 +45,7 @@ class MentoringSession extends Model
         'price_snapshot' => 'decimal:2',
         'refund_deadline' => 'datetime',
         'refund_proof_uploaded_at' => 'datetime',
+        'refund_reminded_at' => 'datetime',
         'payment_final_reminded_at' => 'datetime',
     ];
 
