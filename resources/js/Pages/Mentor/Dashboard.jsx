@@ -132,6 +132,7 @@ export default function Dashboard({
     reportedRefundRequests = [],
     studentCancelledSessions = [],
     confirmedSessions = [],
+    pendingFinalPayments = [],
     pointsBalance = 0,
 }) {
     const { auth, flash } = usePage().props;
@@ -152,6 +153,9 @@ export default function Dashboard({
         : [];
     const safeConfirmedSessions = Array.isArray(confirmedSessions)
         ? confirmedSessions
+        : [];
+    const safePendingFinalPayments = Array.isArray(pendingFinalPayments)
+        ? pendingFinalPayments
         : [];
 
     const availabilitySchedule = Array.isArray(
@@ -444,7 +448,6 @@ export default function Dashboard({
         safeRefundRequests.length > 0 || activeNoShowDisputesCount > 0;
 
     // Filter Sesi Terjadwal berdasarkan tab (Semua / Hari Ini)
-    console.log("CONFIRMED SESSIONS:", safeConfirmedSessions);
     const filteredConfirmedSessions = safeConfirmedSessions.filter(
         (session) => {
             if (sessionFilterTab === "hari_ini") {
@@ -655,7 +658,7 @@ export default function Dashboard({
                     />
                 )}
 
-                               {/* 5 BARIS KARTU STATISTIK */}
+                {/* 5 BARIS KARTU STATISTIK */}
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                     <StatCard
                         title="PERMINTAAN MENUNGGU"
@@ -706,7 +709,7 @@ export default function Dashboard({
                     <StatCard
                         title="SESI TERJADWAL"
                         value={safeConfirmedSessions.length}
-                        unit="sesi aktif"
+                        unit="sesi"
                         badgeText={
                             safeConfirmedSessions.filter(
                                 (s) => s.status === "berlangsung",
@@ -715,7 +718,7 @@ export default function Dashboard({
                                 : "Siap jalan"
                         }
                         badgeVariant="success"
-                        subText={`${safeConfirmedSessions.filter((s) => s.status === "dikonfirmasi").length} Dikonfirmasi`}
+                        subText={`${safeConfirmedSessions.filter((s) => s.status === "dikonfirmasi").length} Dikonfirmasi • ${safeConfirmedSessions.filter((s) => s.status === "selesai").length} Selesai`}
                     />
 
                     <StatCard
@@ -727,39 +730,14 @@ export default function Dashboard({
                         subText="06:00 - 22:00"
                     />
 
-                                        <div className="rounded-2xl border border-purple-100 bg-white p-4">
-                        <StatCard
-                            title="TOTAL POIN"
-                            value={Number(pointsBalance).toLocaleString('id-ID')}
-                            unit="poin tersedia"
-                            badgeText="Reward Mentor"
-                            badgeVariant="purple"
-                            subText="100 poin setiap sesi gratis selesai"
-                        />
-
-                        <div className="mt-3 space-y-2">
-                            <Link
-                                href={route('mentor.badges.index')}
-                                className="block rounded-lg bg-purple-50 p-2 text-center text-sm font-semibold text-purple-700 hover:bg-purple-100"
-                            >
-                                Tukar Badge
-                            </Link>
-
-                            <Link
-                                href={route('mentor.merchandise.index')}
-                                className="block rounded-lg bg-indigo-50 p-2 text-center text-sm font-semibold text-indigo-700 hover:bg-indigo-100"
-                            >
-                                Tukar Merchandise
-                            </Link>
-
-                            <Link
-                                href={route('mentor.merchandise.history')}
-                                className="block rounded-lg bg-slate-100 p-2 text-center text-sm font-semibold text-slate-700 hover:bg-slate-200"
-                            >
-                                Riwayat Penukaran
-                            </Link>
-                        </div>
-                    </div>
+                    <StatCard
+                        title="TOTAL POIN"
+                        value={Number(pointsBalance).toLocaleString('id-ID')}
+                        unit="poin tersedia"
+                        badgeText="Reward Mentor"
+                        badgeVariant="purple"
+                        subText="100 poin setiap sesi gratis selesai"
+                    />
                 </div>
 
                 {/* GRID 2 KOLOM */}
@@ -945,6 +923,8 @@ export default function Dashboard({
                                             const isOngoing =
                                                 session.status ===
                                                 "berlangsung";
+                                            const isCompleted =
+                                                session.status === "selesai";
 
                                             return (
                                                 <Card
@@ -954,20 +934,42 @@ export default function Dashboard({
                                                 >
                                                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                                         <div className="flex items-start gap-3">
-                                                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
-                                                                <svg
-                                                                    className="h-5 w-5"
-                                                                    fill="none"
-                                                                    viewBox="0 0 24 24"
-                                                                    stroke="currentColor"
-                                                                >
-                                                                    <path
-                                                                        strokeLinecap="round"
-                                                                        strokeLinejoin="round"
-                                                                        strokeWidth="2"
-                                                                        d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
-                                                                    />
-                                                                </svg>
+                                                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                                                                isCompleted
+                                                                    ? "bg-emerald-50 text-emerald-600"
+                                                                    : isOngoing
+                                                                      ? "bg-emerald-100 text-emerald-700"
+                                                                      : "bg-slate-100 text-slate-500"
+                                                            }`}>
+                                                                {isCompleted ? (
+                                                                    <svg
+                                                                        className="h-5 w-5"
+                                                                        fill="none"
+                                                                        viewBox="0 0 24 24"
+                                                                        stroke="currentColor"
+                                                                        strokeWidth="2.5"
+                                                                    >
+                                                                        <path
+                                                                            strokeLinecap="round"
+                                                                            strokeLinejoin="round"
+                                                                            d="M5 13l4 4L19 7"
+                                                                        />
+                                                                    </svg>
+                                                                ) : (
+                                                                    <svg
+                                                                        className="h-5 w-5"
+                                                                        fill="none"
+                                                                        viewBox="0 0 24 24"
+                                                                        stroke="currentColor"
+                                                                    >
+                                                                        <path
+                                                                            strokeLinecap="round"
+                                                                            strokeLinejoin="round"
+                                                                            strokeWidth="2"
+                                                                            d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"
+                                                                        />
+                                                                    </svg>
+                                                                )}
                                                             </div>
 
                                                             <div>
@@ -982,13 +984,17 @@ export default function Dashboard({
                                                                         variant={
                                                                             isOngoing
                                                                                 ? "successBold"
-                                                                                : "primary"
+                                                                                : isCompleted
+                                                                                  ? "success"
+                                                                                  : "primary"
                                                                         }
                                                                         size="xs"
                                                                     >
                                                                         {isOngoing
                                                                             ? "● Berlangsung"
-                                                                            : "Dikonfirmasi"}
+                                                                            : isCompleted
+                                                                              ? "Selesai"
+                                                                              : "Dikonfirmasi"}
                                                                     </Badge>
                                                                     <span className="text-[11px] font-medium text-slate-400">
                                                                         {session.is_free_session
@@ -1393,12 +1399,98 @@ export default function Dashboard({
 
                     {/* KOLOM KANAN (SIDEBAR / 5 of 12 atau 4 of 12) */}
                     <div className="space-y-6 lg:col-span-5 xl:col-span-4">
+                        {/* 0. PELUNASAN MENUNGGU VERIFIKASI */}
+                        <Card
+                            as="section"
+                            id="pelunasan-menunggu-verifikasi"
+                            variant="warning"
+                            className="p-5 sm:p-6"
+                        >
+                            <SectionHeader
+                                tag="VERIFIKASI PEMBAYARAN"
+                                tagColor="text-amber-700"
+                                title={`Pelunasan Menunggu Verifikasi (${safePendingFinalPayments.length})`}
+                                badge={
+                                    <Badge variant="warning" size="sm">
+                                        {safePendingFinalPayments.length} Menunggu
+                                    </Badge>
+                                }
+                                className="border-b border-amber-100 pb-3 mb-4"
+                            />
+
+                            {safePendingFinalPayments.length > 0 ? (
+                                <div className="space-y-3">
+                                    {safePendingFinalPayments.map((session) => {
+                                        const studentName =
+                                            session.student?.name ?? "Student";
+
+                                        return (
+                                            <div
+                                                key={session.id}
+                                                className="rounded-xl border border-amber-100 bg-amber-50/40 p-4 transition hover:bg-amber-50/70"
+                                            >
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <h3 className="text-sm font-bold text-slate-900">
+                                                        {studentName}
+                                                    </h3>
+                                                    <Badge
+                                                        variant="warningBold"
+                                                        size="xs"
+                                                    >
+                                                        Menunggu Verifikasi
+                                                    </Badge>
+                                                </div>
+
+                                                <p className="mt-2 flex items-center gap-1.5 text-xs text-slate-600">
+                                                    <svg
+                                                        className="h-3.5 w-3.5 text-slate-400"
+                                                        fill="none"
+                                                        viewBox="0 0 24 24"
+                                                        stroke="currentColor"
+                                                    >
+                                                        <path
+                                                            strokeLinecap="round"
+                                                            strokeLinejoin="round"
+                                                            strokeWidth="2"
+                                                            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+                                                        />
+                                                    </svg>
+                                                    {formatSessionDateTime(
+                                                        session.schedule_time,
+                                                    )}
+                                                </p>
+
+                                                <div className="mt-3">
+                                                    <Button
+                                                        href={route(
+                                                            "mentor.session.tracking",
+                                                            session.id,
+                                                        )}
+                                                        variant="primary"
+                                                        size="sm"
+                                                        className="w-full justify-center shadow-xs"
+                                                    >
+                                                        Tinjau
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <EmptyState
+                                    message="Tidak ada pelunasan yang menunggu verifikasi."
+                                    className="py-6"
+                                />
+                            )}
+                        </Card>
+
                         {/* 1. MENUNGGU RESPONS MENTEE */}
                         <Card
                             as="section"
                             id="menunggu-respons-mentee"
                             variant="warning"
-                            className="p-5"
+                            className="p-5 sm:p-6"
                         >
                             <SectionHeader
                                 tag="MENUNGGU RESPONS"
@@ -1409,7 +1501,7 @@ export default function Dashboard({
                                         {safeRescheduleOffers.length} Penawaran
                                     </Badge>
                                 }
-                                className="border-b border-amber-100 pb-3 mb-3"
+                                className="border-b border-amber-100 pb-3 mb-4"
                             />
 
                             {safeRescheduleOffers.length > 0 ? (
@@ -1417,7 +1509,7 @@ export default function Dashboard({
                                     {safeRescheduleOffers.map((offer) => (
                                         <div
                                             key={offer.id}
-                                            className="rounded-xl border border-amber-100 bg-amber-50/40 p-3.5"
+                                            className="rounded-xl border border-amber-100 bg-amber-50/40 p-4"
                                         >
                                             <div className="flex items-center justify-between gap-2">
                                                 <h3 className="text-sm font-bold text-slate-900">
@@ -1488,7 +1580,7 @@ export default function Dashboard({
                             ) : (
                                 <EmptyState
                                     message="Tidak ada penawaran jadwal pengganti yang menunggu respons mentee."
-                                    className="py-4"
+                                    className="py-6"
                                 />
                             )}
                         </Card>
@@ -1498,7 +1590,7 @@ export default function Dashboard({
                             as="section"
                             id="menunggu-refund"
                             variant="danger"
-                            className="p-5"
+                            className="p-5 sm:p-6"
                         >
                             <SectionHeader
                                 icon={
@@ -1527,7 +1619,7 @@ export default function Dashboard({
                                         Diproses
                                     </Badge>
                                 }
-                                className="border-b border-rose-100 pb-3 mb-3"
+                                className="border-b border-rose-100 pb-3 mb-4"
                             />
 
                             {safeRefundRequests.length > 0 ? (
@@ -1541,7 +1633,7 @@ export default function Dashboard({
                                             return (
                                                 <div
                                                     key={refundRequest.id}
-                                                    className={`rounded-xl border p-3.5 transition ${
+                                                    className={`rounded-xl border p-4 transition ${
                                                         isOverdue
                                                             ? "border-rose-300 bg-rose-50/40"
                                                             : "border-slate-100 bg-slate-50/50 hover:bg-slate-50"
@@ -1648,17 +1740,17 @@ export default function Dashboard({
                             ) : (
                                 <EmptyState
                                     message="Tidak ada refund yang perlu diproses."
-                                    className="py-4"
+                                    className="py-6"
                                 />
                             )}
                         </Card>
 
-                        {/* 2. DILAPORKAN BELUM DITERIMA */}
+                        {/* 3. DILAPORKAN BELUM DITERIMA */}
                         {safeReportedRefundRequests.length > 0 && (
                             <Card
                                 as="section"
                                 variant="warning"
-                                className="p-5"
+                                className="p-5 sm:p-6"
                             >
                                 <SectionHeader
                                     tag="PERLU DITINJAU"
@@ -1670,7 +1762,7 @@ export default function Dashboard({
                                             Laporan
                                         </Badge>
                                     }
-                                    className="border-b border-amber-100 pb-3 mb-3"
+                                    className="border-b border-amber-100 pb-3 mb-4"
                                 />
 
                                 <div className="space-y-3">
@@ -1678,7 +1770,7 @@ export default function Dashboard({
                                         (request) => (
                                             <div
                                                 key={request.id}
-                                                className="rounded-xl border border-amber-100 bg-amber-50/40 p-3.5 text-xs"
+                                                className="rounded-xl border border-amber-100 bg-amber-50/40 p-4 text-xs"
                                             >
                                                 <div className="flex items-center justify-between">
                                                     <h3 className="font-bold text-slate-900">
@@ -1706,7 +1798,7 @@ export default function Dashboard({
                                                         )}
                                                     </p>
                                                 </div>
-                                                <p className="mt-2 text-[11px] text-amber-900/80 leading-relaxed italic bg-amber-50/80 p-2 rounded-lg border border-amber-100">
+                                                <p className="mt-2 text-[11px] text-amber-900/80 leading-relaxed italic bg-amber-50/80 p-2.5 rounded-lg border border-amber-100">
                                                     "Student melaporkan belum
                                                     menerima transfer. Belum ada
                                                     tindakan yang tersedia di
@@ -1725,9 +1817,9 @@ export default function Dashboard({
                             </Card>
                         )}
 
-                        {/* 3. DIBATALKAN STUDENT - 7 HARI TERAKHIR */}
+                        {/* 4. DIBATALKAN STUDENT - 7 HARI TERAKHIR */}
                         {safeStudentCancelledSessions.length > 0 && (
-                            <Card as="section" className="p-5">
+                            <Card as="section" className="p-5 sm:p-6">
                                 <SectionHeader
                                     tag="7 HARI TERAKHIR"
                                     tagColor="text-slate-400"
@@ -1740,7 +1832,7 @@ export default function Dashboard({
                                             Sesi
                                         </Badge>
                                     }
-                                    className="border-b border-slate-100 pb-3 mb-3"
+                                    className="border-b border-slate-100 pb-3 mb-4"
                                 />
 
                                 <div className="space-y-3">
@@ -1748,7 +1840,7 @@ export default function Dashboard({
                                         (session) => (
                                             <div
                                                 key={session.id}
-                                                className="rounded-xl border border-slate-100 bg-slate-50/60 p-3.5 text-xs text-slate-600"
+                                                className="rounded-xl border border-slate-100 bg-slate-50/60 p-4 text-xs text-slate-600"
                                             >
                                                 <div className="flex items-center justify-between">
                                                     <h3 className="font-bold text-slate-900">
@@ -1777,8 +1869,8 @@ export default function Dashboard({
                             </Card>
                         )}
 
-                        {/* 4. PROFIL MENTOR (CARD) */}
-                        <Card as="section" className="border-transparent !bg-[#6594B1] p-5 text-white shadow-sm">
+                        {/* 5. PROFIL MENTOR (CARD) */}
+                        <Card as="section" className="border-transparent !bg-[#6594B1] p-5 sm:p-6 text-white shadow-sm">
                             <div className="flex items-start gap-3.5">
                                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white/20 text-sm font-bold text-white shadow-sm">
                                     {avatarInitials}

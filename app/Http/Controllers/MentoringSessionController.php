@@ -59,6 +59,9 @@ class MentoringSessionController extends Controller
                 'is_free_session',
                 'price_snapshot',
                 'payment_dp_status',
+                'payment_final_status',
+                'payment_final_proof',
+                'payment_final_reminded_at',
                 'refund_status',
                 'refund_proof',
                 'refund_proof_uploaded_at',
@@ -86,6 +89,9 @@ class MentoringSessionController extends Controller
                     'is_free_session' => $session->is_free_session,
                     'price_snapshot' => $session->price_snapshot,
                     'payment_dp_status' => $session->payment_dp_status,
+                    'payment_final_status' => $session->payment_final_status,
+                    'payment_final_proof_path' => $session->payment_final_proof,
+                    'payment_final_reminded_at' => $session->payment_final_reminded_at?->copy()->setTimezone('UTC')->toISOString(),
                     'refund_status' => $session->refund_status,
                     'refund_proof_path' => $isAwaitingRefundConfirmation
                         ? $session->refund_proof
@@ -830,6 +836,9 @@ class MentoringSessionController extends Controller
                 'payment_dp_status' => $booking['is_free_session']
                     ? 'tidak_berlaku'
                     : 'menunggu_verifikasi',
+                'payment_final_status' => $booking['is_free_session']
+                    ? 'tidak_berlaku'
+                    : 'belum_dibayar',
             ]);
 
             $session->mentor?->notify(new SessionEvent('Ada pengajuan booking baru dari student.', '/mentor/dashboard'));
@@ -1587,14 +1596,14 @@ class MentoringSessionController extends Controller
                     $session->mentor?->notify(
                         new SessionEvent(
                             'Tawaran jadwal pengganti kedaluwarsa. Proses refund dilanjutkan dengan batas waktu 48 jam.',
-                            '/mentor/session/' . $session->id . '/refund'
+                            '/mentor/session/'.$session->id.'/refund'
                         )
                     );
                 } else {
                     $session->mentor?->notify(
                         new SessionEvent(
                             'Tawaran jadwal pengganti untuk sesi gratis kedaluwarsa. Sesi tetap dibatalkan.',
-                            '/mentor/session/' . $session->id
+                            '/mentor/session/'.$session->id
                         )
                     );
                 }
@@ -1618,11 +1627,11 @@ class MentoringSessionController extends Controller
 
                     $message = 'Student menolak tawaran jadwal pengganti. Proses refund dilanjutkan dengan batas waktu 48 jam.';
 
-                    $url = '/mentor/session/' . $session->id . '/refund';
+                    $url = '/mentor/session/'.$session->id.'/refund';
                 } else {
                     $message = 'Student menolak tawaran jadwal pengganti untuk sesi gratis. Sesi tetap dibatalkan tanpa proses refund.';
 
-                    $url = '/mentor/session/' . $session->id;
+                    $url = '/mentor/session/'.$session->id;
                 }
 
                 $session->mentor?->notify(
@@ -1666,7 +1675,7 @@ class MentoringSessionController extends Controller
             $session->mentor?->notify(
                 new SessionEvent(
                     'Student menerima tawaran jadwal pengganti. Sesi mentoring kembali dikonfirmasi.',
-                    '/mentor/session/' . $session->id
+                    '/mentor/session/'.$session->id
                 )
             );
 
@@ -1856,6 +1865,92 @@ class MentoringSessionController extends Controller
             'success',
             'Bukti refund berhasil diupload, menunggu konfirmasi mentee'
         );
+    }
+
+    public function uploadFinalPaymentProof(Request $request, int $id): RedirectResponse
+    {
+        $session = MentoringSession::where('student_id', Auth::id())
+            ->where('id', $id)
+            ->firstOrFail();
+
+        abort_if($session->is_free_session, 403, 'Sesi gratis tidak memerlukan pelunasan.');
+        abort_if(! in_array($session->status, ['berlangsung', 'selesai'], true), 403, 'Status sesi tidak valid untuk pelunasan.');
+        abort_if(! in_array($session->payment_final_status, ['belum_dibayar', 'ditolak'], true), 403, 'Status pelunasan tidak valid untuk upload bukti.');
+
+        $request->validate([
+            'payment_final_proof' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
+        ]);
+
+        $proofPath = $request->file('payment_final_proof')->store('payment-proofs', 'public');
+
+        $session->update([
+            'payment_final_proof' => $proofPath,
+            'payment_final_status' => 'menunggu_verifikasi',
+        ]);
+
+        $session->mentor?->notify(
+            new SessionEvent('Murid mengunggah bukti pelunasan sisa sesi.', route('mentor.session.tracking', $session->id, false))
+        );
+
+        return redirect()->back()->with('success', 'Bukti pelunasan berhasil diunggah.');
+    }
+
+    public function verifyFinalPayment(Request $request, int $id): RedirectResponse
+    {
+        $session = MentoringSession::where('mentor_id', Auth::id())
+            ->where('id', $id)
+            ->firstOrFail();
+
+        abort_if($session->payment_final_status !== 'menunggu_verifikasi', 403, 'Status pelunasan tidak menunggu verifikasi.');
+
+        $validated = $request->validate([
+            'action' => ['required', 'in:terima,tolak'],
+            'rejection_reason' => ['required_if:action,tolak', 'nullable', 'string', 'max:500'],
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        if ($validated['action'] === 'tolak') {
+            $reason = $validated['rejection_reason'] ?? $validated['reason'] ?? null;
+            if (empty(trim((string) $reason))) {
+                throw ValidationException::withMessages([
+                    'rejection_reason' => 'Alasan penolakan wajib disertakan.',
+                ]);
+            }
+
+            $session->update([
+                'payment_final_status' => 'ditolak',
+            ]);
+
+            $session->student?->notify(
+                new SessionEvent("Bukti pelunasan ditolak mentor: {$reason}", route('student.bookings.index', [], false))
+            );
+
+            return redirect()->back()->with('success', 'Bukti pelunasan berhasil ditolak.');
+        }
+
+        $session->update([
+            'payment_final_status' => 'terverifikasi',
+        ]);
+
+        $session->student?->notify(
+            new SessionEvent('Bukti pelunasan Anda telah disetujui mentor.', route('student.bookings.index', [], false))
+        );
+
+        return redirect()->back()->with('success', 'Bukti pelunasan berhasil diverifikasi.');
+    }
+
+    public function acceptFinalPayment(Request $request, int $id): RedirectResponse
+    {
+        $request->merge(['action' => 'terima']);
+
+        return $this->verifyFinalPayment($request, $id);
+    }
+
+    public function rejectFinalPayment(Request $request, int $id): RedirectResponse
+    {
+        $request->merge(['action' => 'tolak']);
+
+        return $this->verifyFinalPayment($request, $id);
     }
 
     private function hasActiveNoShowReport(int $sessionId): bool

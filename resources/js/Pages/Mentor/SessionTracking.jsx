@@ -155,6 +155,39 @@ export default function SessionTracking({
         action: "",
         rejection_reason: "",
     });
+    const [isFinalPaymentRejectModalOpen, setIsFinalPaymentRejectModalOpen] =
+        useState(false);
+    const finalPaymentForm = useForm({
+        action: "terima",
+        rejection_reason: "",
+    });
+    const finalProofUrl = getPublicStorageUrl(session.payment_final_proof);
+
+    function acceptFinalPayment() {
+        finalPaymentForm.transform((data) => ({
+            ...data,
+            action: "terima",
+        }));
+        finalPaymentForm.patch(route("mentor.session.payment-final.verify", session.id), {
+            preserveScroll: true,
+        });
+    }
+
+    function rejectFinalPayment(event) {
+        event.preventDefault();
+        finalPaymentForm.transform((data) => ({
+            ...data,
+            action: "tolak",
+            rejection_reason: data.rejection_reason,
+        }));
+        finalPaymentForm.patch(route("mentor.session.payment-final.verify", session.id), {
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsFinalPaymentRejectModalOpen(false);
+                finalPaymentForm.reset();
+            },
+        });
+    }
     const mentorName = auth?.user?.name ?? "Mentor";
     const mentorInitials = getInitials(mentorName);
     const studentName = session.student?.name ?? "Student";
@@ -170,13 +203,18 @@ export default function SessionTracking({
         ...Object.values(startForm.errors),
         ...Object.values(completeForm.errors),
         ...Object.values(cancelForm.errors),
+        ...Object.values(finalPaymentForm.errors),
     ].filter(Boolean);
     const errorMessages = [
         ...new Set([flash?.error, ...formErrors, copyError].filter(Boolean)),
     ];
 
     useEffect(() => {
-        if (!isNoShowReportModalOpen && !isNoShowRespondModalOpen) {
+        if (
+            !isNoShowReportModalOpen &&
+            !isNoShowRespondModalOpen &&
+            !isFinalPaymentRejectModalOpen
+        ) {
             return;
         }
 
@@ -185,7 +223,9 @@ export default function SessionTracking({
                 return;
             }
 
-            if (isNoShowRespondModalOpen && !noShowRespondForm.processing) {
+            if (isFinalPaymentRejectModalOpen && !finalPaymentForm.processing) {
+                setIsFinalPaymentRejectModalOpen(false);
+            } else if (isNoShowRespondModalOpen && !noShowRespondForm.processing) {
                 setIsNoShowRespondModalOpen(false);
             } else if (
                 isNoShowReportModalOpen &&
@@ -203,8 +243,10 @@ export default function SessionTracking({
     }, [
         isNoShowReportModalOpen,
         isNoShowRespondModalOpen,
+        isFinalPaymentRejectModalOpen,
         noShowReportForm.processing,
         noShowRespondForm.processing,
+        finalPaymentForm.processing,
     ]);
     function startSession() {
         startForm.patch(route("mentor.session.start", session.id), {
@@ -1365,6 +1407,92 @@ export default function SessionTracking({
                                 </div>
                             </Card>
                         )}
+
+                        {/* VERIFIKASI PELUNASAN SISA 50% */}
+                        {session.payment_final_status === "menunggu_verifikasi" && (
+                            <Card className="p-5 sm:p-6 space-y-4 border-amber-200 bg-amber-50/20">
+                                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-100 pb-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                                            <svg
+                                                className="h-5 w-5"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                                                />
+                                            </svg>
+                                        </div>
+                                        <div>
+                                            <h2 className="text-sm font-bold text-slate-900">
+                                                Verifikasi Pelunasan Sisa 50%
+                                            </h2>
+                                            <p className="text-[11px] text-slate-500">
+                                                Mentee telah mengunggah bukti pelunasan biaya mentoring.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Badge variant="warning">Menunggu Verifikasi</Badge>
+                                </div>
+
+                                {finalProofUrl && (
+                                    <div className="space-y-2">
+                                        <p className="text-xs font-semibold text-slate-700">
+                                            Bukti Transfer Pelunasan:
+                                        </p>
+                                        <a
+                                            href={finalProofUrl}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-[#527D98] hover:bg-slate-50 shadow-xs"
+                                        >
+                                            <svg
+                                                className="h-4 w-4"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                                                />
+                                            </svg>
+                                            Lihat Bukti Pelunasan (Buka di Tab Baru)
+                                        </a>
+                                    </div>
+                                )}
+
+                                <div className="flex items-center gap-3 pt-2">
+                                    <Button
+                                        type="button"
+                                        variant="primary"
+                                        size="md"
+                                        disabled={finalPaymentForm.processing}
+                                        onClick={acceptFinalPayment}
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                                    >
+                                        Terima Pelunasan
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="danger"
+                                        size="md"
+                                        disabled={finalPaymentForm.processing}
+                                        onClick={() => setIsFinalPaymentRejectModalOpen(true)}
+                                        className="font-bold"
+                                    >
+                                        Tolak
+                                    </Button>
+                                </div>
+                            </Card>
+                        )}
                     </div>
 
                     <aside className="space-y-5 lg:col-span-2">
@@ -2312,6 +2440,92 @@ export default function SessionTracking({
                                     {cancelForm.processing
                                         ? "Membatalkan..."
                                         : "Ya, Batalkan Sesi"}
+                                </Button>
+                            </div>
+                        </form>
+                    </Card>
+                </div>
+            )}
+
+            {/* Modal Tolak Bukti Pelunasan */}
+            {isFinalPaymentRejectModalOpen && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 backdrop-blur-sm p-4"
+                    onMouseDown={(event) => {
+                        if (
+                            event.target === event.currentTarget &&
+                            !finalPaymentForm.processing
+                        ) {
+                            setIsFinalPaymentRejectModalOpen(false);
+                        }
+                    }}
+                >
+                    <Card className="w-full max-w-md p-6 space-y-4 shadow-xl">
+                        <div className="flex items-start justify-between gap-3">
+                            <div>
+                                <h3 className="text-base font-bold text-slate-900">
+                                    Tolak Bukti Pelunasan
+                                </h3>
+                                <p className="mt-1 text-xs text-slate-500">
+                                    Sertakan alasan singkat penolakan bukti pelunasan untuk mentee.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setIsFinalPaymentRejectModalOpen(false)}
+                                disabled={finalPaymentForm.processing}
+                                className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                            >
+                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        <form onSubmit={rejectFinalPayment} className="space-y-4">
+                            <div>
+                                <label
+                                    htmlFor="rejection_reason"
+                                    className="block text-xs font-semibold text-slate-700 mb-1.5"
+                                >
+                                    Alasan Penolakan <span className="text-rose-500">*</span>
+                                </label>
+                                <textarea
+                                    id="rejection_reason"
+                                    name="rejection_reason"
+                                    rows={3}
+                                    value={finalPaymentForm.data.rejection_reason}
+                                    onChange={(e) =>
+                                        finalPaymentForm.setData("rejection_reason", e.target.value)
+                                    }
+                                    placeholder="Contoh: Bukti transfer tidak jelas / nominal tidak sesuai"
+                                    className="block w-full rounded-xl border border-slate-200 p-3 text-xs text-slate-800 placeholder-slate-400 focus:border-[#527D98] focus:outline-none focus:ring-1 focus:ring-[#527D98]"
+                                    required
+                                />
+                                {finalPaymentForm.errors.rejection_reason && (
+                                    <p className="mt-1.5 text-xs text-rose-600 font-medium">
+                                        {finalPaymentForm.errors.rejection_reason}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="flex flex-col-reverse gap-2.5 sm:flex-row sm:justify-end border-t border-slate-100 pt-3.5">
+                                <Button
+                                    type="button"
+                                    variant="secondary"
+                                    size="sm"
+                                    disabled={finalPaymentForm.processing}
+                                    onClick={() => setIsFinalPaymentRejectModalOpen(false)}
+                                >
+                                    Batal
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    variant="danger"
+                                    size="sm"
+                                    disabled={finalPaymentForm.processing || !finalPaymentForm.data.rejection_reason.trim()}
+                                >
+                                    {finalPaymentForm.processing ? "Menolak..." : "Tolak Pelunasan"}
                                 </Button>
                             </div>
                         </form>

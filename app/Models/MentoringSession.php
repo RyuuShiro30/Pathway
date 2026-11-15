@@ -4,8 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class MentoringSession extends Model
 {
@@ -25,6 +25,8 @@ class MentoringSession extends Model
         'payment_dp_proof',
         'payment_dp_status',
         'payment_final_proof',
+        'payment_final_status',
+        'payment_final_reminded_at',
         'cancelled_by',
         'cancellation_reason',
         'refund_proof',
@@ -42,6 +44,7 @@ class MentoringSession extends Model
         'price_snapshot' => 'decimal:2',
         'refund_deadline' => 'datetime',
         'refund_proof_uploaded_at' => 'datetime',
+        'payment_final_reminded_at' => 'datetime',
     ];
 
     public function mentor(): BelongsTo
