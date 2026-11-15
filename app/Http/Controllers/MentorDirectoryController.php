@@ -62,14 +62,16 @@ class MentorDirectoryController extends Controller
                     );
                 }
             })
-            ->get()
-            ->map(function ($mentor) {
-                $mentor->avg_rating = $mentor->reviews_avg_rating !== null
-                    ? round((float) $mentor->reviews_avg_rating, 1)
-                    : (float) ($mentor->avg_rating ?? 0);
+            ->paginate(6)
+            ->withQueryString();
 
-                return $mentor;
-            });
+        $mentors->through(function ($mentor) {
+            $mentor->avg_rating = $mentor->reviews_avg_rating !== null
+                ? round((float) $mentor->reviews_avg_rating, 1)
+                : (float) ($mentor->avg_rating ?? 0);
+
+            return $mentor;
+        });
 
        $expertises = MentorProfile::where('verification_status', 'verified')
         ->where('is_suspended', false)
