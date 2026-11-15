@@ -57,28 +57,33 @@ export default function Create() {
                         {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
                     </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Level</label>
-                        <select
-                            value={data.level}
-                            onChange={(e) => setData('level', e.target.value)}
-                            className={inputClass}
-                        >
-                            <option value="beginner">Beginner</option>
-                            <option value="intermediate">Intermediate</option>
-                            <option value="advanced">Advanced</option>
-                        </select>
-                        {errors.level && <p className="text-red-500 text-xs mt-1">{errors.level}</p>}
-                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Level</label>
+                            <select
+                                value={data.level}
+                                onChange={(e) => setData('level', e.target.value)}
+                                className={inputClass}
+                            >
+                                <option value="beginner">Beginner</option>
+                                <option value="intermediate">Intermediate</option>
+                                <option value="advanced">Advanced</option>
+                            </select>
+                            {errors.level && <p className="text-red-500 text-xs mt-1">{errors.level}</p>}
+                        </div>
 
-                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                        <input
-                            type="checkbox"
-                            checked={data.is_published}
-                            onChange={(e) => setData('is_published', e.target.checked)}
-                        />
-                        Publikasikan course ini
-                    </label>
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Status Publikasi</label>
+                            <select
+                                value={data.is_published ? '1' : '0'}
+                                onChange={(e) => setData('is_published', e.target.value === '1')}
+                                className={inputClass}
+                            >
+                                <option value="0">Draft (Sembunyikan dari User)</option>
+                                <option value="1">Published (Tampilkan ke User)</option>
+                            </select>
+                        </div>
+                    </div>
 
                     <button
                         type="submit"
