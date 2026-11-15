@@ -17,6 +17,9 @@ export default function UpdateProfileInformation({
         useForm({
             name: user.name,
             email: user.email,
+            bank_name: user.bank_name || "",
+            bank_account_number: user.bank_account_number || "",
+            bank_account_holder: user.bank_account_holder || "",
         });
 
     const submit = (e) => {
@@ -25,7 +28,7 @@ export default function UpdateProfileInformation({
         patch(route("profile.update"));
     };
 
-    // Form khusus foto profil (DITAMBAHKAN)
+    // Form khusus foto profil
     const [preview, setPreview] = useState(null);
 
     const {
@@ -58,6 +61,7 @@ export default function UpdateProfileInformation({
             },
         });
     };
+
     return (
         <section className={className}>
             <header>
@@ -70,7 +74,7 @@ export default function UpdateProfileInformation({
                 </p>
             </header>
 
-            <form onSubmit={submit} className="mt-6">
+            <form onSubmit={submit} className="mt-6 space-y-6">
                 {/* Foto Profil, Nama, dan Email */}
                 <div className="rounded-xl border border-[#DCE5EA] bg-[#F3F7F9] p-5">
                     <div className="grid grid-cols-1 items-center gap-8 sm:grid-cols-[150px_minmax(0,1fr)]">
@@ -199,27 +203,131 @@ export default function UpdateProfileInformation({
                                         )}
                                     </div>
                                 )}
-
-                            {/* Tombol Simpan */}
-                            <div className="flex items-center gap-4">
-                                <PrimaryButton disabled={processing}>
-                                    Save
-                                </PrimaryButton>
-
-                                <Transition
-                                    show={recentlySuccessful}
-                                    enter="transition ease-in-out"
-                                    enterFrom="opacity-0"
-                                    leave="transition ease-in-out"
-                                    leaveTo="opacity-0"
-                                >
-                                    <p className="text-sm text-gray-600">
-                                        Saved.
-                                    </p>
-                                </Transition>
-                            </div>
                         </div>
                     </div>
+                </div>
+
+                {/* Informasi Rekening Bank */}
+                <div className="rounded-xl border border-[#DCE5EA] bg-[#F3F7F9] p-5">
+                    <div className="mb-4">
+                        <h3 className="text-base font-semibold text-slate-800">
+                            Informasi Rekening Bank
+                        </h3>
+                        <p className="mt-1 text-xs text-slate-500">
+                            Wajib dilengkapi untuk keperluan pengembalian dana
+                            (refund) apabila sesi mentoring dibatalkan atau
+                            mentor berhalangan.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <div>
+                            <InputLabel
+                                htmlFor="bank_name"
+                                value="Nama Bank / E-Wallet"
+                            />
+
+                            <TextInput
+                                id="bank_name"
+                                list="bank-options"
+                                className="mt-1 block w-full"
+                                value={data.bank_name}
+                                onChange={(e) =>
+                                    setData("bank_name", e.target.value)
+                                }
+                                placeholder="Contoh: BCA / Mandiri / GoPay"
+                            />
+                            <datalist id="bank-options">
+                                <option value="BCA" />
+                                <option value="BNI" />
+                                <option value="BRI" />
+                                <option value="Mandiri" />
+                                <option value="BSI" />
+                                <option value="CIMB Niaga" />
+                                <option value="SeaBank" />
+                                <option value="Bank Jago" />
+                                <option value="GoPay" />
+                                <option value="OVO" />
+                                <option value="DANA" />
+                                <option value="ShopeePay" />
+                            </datalist>
+
+                            <InputError
+                                className="mt-2"
+                                message={errors.bank_name}
+                            />
+                        </div>
+
+                        <div>
+                            <InputLabel
+                                htmlFor="bank_account_number"
+                                value="Nomor Rekening"
+                            />
+
+                            <TextInput
+                                id="bank_account_number"
+                                type="text"
+                                inputMode="numeric"
+                                className="mt-1 block w-full"
+                                value={data.bank_account_number}
+                                onChange={(e) =>
+                                    setData(
+                                        "bank_account_number",
+                                        e.target.value,
+                                    )
+                                }
+                                placeholder="Contoh: 1234567890"
+                            />
+
+                            <InputError
+                                className="mt-2"
+                                message={errors.bank_account_number}
+                            />
+                        </div>
+
+                        <div>
+                            <InputLabel
+                                htmlFor="bank_account_holder"
+                                value="Nama Pemilik Rekening"
+                            />
+
+                            <TextInput
+                                id="bank_account_holder"
+                                type="text"
+                                className="mt-1 block w-full"
+                                value={data.bank_account_holder}
+                                onChange={(e) =>
+                                    setData(
+                                        "bank_account_holder",
+                                        e.target.value,
+                                    )
+                                }
+                                placeholder="Sesuai buku tabungan"
+                            />
+
+                            <InputError
+                                className="mt-2"
+                                message={errors.bank_account_holder}
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Tombol Simpan */}
+                <div className="flex items-center gap-4">
+                    <PrimaryButton disabled={processing}>Save</PrimaryButton>
+
+                    <Transition
+                        show={recentlySuccessful}
+                        enter="transition ease-in-out"
+                        enterFrom="opacity-0"
+                        leave="transition ease-in-out"
+                        leaveTo="opacity-0"
+                    >
+                        <p className="text-sm font-medium text-emerald-600">
+                            Profil & rekening berhasil disimpan.
+                        </p>
+                    </Transition>
                 </div>
             </form>
         </section>
