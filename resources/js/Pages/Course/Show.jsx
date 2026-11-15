@@ -12,17 +12,8 @@ function MaterialContent({ content }) {
         );
     }
 
-    const isHtml = /<\/?[a-z][\s\S]*>/i.test(content);
-    if (isHtml) {
-        return (
-            <div
-                className="text-slate-600 text-lg leading-relaxed space-y-6 prose prose-emerald max-w-none"
-                dangerouslySetInnerHTML={{ __html: content }}
-            />
-        );
-    }
-
-    const sqlStarterRegex = /^(CREATE|SELECT|INSERT|UPDATE|DELETE|ALTER|DROP|WITH|GRANT|REVOKE|BEGIN|COMMIT|ROLLBACK)\b/i;
+    // Ubah literal "\n" dari seeder PHP (kutip tunggal) menjadi baris baru asli
+    const normalizedContent = content.replace(/\\n/g, '\n');
 
     const handleCopy = (text, idx) => {
         navigator.clipboard.writeText(text);
@@ -30,7 +21,66 @@ function MaterialContent({ content }) {
         setTimeout(() => setCopiedIndex(null), 2000);
     };
 
-    const blocks = content.trim().split(/\n\s*\n/);
+    const decodeHtmlEntities = (str) => {
+        return str
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&amp;/g, '&')
+            .replace(/&quot;/g, '"')
+            .replace(/&#039;/g, "'");
+    };
+
+    // Jika konten berasal dari HTML (course lama/seeder)
+    const isHtml = /<\/?[a-z][\s\S]*>/i.test(normalizedContent);
+    if (isHtml) {
+        const parts = normalizedContent.split(/(<pre[\s\S]*?<\/pre>)/gi);
+
+        return (
+            <div className="text-slate-600 text-[17px] leading-relaxed space-y-6">
+                {parts.map((part, index) => {
+                    if (!part || !part.trim()) return null;
+
+                    if (/^<pre[\s\S]*<\/pre>$/i.test(part.trim())) {
+                        const rawCode = part
+                            .replace(/^<pre[^>]*>/i, '')
+                            .replace(/<\/pre>$/i, '')
+                            .replace(/^<code[^>]*>/i, '')
+                            .replace(/<\/code>$/i, '');
+                        const codeText = decodeHtmlEntities(rawCode).trim();
+
+                        return (
+                            <div
+                                key={index}
+                                className="relative group rounded-2xl bg-slate-900 text-slate-100 p-5 overflow-x-auto border border-slate-800 shadow-sm"
+                            >
+                                <button
+                                    type="button"
+                                    onClick={() => handleCopy(codeText, index)}
+                                    className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition"
+                                >
+                                    {copiedIndex === index ? 'Tersalin!' : 'Salin'}
+                                </button>
+                                <pre className="font-mono text-sm leading-relaxed text-emerald-300 pr-14">
+                                    <code>{codeText}</code>
+                                </pre>
+                            </div>
+                        );
+                    }
+
+                    return (
+                        <div
+                            key={index}
+                            className="space-y-4 [&_ul]:list-disc [&_ul]:pl-6 [&_ol]:list-decimal [&_ol]:pl-6 [&_h3]:font-bold [&_h3]:text-slate-900 [&_h4]:font-bold [&_h4]:text-slate-900"
+                            dangerouslySetInnerHTML={{ __html: part }}
+                        />
+                    );
+                })}
+            </div>
+        );
+    }
+
+    const sqlStarterRegex = /^(CREATE|SELECT|INSERT|UPDATE|DELETE|ALTER|DROP|WITH|GRANT|REVOKE|BEGIN|COMMIT|ROLLBACK)\b/i;
+    const blocks = normalizedContent.trim().split(/\n\s*\n/);
 
     return (
         <div className="text-slate-600 text-[17px] leading-relaxed space-y-6">
@@ -38,10 +88,7 @@ function MaterialContent({ content }) {
                 const lines = block.split('\n');
                 const firstLine = lines[0].trim();
 
-                // Cek apakah seluruh blok adalah kueri SQL
                 const isPureCode = sqlStarterRegex.test(firstLine);
-
-                // Cek apakah baris pertama adalah label/judul (diakhiri ':') dan baris berikutnya adalah SQL
                 const hasHeadingAndCode =
                     lines.length > 1 &&
                     firstLine.endsWith(':') &&
@@ -72,7 +119,6 @@ function MaterialContent({ content }) {
                     );
                 }
 
-                // Cek jika blok berisi subjudul di baris pertama diikuti poin-poin daftar
                 if (lines.length > 1 && (firstLine.endsWith(':') || firstLine.endsWith('?'))) {
                     return (
                         <div key={index} className="space-y-2">
@@ -84,7 +130,6 @@ function MaterialContent({ content }) {
                     );
                 }
 
-                // Paragraf biasa dengan mempertahankan baris baru
                 return (
                     <p key={index} className="whitespace-pre-line">
                         {block}
