@@ -41,7 +41,13 @@ class AdminMaterialController extends Controller
             'sequence_order' => 'required|integer|min:1',
         ]);
 
-        $course->courseMaterials()->create($validated);
+        $course->courseMaterials()->create([
+            'section_name' => $validated['section_name'],
+            'title' => $validated['title'],
+            'content_body' => $validated['content'],
+            'content_url' => $validated['video_url'] ?? null,
+            'sequence_order' => $validated['sequence_order'],
+        ]);
 
         return redirect()->route('admin.courses.materials.index', $course->id);
     }
@@ -56,8 +62,8 @@ class AdminMaterialController extends Controller
                 'id' => $material->id,
                 'section_name' => $material->section_name,
                 'title' => $material->title,
-                'content' => $material->content ?? $material->content_body ?? '',
-                'video_url' => $material->video_url ?? $material->content_url ?? '',
+                'content' => $material->content_body ?? '',
+                'video_url' => $material->content_url ?? '',
                 'sequence_order' => $material->sequence_order,
             ],
             'existingSections' => $this->getExistingSections($course),
@@ -74,7 +80,13 @@ class AdminMaterialController extends Controller
             'sequence_order' => 'required|integer|min:1',
         ]);
 
-        $material->update($validated);
+        $material->update([
+            'section_name' => $validated['section_name'],
+            'title' => $validated['title'],
+            'content_body' => $validated['content'],
+            'content_url' => $validated['video_url'] ?? null,
+            'sequence_order' => $validated['sequence_order'],
+        ]);
 
         return redirect()->route('admin.courses.materials.index', $material->course_id);
     }
@@ -89,7 +101,7 @@ class AdminMaterialController extends Controller
 
     private function getExistingSections(Course $course): array
     {
-        return $course->courseMaterials()
+        return CourseMaterial::where('course_id', $course->id)
             ->whereNotNull('section_name')
             ->where('section_name', '!=', '')
             ->distinct()
