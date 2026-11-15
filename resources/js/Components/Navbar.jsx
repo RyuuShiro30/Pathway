@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { usePage, Link } from "@inertiajs/react";
+import NotificationBell from "./NotificationBell";
 
 const MENU = [
     { key: "dashboard", label: "Dashboard", href: "/dashboard" },
@@ -17,6 +18,34 @@ export default function Navbar({ active }) {
     const user = auth?.user;
 
     const [showingDropdown, setShowingDropdown] = useState(false);
+    const dropdownRef = useRef(null);
+
+    useEffect(() => {
+        function handleClickOutside(event) {
+            if (
+                dropdownRef.current &&
+                !dropdownRef.current.contains(event.target)
+            ) {
+                setShowingDropdown(false);
+            }
+        }
+
+        function handleKeyDown(event) {
+            if (event.key === "Escape") {
+                setShowingDropdown(false);
+            }
+        }
+
+        if (showingDropdown) {
+            document.addEventListener("mousedown", handleClickOutside);
+            document.addEventListener("keydown", handleKeyDown);
+        }
+
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [showingDropdown]);
 
     const isMentor = user?.role === "mentor";
 
@@ -86,7 +115,10 @@ export default function Navbar({ active }) {
                     />
                 </div>
 
-                <div className="relative ml-2 flex items-center space-x-3 border-l border-white/20 pl-2">
+                {/* Lonceng notifikasi */}
+                {user && <NotificationBell />}
+
+                <div ref={dropdownRef} className="relative ml-2 flex items-center space-x-3 border-l border-white/20 pl-2">
                     <button
                         type="button"
                         onClick={() => setShowingDropdown(!showingDropdown)}
@@ -120,7 +152,7 @@ export default function Navbar({ active }) {
 
                     {/* Dropdown profil */}
                     {showingDropdown && (
-                        <div className="absolute right-0 top-12 z-50 w-48 rounded-md border border-gray-100 bg-white py-1 shadow-lg">
+                        <div className="absolute right-0 top-full mt-2 z-50 w-48 rounded-md border border-gray-100 bg-white py-1 shadow-lg">
                             <Link
                                 href={route("profile.edit")}
                                 className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
