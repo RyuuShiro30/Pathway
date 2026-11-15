@@ -1,30 +1,31 @@
 <?php
 
 use App\Http\Controllers\Admin\AdminAuthController;
-use App\Http\Controllers\Admin\AdminCourseController;
-use App\Http\Controllers\Admin\AdminMaterialController;
-use App\Http\Controllers\Admin\AdminDashboardController;
 use App\Http\Controllers\Admin\AdminBadgeController;
+use App\Http\Controllers\Admin\AdminCourseController;
+use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminMaterialController;
+use App\Http\Controllers\Admin\AdminMentorController;
 use App\Http\Controllers\Admin\AdminMerchandiseController;
 use App\Http\Controllers\Admin\AdminMerchandiseOrderController;
+use App\Http\Controllers\Admin\AdminPaymentReminderController;
 use App\Http\Controllers\Admin\AdminRefundReportController;
-use App\Http\Controllers\Admin\AdminMentorController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\BadgeController;
-use App\Http\Controllers\MerchandiseController;
 use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ForumController;
 use App\Http\Controllers\JourneyController;
-use App\Http\Controllers\TransactionHistoryController;
 use App\Http\Controllers\MentorDirectoryController;
 use App\Http\Controllers\MentoringSessionController;
 use App\Http\Controllers\MentorProfileController;
 use App\Http\Controllers\MentorRegistrationController;
+use App\Http\Controllers\MerchandiseController;
 use App\Http\Controllers\NoShowReportController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\TransactionHistoryController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -85,7 +86,6 @@ Route::middleware('guest')->prefix('admin')->name('admin.')->group(function () {
         ->name('login.store');
 });
 
-
 /*
 |--------------------------------------------------------------------------
 | Admin Protected Routes (Hanya bisa diakses oleh Admin)
@@ -95,7 +95,7 @@ Route::middleware('guest')->prefix('admin')->name('admin.')->group(function () {
 Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::resource('courses', AdminCourseController::class);
     Route::resource('courses.materials', AdminMaterialController::class)->shallow();
-    
+
     Route::patch('/courses/{course}/toggle-status', [AdminCourseController::class, 'toggleStatus'])
         ->name('courses.toggle-status');
 
@@ -121,6 +121,13 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::patch('/refund-reports/{session}/decide', [AdminRefundReportController::class, 'decide'])
         ->name('refund-reports.decide');
 
+    Route::get('/payment-reminders', [AdminPaymentReminderController::class, 'index'])
+        ->name('payment-reminders.index');
+    Route::post('/payment-reminders/remind-all', [AdminPaymentReminderController::class, 'remindAll'])
+        ->name('payment-reminders.remind-all');
+    Route::match(['post', 'patch'], '/payment-reminders/{session}/remind', [AdminPaymentReminderController::class, 'remind'])
+        ->name('payment-reminders.remind');
+
     Route::get('/mentors', [AdminMentorController::class, 'index'])
         ->name('mentors.index');
     Route::patch('/mentors/{mentorProfile}/verify', [AdminMentorController::class, 'verify'])
@@ -130,7 +137,6 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::post('/mentors/{mentorProfile}/unsuspend', [AdminMentorController::class, 'unsuspend'])
         ->name('mentors.unsuspend');
 });
-
 
 /*
 |--------------------------------------------------------------------------

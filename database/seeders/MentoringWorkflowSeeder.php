@@ -686,6 +686,56 @@ class MentoringWorkflowSeeder extends Seeder
             ]
         );
 
+        // Skenario 29: Sesi berbayar selesai belum dilunasi (sudah diingatkan 25 jam lalu)
+        MentoringSession::updateOrCreate(
+            [
+                'student_id' => $mainStudent->id,
+                'mentor_id' => $mainMentor->id,
+                'notes_from_student' => 'SKENARIO-29: Konsultasi Microservices Architecture (Diingatkan 25 Jam Lalu)',
+            ],
+            [
+                'status' => 'selesai',
+                'schedule_time' => $now->copy()->subDays(4)->setTime(10, 0),
+                'end_time' => $now->copy()->subDays(4)->setTime(11, 0),
+                'duration_hours' => 1,
+                'notes_from_mentor' => 'Diskusi arsitektur microservices dan message broker.',
+                'proof_file' => 'session-proofs/sample-session.png',
+                'is_free_session' => false,
+                'price_snapshot' => 100000,
+                'payment_dp_proof' => 'payment-proofs/sample-dp.png',
+                'payment_dp_status' => 'terverifikasi',
+                'payment_final_proof' => null,
+                'payment_final_status' => 'belum_dibayar',
+                'payment_final_reminded_at' => $now->copy()->subHours(25),
+                'discord_link' => 'https://discord.gg/pathway-budi',
+            ]
+        );
+
+        // Skenario 30: Sesi berbayar selesai belum dilunasi (baru diingatkan 2 jam lalu)
+        MentoringSession::updateOrCreate(
+            [
+                'student_id' => $mainStudent->id,
+                'mentor_id' => $mainMentor->id,
+                'notes_from_student' => 'SKENARIO-30: Review Performance Indexing MySQL (Diingatkan 2 Jam Lalu)',
+            ],
+            [
+                'status' => 'selesai',
+                'schedule_time' => $now->copy()->subDays(5)->setTime(14, 0),
+                'end_time' => $now->copy()->subDays(5)->setTime(15, 0),
+                'duration_hours' => 1,
+                'notes_from_mentor' => 'Review query dan pembuatan composite index.',
+                'proof_file' => 'session-proofs/sample-session.png',
+                'is_free_session' => false,
+                'price_snapshot' => 100000,
+                'payment_dp_proof' => 'payment-proofs/sample-dp.png',
+                'payment_dp_status' => 'terverifikasi',
+                'payment_final_proof' => null,
+                'payment_final_status' => 'belum_dibayar',
+                'payment_final_reminded_at' => $now->copy()->subHours(2),
+                'discord_link' => 'https://discord.gg/pathway-budi',
+            ]
+        );
+
         $this->command->info('MentoringWorkflowSeeder berhasil dijalankan: 19 skenario alur mentoring siap ditest.');
     }
 }
