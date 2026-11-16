@@ -51,6 +51,7 @@ class MentoringSessionController extends Controller
                 },
             ])
             ->with('noShowReport')
+            ->with('review:id,session_id,rating,feedback,status,created_at')
             ->select([
                 'id',
                 'mentor_id',
@@ -109,6 +110,16 @@ class MentoringSessionController extends Controller
                         : null,
                     'can_report_no_show' => $session->canReportNoShow(),
                     'no_show_report' => $session->noShowReportPayloadFor((int) Auth::id()),
+                    'has_reviewed' => $session->review !== null,
+                    'review' => $session->review
+                        ? [
+                            'id' => $session->review->id,
+                            'rating' => $session->review->rating,
+                            'feedback' => $session->review->feedback,
+                            'status' => $session->review->status,
+                            'created_at' => $session->review->created_at?->copy()->setTimezone('UTC')->toISOString(),
+                        ]
+                        : null,
 
                     'reschedule_requests' => $session->rescheduleRequests
                         ->map(static function (RescheduleRequest $request): array {
@@ -1836,7 +1847,10 @@ class MentoringSessionController extends Controller
             }
 
             $session->student?->notify(
-                new SessionEvent('Sesi mentoring Anda sudah selesai.', '/bookings')
+                new SessionEvent(
+                    'Menunggu Ulasan: sesi mentoring Anda sudah selesai. Beri rating dan ulasan untuk mentor.',
+                    '/sessions/'.$session->id.'/review'
+                )
             );
         });
 

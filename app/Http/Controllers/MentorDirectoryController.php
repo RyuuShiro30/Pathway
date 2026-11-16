@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\MentorProfile;
+use App\Models\Review;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -19,8 +20,13 @@ class MentorDirectoryController extends Controller
         $minRating = $request->input('min_rating');
 
         $mentors = MentorProfile::with('user')
-            ->withCount('reviews')
-            ->withAvg('reviews', 'rating')
+            ->withCount([
+                'reviews as reviews_count' => fn ($query) => $query->approved(),
+            ])
+            ->withAvg(
+                ['reviews as reviews_avg_rating' => fn ($query) => $query->approved()],
+                'rating'
+            )
             ->where('verification_status', 'verified')
             ->where('is_suspended', false)
             ->when($search, function ($query) use ($search) {
@@ -50,17 +56,10 @@ class MentorDirectoryController extends Controller
                 $query->where('price_per_session', '<=', $maxPrice);
             })
             ->when($minRating !== null && $minRating !== '', function ($query) use ($minRating) {
-                if ((float) $minRating === 5.0) {
-                    $query->whereRaw(
-                        'COALESCE((SELECT AVG(rating) FROM reviews WHERE reviews.mentor_id = mentor_profiles.user_id), mentor_profiles.avg_rating) >= ?',
-                        [5]
-                    );
-                } else {
-                    $query->whereRaw(
-                        'COALESCE((SELECT AVG(rating) FROM reviews WHERE reviews.mentor_id = mentor_profiles.user_id), mentor_profiles.avg_rating) >= ?',
-                        [$minRating]
-                    );
-                }
+                $query->whereRaw(
+                    'COALESCE((SELECT AVG(rating) FROM reviews WHERE reviews.mentor_id = mentor_profiles.user_id AND reviews.status = ?), 0) >= ?',
+                    [Review::STATUS_DISETUJUI, $minRating]
+                );
             })
             ->paginate(6)
             ->withQueryString();
@@ -68,19 +67,19 @@ class MentorDirectoryController extends Controller
         $mentors->through(function ($mentor) {
             $mentor->avg_rating = $mentor->reviews_avg_rating !== null
                 ? round((float) $mentor->reviews_avg_rating, 1)
-                : (float) ($mentor->avg_rating ?? 0);
+                : 0.0;
 
             return $mentor;
         });
 
-       $expertises = MentorProfile::where('verification_status', 'verified')
-        ->where('is_suspended', false)
-        ->whereNotNull('expertise')
-        ->whereRaw("TRIM(expertise) != ''")
-        ->selectRaw('MIN(TRIM(expertise)) as expertise')
-        ->groupByRaw('LOWER(TRIM(expertise))')
-        ->orderBy('expertise')
-        ->pluck('expertise');
+        $expertises = MentorProfile::where('verification_status', 'verified')
+            ->where('is_suspended', false)
+            ->whereNotNull('expertise')
+            ->whereRaw("TRIM(expertise) != ''")
+            ->selectRaw('MIN(TRIM(expertise)) as expertise')
+            ->groupByRaw('LOWER(TRIM(expertise))')
+            ->orderBy('expertise')
+            ->pluck('expertise');
 
         return Inertia::render('Mentors/Index', [
             'mentors' => $mentors,
@@ -98,19 +97,36 @@ class MentorDirectoryController extends Controller
     public function show($id)
     {
         $mentor = MentorProfile::with([
-            'user',
+            'user:id,name,photo_path',
             'certificates',
-            'reviews.student',
+            'reviews' => function ($query) {
+                $query->approved()
+                    ->select([
+                        'id',
+                        'mentor_id',
+                        'student_id',
+                        'rating',
+                        'feedback',
+                        'created_at',
+                    ])
+                    ->latest('created_at');
+            },
+            'reviews.student:id,name',
             'portfolios',
         ])
-            ->withCount('reviews')
-            ->withAvg('reviews', 'rating')
+            ->withCount([
+                'reviews as reviews_count' => fn ($query) => $query->approved(),
+            ])
+            ->withAvg(
+                ['reviews as reviews_avg_rating' => fn ($query) => $query->approved()],
+                'rating'
+            )
             ->where('verification_status', 'verified')
             ->findOrFail($id);
 
         $mentor->avg_rating = $mentor->reviews_avg_rating !== null
             ? round((float) $mentor->reviews_avg_rating, 1)
-            : (float) ($mentor->avg_rating ?? 0);
+            : 0.0;
 
         return Inertia::render('Mentors/Show', [
             'mentor' => $mentor,
