@@ -100,6 +100,22 @@ export default function Dashboard({ statistics, reviewQueue, monitoring }) {
                                 icon={<WarningIcon />}
                                 href="/admin/no-show-reports"
                             />
+
+                            <ReviewCard
+                                title="Sesi Belum Selesai"
+                                description="Berjalan atau sudah lewat jadwal"
+                                value={reviewQueue.unresolved_sessions}
+                                icon={<CalendarIcon />}
+                                href="/admin/sessions?status=belum_selesai"
+                            />
+
+                            <ReviewCard
+                                title="Mentor Disuspend"
+                                description="Suspend aktif yang perlu dipantau"
+                                value={reviewQueue.active_suspensions}
+                                icon={<ShieldIcon />}
+                                href="/admin/mentors?status=suspended"
+                            />
                         </div>
                     </section>
 

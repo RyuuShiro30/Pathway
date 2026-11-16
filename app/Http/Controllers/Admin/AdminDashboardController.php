@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Models\MentoringSession;
 use App\Models\MentorProfile;
 use App\Models\MentorSuspension;
-use App\Models\MentoringSession;
 use App\Models\NoShowReport;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -40,6 +40,10 @@ class AdminDashboardController extends Controller
                 'status',
                 'disanggah'
             )->count(),
+
+            'unresolved_sessions' => MentoringSession::unresolved()->count(),
+
+            'active_suspensions' => MentorSuspension::active()->count(),
         ];
 
         // Monitoring
