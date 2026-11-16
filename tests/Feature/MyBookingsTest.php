@@ -209,7 +209,7 @@ class MyBookingsTest extends TestCase
             ->assertInertia(fn (AssertableInertia $page) => $page
                 ->component('Student/MyBookings', false)
                 ->where('bookings.0.id', $awaitingSession->id)
-                ->where('bookings.0.refund_proof_path', 'refund-proofs/receipt.pdf')
+                ->where('bookings.0.refund_proof_path', route('session.proof', ['id' => $awaitingSession->id, 'type' => 'refund']))
                 ->where('bookings.0.refund_proof_uploaded_at', '2026-10-14T15:30:00.000000Z')
                 ->where('bookings.1.id', $waitingSession->id)
                 ->where('bookings.1.refund_proof_path', null)

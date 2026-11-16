@@ -10,11 +10,14 @@ use App\Models\Review;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 class MentoringWorkflowSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->ensureDummyProofFilesExist();
+
         $now = Carbon::now();
 
         // 1. Admin Akun
@@ -824,5 +827,40 @@ class MentoringWorkflowSeeder extends Seeder
         );
 
         $this->command->info('MentoringWorkflowSeeder berhasil dijalankan: 19 skenario alur mentoring siap ditest.');
+    }
+
+    protected function ensureDummyProofFilesExist(): void
+    {
+        $localDisk = Storage::disk('local');
+
+        $dummyPng = null;
+        if (function_exists('imagecreatetruecolor')) {
+            $img = imagecreatetruecolor(200, 200);
+            if ($img !== false) {
+                $bg = imagecolorallocate($img, 99, 102, 241);
+                imagefill($img, 0, 0, $bg);
+                ob_start();
+                imagepng($img);
+                $dummyPng = ob_get_clean();
+                imagedestroy($img);
+            }
+        }
+        $dummyPng = $dummyPng ?: base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==');
+
+        $dummyFiles = [
+            'payment-proofs/sample-dp.png',
+            'payment-proofs/sample-final-payment.png',
+            'payment-proofs/sample-final-payment-rejected.png',
+            'session-proofs/sample-session.png',
+            'refund-proofs/sample-refund.png',
+            'no-show-reports/sample-evidence.png',
+            'no-show-responses/sample-response.png',
+        ];
+
+        foreach ($dummyFiles as $file) {
+            if (! $localDisk->exists($file)) {
+                $localDisk->put($file, $dummyPng);
+            }
+        }
     }
 }

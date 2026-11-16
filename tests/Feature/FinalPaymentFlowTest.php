@@ -16,6 +16,14 @@ class FinalPaymentFlowTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Storage::fake('public');
+        Storage::fake('local');
+    }
+
     public function test_other_student_cannot_upload_proof_to_another_students_session_returns_404(): void
     {
         Storage::fake('public');
@@ -133,7 +141,7 @@ class FinalPaymentFlowTest extends TestCase
         $fresh = $session->fresh();
         $this->assertSame('menunggu_verifikasi', $fresh->payment_final_status);
         $this->assertNotNull($fresh->payment_final_proof);
-        Storage::disk('public')->assertExists($fresh->payment_final_proof);
+        Storage::disk('local')->assertExists($fresh->payment_final_proof);
 
         Notification::assertSentTo(
             $mentor,
@@ -367,4 +375,3 @@ class FinalPaymentFlowTest extends TestCase
         ], $overrides));
     }
 }
-

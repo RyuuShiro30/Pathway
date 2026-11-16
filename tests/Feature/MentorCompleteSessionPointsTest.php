@@ -7,7 +7,6 @@ use App\Models\MentorProfile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -21,6 +20,7 @@ class MentorCompleteSessionPointsTest extends TestCase
         parent::setUp();
 
         Storage::fake('public');
+        Storage::fake('local');
         Notification::fake();
     }
 

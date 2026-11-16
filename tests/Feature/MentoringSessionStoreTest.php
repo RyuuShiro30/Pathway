@@ -16,6 +16,14 @@ class MentoringSessionStoreTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Storage::fake('public');
+        Storage::fake('local');
+    }
+
     public function test_student_can_book_free_slot_with_zero_price_snapshot(): void
     {
         [$mentor] = $this->createMentorWithAvailability([
@@ -945,7 +953,7 @@ class MentoringSessionStoreTest extends TestCase
             // expected exception rethrown
         }
 
-        $files = Storage::disk('public')->allFiles('payment-proofs');
+        $files = Storage::disk('local')->allFiles('payment-proofs');
         $this->assertEmpty($files);
         $this->assertDatabaseMissing('mentoring_sessions', [
             'mentor_id' => $mentor->id,

@@ -173,8 +173,12 @@ class AdminRefundReportController extends Controller
             'dp_amount' => $session->price_snapshot ? (int) ceil(((float) $session->price_snapshot) * 0.5) : 0,
             'cancelled_by' => $session->cancelled_by,
             'cancellation_reason' => $session->cancellation_reason,
-            'payment_dp_proof' => $this->resolveFileUrl($session->payment_dp_proof),
-            'refund_proof' => $this->resolveFileUrl($session->refund_proof),
+            'payment_dp_proof' => $session->payment_dp_proof
+                ? route('session.proof', ['id' => $session->id, 'type' => 'dp'])
+                : null,
+            'refund_proof' => $session->refund_proof
+                ? route('session.proof', ['id' => $session->id, 'type' => 'refund'])
+                : null,
             'refund_proof_uploaded_at' => $session->refund_proof_uploaded_at?->format('d M Y, H:i'),
             'refund_deadline' => $session->refund_deadline?->format('d M Y, H:i'),
             'refund_admin_note' => $session->refund_admin_note,
@@ -200,18 +204,5 @@ class AdminRefundReportController extends Controller
                 'is_suspended' => (bool) ($session->mentor?->mentorProfile?->is_suspended ?? false),
             ],
         ];
-    }
-
-    private function resolveFileUrl(?string $path): ?string
-    {
-        if (! $path) {
-            return null;
-        }
-
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://') || str_starts_with($path, '/storage/')) {
-            return $path;
-        }
-
-        return '/storage/'.ltrim($path, '/');
     }
 }
