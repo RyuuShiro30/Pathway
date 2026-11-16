@@ -13,3 +13,4 @@ Schedule::command('no-show:finalize')->everyFiveMinutes();
 Schedule::command('mentors:check-suspensions')->everyFiveMinutes();
 Schedule::command('refund:auto-confirm')->hourly();
 Schedule::command('refund-reschedule:expire-offers')->everyFiveMinutes();
+Schedule::command('reviews:auto-rate')->daily();

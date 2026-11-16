@@ -6,6 +6,7 @@ use App\Models\MentoringSession;
 use App\Models\Review;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class ReviewController extends Controller
@@ -22,7 +23,7 @@ class ReviewController extends Controller
 
         if (Review::where('session_id', $session->id)->exists()) {
             return redirect()
-                ->route('mentors.show', $session->mentor->mentorProfile->id)
+                ->route('dashboard')
                 ->with('error', 'Sesi ini sudah memiliki ulasan.');
         }
 
@@ -51,37 +52,45 @@ class ReviewController extends Controller
             abort(403);
         }
 
-        if (Review::where('session_id', $session->id)->exists()) {
-            return back()->with('error', 'Sesi ini sudah memiliki ulasan.');
-        }
-
         $validated = $request->validate([
             'rating' => ['required', 'integer', 'min:1', 'max:5'],
             'feedback' => ['nullable', 'string', 'max:1000'],
+        ], [
+            'rating.required' => 'Rating wajib dipilih.',
+            'rating.integer' => 'Rating harus berupa angka.',
+            'rating.min' => 'Rating minimal 1 bintang.',
+            'rating.max' => 'Rating maksimal 5 bintang.',
+            'feedback.max' => 'Ulasan maksimal 1000 karakter.',
         ]);
 
-        Review::create([
-            'session_id' => $session->id,
-            'student_id' => $session->student_id,
-            'mentor_id' => $session->mentor_id,
-            'rating' => $validated['rating'],
-            'feedback' => $validated['feedback'] ?? null,
-        ]);
+        $created = DB::transaction(function () use ($session, $validated): bool {
+            MentoringSession::query()
+                ->whereKey($session->id)
+                ->lockForUpdate()
+                ->first();
 
-        $mentorProfile = \App\Models\MentorProfile::where(
-            'user_id',
-            $session->mentor_id
-        )->firstOrFail();
+            if (Review::where('session_id', $session->id)->exists()) {
+                return false;
+            }
 
-        $averageRating = Review::where('mentor_id', $session->mentor_id)
-            ->avg('rating');
+            Review::create([
+                'session_id' => $session->id,
+                'student_id' => $session->student_id,
+                'mentor_id' => $session->mentor_id,
+                'rating' => $validated['rating'],
+                'feedback' => $validated['feedback'] ?? null,
+                'status' => Review::STATUS_MENUNGGU,
+            ]);
 
-        $mentorProfile->update([
-            'avg_rating' => round((float) $averageRating, 2),
-        ]);
+            return true;
+        });
+
+        if (! $created) {
+            return back()->with('error', 'Sesi ini sudah memiliki ulasan.');
+        }
 
         return redirect()
-            ->route('mentors.show', $mentorProfile->id)
-            ->with('success', 'Rating dan ulasan berhasil dikirim.');
+            ->route('dashboard')
+            ->with('success', 'Ulasan berhasil dikirim dan menunggu moderasi admin.');
     }
 }

@@ -12,6 +12,7 @@ export default function AdminSidebar() {
         { name: 'Kelola Mahasiswa', path: '/admin/students', icon: '👥' },
         { name: 'Kelola Mentor', path: '/admin/mentors', icon: '👨‍🏫' },
         { name: 'Sesi Bimbingan', path: '/admin/sessions', icon: '🗓️' },
+        { name: 'Moderasi Ulasan', path: '/admin/reviews', icon: '⭐' },
         {
             name: 'Laporan No-Show',
             path: '/admin/no-show-reports',
