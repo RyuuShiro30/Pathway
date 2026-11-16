@@ -31,7 +31,7 @@ class HandleInertiaRequests extends Middleware
     {
         $user = $request->user();
 
-        return [
+        $shared = [
             ...parent::share($request),
             'auth' => [
                 'user' => $user ? [
@@ -45,6 +45,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
             ],
             'notifications' => fn () => $user
                 ? [
@@ -52,5 +53,11 @@ class HandleInertiaRequests extends Middleware
                 ]
                 : null,
         ];
+
+        if ($user && $user->role === 'admin') {
+            $shared['disputed_no_show_count'] = fn () => \App\Models\NoShowReport::where('status', 'disanggah')->count();
+        }
+
+        return $shared;
     }
 }

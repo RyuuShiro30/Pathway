@@ -165,6 +165,7 @@ class AdminNoShowReportController extends Controller
             'finalized_at' => $report->finalized_at?->format('d M Y, H:i'),
             'admin_note' => $report->admin_note,
             'decided_at' => $report->decided_at?->format('d M Y, H:i'),
+            'created_at' => $report->created_at?->format('d M Y, H:i'),
             'decided_by' => $report->decidedBy ? [
                 'id' => $report->decidedBy->id,
                 'name' => $report->decidedBy->name,
