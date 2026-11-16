@@ -13,6 +13,8 @@ export default function AdminSidebar() {
         { name: 'Kelola Mentor', path: '/admin/mentors', icon: '👨‍🏫' },
         { name: 'Sesi Bimbingan', path: '/admin/sessions', icon: '🗓️' },
         { name: 'Moderasi Ulasan', path: '/admin/reviews', icon: '⭐' },
+        { name: 'Moderasi Journey', path: '/admin/journeys', icon: '📝' },
+        { name: 'Laporan Journey', path: '/admin/journey-reports', icon: '🚩' },
         {
             name: 'Laporan No-Show',
             path: '/admin/no-show-reports',
