@@ -628,6 +628,40 @@ export default function Dashboard({
                     </AlertBanner>
                 )}
 
+                {/* ALERT LINK ROOM DISCORD BELUM DIISI ADMIN */}
+                {!mentorProfile?.is_suspended &&
+                    !mentorProfile?.discord_room_link && (
+                        <AlertBanner
+                            variant="warning"
+                            icon={
+                                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                                    <svg
+                                        className="h-5 w-5"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            strokeWidth="2"
+                                            d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-8.89a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                                        />
+                                    </svg>
+                                </div>
+                            }
+                        >
+                            <div>
+                                <span className="font-bold">
+                                    Link room Discord Anda belum diisi.
+                                </span>{" "}
+                                Admin perlu mengisi link room Discord Anda
+                                sebelum Anda dapat menerima pengajuan booking.
+                                Menolak pengajuan tetap bisa dilakukan.
+                            </div>
+                        </AlertBanner>
+                    )}
+
                 {/* BANNER "TINDAKAN SEGERA" */}
                 {hasUrgentActions && (
                     <AlertBanner

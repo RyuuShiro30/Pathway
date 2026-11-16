@@ -13,6 +13,17 @@ export default function MentorIndex({ mentors, filters }) {
         note: "",
     });
 
+    const {
+        data: discordForm,
+        setData: setDiscordField,
+        patch: patchDiscord,
+        processing: discordProcessing,
+        errors: discordErrors,
+        reset: resetDiscord,
+    } = useForm({
+        discord_room_link: "",
+    });
+
     const handleFilter = (status) => {
         router.get("/admin/mentors", { status, search }, { preserveState: true });
     };
@@ -32,6 +43,27 @@ export default function MentorIndex({ mentors, filters }) {
         reset();
         setSelectedMentor(mentor);
         setModalAction(action);
+    };
+
+    const openDiscordModal = (mentor) => {
+        resetDiscord();
+        setDiscordField("discord_room_link", mentor.discord_room_link ?? "");
+        setSelectedMentor(mentor);
+        setModalAction("discord");
+    };
+
+    const submitDiscord = (e) => {
+        e.preventDefault();
+        if (!selectedMentor) return;
+
+        patchDiscord(`/admin/mentors/${selectedMentor.id}/discord`, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setSelectedMentor(null);
+                setModalAction(null);
+                resetDiscord();
+            },
+        });
     };
 
     const submitAction = (e) => {
@@ -122,13 +154,14 @@ export default function MentorIndex({ mentors, filters }) {
                                     <th className="px-6 py-4">Tarif / Sesi</th>
                                     <th className="px-6 py-4">Verifikasi</th>
                                     <th className="px-6 py-4">Status Akun</th>
+                                    <th className="px-6 py-4">Link Discord</th>
                                     <th className="px-6 py-4 text-right">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
                                 {mentors.length === 0 ? (
                                     <tr>
-                                        <td colSpan="6" className="px-6 py-10 text-center text-slate-400">
+                                        <td colSpan="7" className="px-6 py-10 text-center text-slate-400">
                                             Data mentor tidak ditemukan.
                                         </td>
                                     </tr>
@@ -167,7 +200,31 @@ export default function MentorIndex({ mentors, filters }) {
                                                     </span>
                                                 )}
                                             </td>
+                                            <td className="px-6 py-4">
+                                                {mentor.discord_room_link ? (
+                                                    <a
+                                                        href={mentor.discord_room_link}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="block max-w-52 truncate text-xs font-medium text-[#6594B1] hover:underline"
+                                                    >
+                                                        {mentor.discord_room_link}
+                                                    </a>
+                                                ) : (
+                                                    <span className="inline-flex rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+                                                        Belum diisi
+                                                    </span>
+                                                )}
+                                            </td>
                                             <td className="px-6 py-4 text-right space-x-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openDiscordModal(mentor)}
+                                                    className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-semibold text-sky-700 hover:bg-sky-100"
+                                                >
+                                                    Atur Link
+                                                </button>
+
                                                 {mentor.verification_status === "pending" && (
                                                     <>
                                                         <button
@@ -214,7 +271,7 @@ export default function MentorIndex({ mentors, filters }) {
                 </div>
             </div>
 
-            {selectedMentor && (
+            {selectedMentor && modalAction !== "discord" && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
                     <form
                         onSubmit={submitAction}
@@ -274,6 +331,64 @@ export default function MentorIndex({ mentors, filters }) {
                                 }`}
                             >
                                 {processing ? "Memproses..." : "Konfirmasi"}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            )}
+            {selectedMentor && modalAction === "discord" && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+                    <form
+                        onSubmit={submitDiscord}
+                        className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+                    >
+                        <h3 className="text-lg font-bold text-slate-900">
+                            Link Room Discord: {selectedMentor.name}
+                        </h3>
+
+                        <p className="mt-2 text-sm text-slate-500">
+                            Mentor belum dapat menerima pengajuan booking selama
+                            link ini masih kosong.
+                        </p>
+
+                        <div className="mt-4">
+                            <label className="block text-sm font-medium text-slate-700">
+                                Link Room Discord <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={discordForm.discord_room_link}
+                                onChange={(e) =>
+                                    setDiscordField("discord_room_link", e.target.value)
+                                }
+                                placeholder="https://discord.gg/nama-room"
+                                className="mt-1 w-full rounded-xl border-slate-300 text-sm focus:border-[#6594B1] focus:ring-[#6594B1]"
+                            />
+                            {discordErrors.discord_room_link && (
+                                <p className="mt-1 text-xs text-red-600">
+                                    {discordErrors.discord_room_link}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="mt-6 flex justify-end gap-2">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setSelectedMentor(null);
+                                    setModalAction(null);
+                                    resetDiscord();
+                                }}
+                                className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
+                            >
+                                Batal
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={discordProcessing}
+                                className="rounded-xl bg-[#6594B1] px-4 py-2 text-sm font-semibold text-white hover:bg-[#557F99]"
+                            >
+                                {discordProcessing ? "Menyimpan..." : "Simpan Link"}
                             </button>
                         </div>
                     </form>

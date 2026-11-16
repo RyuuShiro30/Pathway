@@ -31,10 +31,10 @@ class AdminMentorController extends Controller
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('expertise', 'ilike', "%{$search}%")
-                  ->orWhereHas('user', function ($uq) use ($search) {
-                      $uq->where('name', 'ilike', "%{$search}%")
-                         ->orWhere('email', 'ilike', "%{$search}%");
-                  });
+                    ->orWhereHas('user', function ($uq) use ($search) {
+                        $uq->where('name', 'ilike', "%{$search}%")
+                            ->orWhere('email', 'ilike', "%{$search}%");
+                    });
             });
         }
 
@@ -50,6 +50,7 @@ class AdminMentorController extends Controller
             'verification_status' => $profile->verification_status,
             'is_suspended' => (bool) $profile->is_suspended,
             'portfolio_url' => $profile->portfolio_url,
+            'discord_room_link' => $profile->discord_room_link,
             'certificates_count' => $profile->certificates->count(),
         ]);
 
@@ -84,6 +85,29 @@ class AdminMentorController extends Controller
         });
 
         return back()->with('success', 'Status verifikasi mentor berhasil diperbarui.');
+    }
+
+    public function updateDiscord(Request $request, MentorProfile $mentorProfile)
+    {
+        $validated = $request->validate([
+            'discord_room_link' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:~^https?://(discord\.gg|discord\.com/invite)/[A-Za-z0-9_\-]+/?$~i',
+            ],
+        ], [
+            'discord_room_link.required' => 'Link room Discord wajib diisi.',
+            'discord_room_link.string' => 'Link room Discord harus berupa teks.',
+            'discord_room_link.max' => 'Link room Discord maksimal 255 karakter.',
+            'discord_room_link.regex' => 'Format link tidak valid. Gunakan tautan invite Discord, contoh: https://discord.gg/room-mentor.',
+        ]);
+
+        $mentorProfile->update([
+            'discord_room_link' => $validated['discord_room_link'],
+        ]);
+
+        return back()->with('success', 'Link room Discord mentor berhasil disimpan.');
     }
 
     public function suspend(Request $request, MentorProfile $mentorProfile)

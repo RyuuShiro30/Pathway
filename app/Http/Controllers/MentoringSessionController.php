@@ -1157,6 +1157,12 @@ class MentoringSessionController extends Controller
                 ]);
             }
 
+            if (blank($mentorProfile->discord_room_link)) {
+                return redirect()->back()->withErrors([
+                    'message' => 'Link room Discord Anda belum diisi oleh admin, jadi pengajuan belum dapat diterima. Hubungi admin untuk mengisi link room-nya. Anda masih bisa menolak pengajuan.',
+                ]);
+            }
+
             $session->update([
                 'status' => 'dikonfirmasi',
                 'discord_link' => $mentorProfile?->discord_room_link,
