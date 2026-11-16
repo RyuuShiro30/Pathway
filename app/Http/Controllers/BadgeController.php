@@ -6,6 +6,7 @@ use App\Models\BadgeInventory;
 use App\Models\PointTransaction;
 use App\Models\User;
 use App\Models\UserBadge;
+use App\Services\PointService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -14,28 +15,9 @@ use Inertia\Response;
 
 class BadgeController extends Controller
 {
-    /**
-     * Menghitung saldo poin mentor.
-     */
-    private function getPointsBalance(int $userId): int
-    {
-        $balance = PointTransaction::query()
-            ->where('user_id', $userId)
-            ->selectRaw("
-                COALESCE(SUM(
-                    CASE
-                        WHEN transaction_type IN ('earned_mentoring', 'admin_bonus')
-                            THEN amount
-                        WHEN transaction_type IN ('redeemed_badge', 'redeemed_merchandise')
-                            THEN -amount
-                        ELSE 0
-                    END
-                ), 0) AS balance
-            ")
-            ->value('balance');
-
-        return (int) $balance;
-    }
+    public function __construct(
+        private readonly PointService $pointService
+    ) {}
 
     /**
      * Menampilkan katalog badge dan saldo poin mentor.
@@ -45,7 +27,7 @@ class BadgeController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        $pointsBalance = $this->getPointsBalance($user->id);
+        $pointsBalance = $this->pointService->balanceFor($user->id);
 
         $badges = BadgeInventory::query()
             ->withExists([
@@ -98,7 +80,7 @@ class BadgeController extends Controller
 
                 // Hitung saldo setelah memperhitungkan
                 // penukaran badge maupun merchandise.
-                $balance = $this->getPointsBalance($userId);
+                $balance = $this->pointService->balanceFor($userId);
 
                 if ($balance < $badge->point_cost) {
                     throw new \RuntimeException(

@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\AdminMerchandiseController;
 use App\Http\Controllers\Admin\AdminMerchandiseOrderController;
 use App\Http\Controllers\Admin\AdminNoShowReportController;
 use App\Http\Controllers\Admin\AdminPaymentReminderController;
+use App\Http\Controllers\Admin\AdminPointController;
 use App\Http\Controllers\Admin\AdminRefundReportController;
 use App\Http\Controllers\Admin\AdminReviewController;
 use App\Http\Controllers\Admin\AdminSessionController;
@@ -31,6 +32,7 @@ use App\Http\Controllers\NoShowReportController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ReviewController;
+use App\Http\Controllers\RewardController;
 use App\Http\Controllers\TransactionHistoryController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
@@ -119,6 +121,12 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::put('/merchandise-orders/{order}', [AdminMerchandiseOrderController::class, 'update'])
         ->whereNumber('order')
         ->name('merchandise-orders.update');
+
+    Route::get('/point-bonuses', [AdminPointController::class, 'index'])
+        ->name('point-bonuses.index');
+
+    Route::post('/point-bonuses', [AdminPointController::class, 'store'])
+        ->name('point-bonuses.store');
 
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])
         ->name('dashboard');
@@ -342,6 +350,12 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/mentor/merchandise/history', [MerchandiseController::class, 'history'])
             ->name('mentor.merchandise.history');
+
+        Route::get('/mentor/rewards', [RewardController::class, 'index'])
+            ->name('mentor.rewards.index');
+
+        Route::get('/mentor/points/history', [RewardController::class, 'history'])
+            ->name('mentor.points.history');
     });
 
     // Booking Mentoring

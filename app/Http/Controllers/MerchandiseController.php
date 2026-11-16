@@ -6,6 +6,7 @@ use App\Models\MerchandiseInventory;
 use App\Models\PointTransaction;
 use App\Models\User;
 use App\Models\UserMerchandise;
+use App\Services\PointService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,6 +17,10 @@ use Inertia\Response;
 
 class MerchandiseController extends Controller
 {
+    public function __construct(
+        private readonly PointService $pointService
+    ) {}
+
     /**
      * Menampilkan katalog merchandise dan saldo poin mentor.
      */
@@ -24,20 +29,6 @@ class MerchandiseController extends Controller
         /** @var User $user */
         $user = Auth::user();
 
-        $pointsBalance = $user->pointTransactions()
-            ->selectRaw("
-                COALESCE(SUM(
-                    CASE
-                        WHEN transaction_type IN ('earned_mentoring', 'admin_bonus')
-                            THEN amount
-                        WHEN transaction_type IN ('redeemed_badge', 'redeemed_merchandise')
-                            THEN -amount
-                        ELSE 0
-                    END
-                ), 0) AS balance
-            ")
-            ->value('balance');
-
         $merchandises = MerchandiseInventory::query()
             ->where('stock', '>', 0)
             ->orderBy('point_cost')
@@ -45,7 +36,7 @@ class MerchandiseController extends Controller
 
         return Inertia::render('Mentor/Merchandise/Index', [
             'merchandises' => $merchandises,
-            'pointsBalance' => (int) $pointsBalance,
+            'pointsBalance' => $this->pointService->balanceFor($user->id),
         ]);
     }
 
@@ -86,23 +77,9 @@ class MerchandiseController extends Controller
 
             $totalPoints = $merchandise->point_cost * $validated['quantity'];
 
-            // Hitung saldo poin mentor.
-            $pointsBalance = PointTransaction::query()
-                ->where('user_id', $userId)
-                ->selectRaw("
-                    COALESCE(SUM(
-                        CASE
-                            WHEN transaction_type IN ('earned_mentoring', 'admin_bonus')
-                                THEN amount
-                            WHEN transaction_type IN ('redeemed_badge', 'redeemed_merchandise')
-                                THEN -amount
-                            ELSE 0
-                        END
-                    ), 0) AS balance
-                ")
-                ->value('balance');
+            $pointsBalance = $this->pointService->balanceFor($userId);
 
-            if ((int) $pointsBalance < $totalPoints) {
+            if ($pointsBalance < $totalPoints) {
                 throw ValidationException::withMessages([
                     'quantity' => 'Poin kamu tidak cukup untuk menukar merchandise ini.',
                 ]);

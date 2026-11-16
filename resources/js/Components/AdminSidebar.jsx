@@ -23,6 +23,14 @@ export default function AdminSidebar() {
         },
         { name: 'Pengingat Pelunasan', path: '/admin/payment-reminders', icon: '🔔' },
         { name: 'Forum Diskusi', path: '/admin/forums', icon: '💬' },
+        { name: 'Badge Mentor', path: '/admin/badges', icon: '🏅' },
+        { name: 'Merchandise', path: '/admin/merchandises', icon: '🎁' },
+        {
+            name: 'Pesanan Merchandise',
+            path: '/admin/merchandise-orders',
+            icon: '📦',
+        },
+        { name: 'Bonus Poin', path: '/admin/point-bonuses', icon: '✨' },
     ];
 
     return (
