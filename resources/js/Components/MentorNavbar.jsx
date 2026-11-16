@@ -86,6 +86,13 @@ export default function MentorNavbar({
         url === "/journeys" ||
         url.startsWith("/journeys");
 
+    const isRewardActive =
+        active === "rewards" ||
+        url.startsWith("/mentor/rewards") ||
+        url.startsWith("/mentor/badges") ||
+        url.startsWith("/mentor/merchandise") ||
+        url.startsWith("/mentor/points");
+
     return (
         <header
             className="sticky top-0 z-40 shadow-md"
@@ -157,14 +164,26 @@ export default function MentorNavbar({
                         Sharing Journey
                     </Link>
 
-                    {/* 4. Reward Mentor (Nonaktif) */}
-                    <span
-                        aria-disabled="true"
-                        className="cursor-not-allowed select-none rounded-full px-4 py-2 text-sm font-medium text-white/40 whitespace-nowrap"
-                        title="Route belum tersedia"
+                    {/* 4. Reward Mentor */}
+                    <Link
+                        href={route("mentor.rewards.index")}
+                        aria-current={isRewardActive ? "page" : undefined}
+                        style={{
+                            backgroundColor: isRewardActive
+                                ? mentorNavTokens.activeBg
+                                : undefined,
+                            color: isRewardActive
+                                ? mentorNavTokens.activeText
+                                : undefined,
+                        }}
+                        className={`rounded-full px-4 py-2 text-sm whitespace-nowrap transition ${
+                            isRewardActive
+                                ? "font-bold shadow-xs"
+                                : "font-medium text-white/85 hover:bg-white/10"
+                        }`}
                     >
                         Reward Mentor
-                    </span>
+                    </Link>
                 </nav>
 
                 {/* Bagian Kanan: Kotak Pencarian, Lonceng Notifikasi, Profil, Toggle Mobile */}
@@ -361,12 +380,24 @@ export default function MentorNavbar({
                             Sharing Journey
                         </Link>
 
-                        <span
-                            className="cursor-not-allowed select-none rounded-lg px-3 py-2 text-sm font-medium text-white/40 whitespace-nowrap"
-                            title="Route belum tersedia"
+                        <Link
+                            href={route("mentor.rewards.index")}
+                            style={{
+                                backgroundColor: isRewardActive
+                                    ? mentorNavTokens.activeBg
+                                    : undefined,
+                                color: isRewardActive
+                                    ? mentorNavTokens.activeText
+                                    : undefined,
+                            }}
+                            className={`rounded-lg px-3 py-2 text-sm whitespace-nowrap transition ${
+                                isRewardActive
+                                    ? "font-bold shadow-xs"
+                                    : "font-medium text-white/85 hover:bg-white/10"
+                            }`}
                         >
                             Reward Mentor
-                        </span>
+                        </Link>
                     </div>
                 </div>
             )}
