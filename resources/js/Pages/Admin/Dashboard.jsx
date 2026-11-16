@@ -116,6 +116,22 @@ export default function Dashboard({ statistics, reviewQueue, monitoring }) {
                                 icon={<ShieldIcon />}
                                 href="/admin/mentors?status=suspended"
                             />
+
+                            <ReviewCard
+                                title="Ulasan Menunggu Moderasi"
+                                description="Ulasan yang belum ditampilkan"
+                                value={reviewQueue.pending_reviews}
+                                icon={<StarIcon />}
+                                href="/admin/reviews?status=menunggu"
+                            />
+
+                            <ReviewCard
+                                title="Rating 1 Bintang Beruntun"
+                                description="Mentor dengan 3 ulasan terakhir bintang 1"
+                                value={reviewQueue.flagged_mentors}
+                                icon={<WarningIcon />}
+                                href="/admin/reviews?status=disetujui"
+                            />
                         </div>
                     </section>
 

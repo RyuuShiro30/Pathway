@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\AdminMerchandiseOrderController;
 use App\Http\Controllers\Admin\AdminNoShowReportController;
 use App\Http\Controllers\Admin\AdminPaymentReminderController;
 use App\Http\Controllers\Admin\AdminRefundReportController;
+use App\Http\Controllers\Admin\AdminReviewController;
 use App\Http\Controllers\Admin\AdminSessionController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\BadgeController;
@@ -146,6 +147,15 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::match(['post', 'patch'], '/payment-reminders/{session}/remind', [AdminPaymentReminderController::class, 'remind'])
         ->whereNumber('session')
         ->name('payment-reminders.remind');
+
+    Route::get('/reviews', [AdminReviewController::class, 'index'])
+        ->name('reviews.index');
+    Route::patch('/reviews/{review}/approve', [AdminReviewController::class, 'approve'])
+        ->whereNumber('review')
+        ->name('reviews.approve');
+    Route::patch('/reviews/{review}/reject', [AdminReviewController::class, 'reject'])
+        ->whereNumber('review')
+        ->name('reviews.reject');
 
     Route::get('/sessions', [AdminSessionController::class, 'index'])
         ->name('sessions.index');
