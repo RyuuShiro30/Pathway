@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -48,6 +49,18 @@ class MentoringSession extends Model
         'refund_reminded_at' => 'datetime',
         'payment_final_reminded_at' => 'datetime',
     ];
+
+    public function scopeUnresolved(Builder $query): Builder
+    {
+        return $query->where(function (Builder $unresolved) {
+            $unresolved->where('status', 'berlangsung')
+                ->orWhere(function (Builder $overdue) {
+                    $overdue->where('status', 'dikonfirmasi')
+                        ->whereNotNull('end_time')
+                        ->where('end_time', '<', now());
+                });
+        });
+    }
 
     public function mentor(): BelongsTo
     {

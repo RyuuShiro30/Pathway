@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\AdminMerchandiseOrderController;
 use App\Http\Controllers\Admin\AdminNoShowReportController;
 use App\Http\Controllers\Admin\AdminPaymentReminderController;
 use App\Http\Controllers\Admin\AdminRefundReportController;
+use App\Http\Controllers\Admin\AdminSessionController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\CourseController;
@@ -145,6 +146,9 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::match(['post', 'patch'], '/payment-reminders/{session}/remind', [AdminPaymentReminderController::class, 'remind'])
         ->whereNumber('session')
         ->name('payment-reminders.remind');
+
+    Route::get('/sessions', [AdminSessionController::class, 'index'])
+        ->name('sessions.index');
 
     Route::get('/mentors', [AdminMentorController::class, 'index'])
         ->name('mentors.index');
