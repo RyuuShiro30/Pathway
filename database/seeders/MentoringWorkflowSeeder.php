@@ -258,6 +258,7 @@ class MentoringWorkflowSeeder extends Seeder
                 'mentor_id' => $mainMentor->id,
                 'rating' => 5,
                 'feedback' => 'Penjelasan Mas Budi sangat mudah dipahami dan to the point! Sangat recommended.',
+                'status' => Review::STATUS_DISETUJUI,
             ]
         );
 

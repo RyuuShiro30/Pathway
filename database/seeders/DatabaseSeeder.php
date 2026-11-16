@@ -46,6 +46,11 @@ class DatabaseSeeder extends Seeder
             MenteeBankAccountSeeder::class,
             CourseSeeder::class,
             CourseMaterialSeeder::class,
+            BadgeInventorySeeder::class,
+            MerchandiseInventorySeeder::class,
+            JourneySeeder::class,
+            ReviewModerationSeeder::class,
+            RewardTransactionSeeder::class,
         ]);
     }
 }
