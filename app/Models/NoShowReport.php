@@ -19,12 +19,16 @@ class NoShowReport extends Model
         'response_evidence_path',
         'responded_at',
         'finalized_at',
+        'admin_note',
+        'decided_by',
+        'decided_at',
     ];
 
     protected $casts = [
         'respond_deadline' => 'datetime',
         'responded_at' => 'datetime',
         'finalized_at' => 'datetime',
+        'decided_at' => 'datetime',
     ];
 
     public function session(): BelongsTo
@@ -40,5 +44,10 @@ class NoShowReport extends Model
     public function reportedUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'reported_user_id');
+    }
+
+    public function decidedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'decided_by');
     }
 }

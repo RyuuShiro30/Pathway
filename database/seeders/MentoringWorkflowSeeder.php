@@ -788,6 +788,41 @@ class MentoringWorkflowSeeder extends Seeder
             ]
         );
 
+        // Skenario 33: Sesi no-show disanggah tambahan (Mentee terlapor menyanggah / siap diputuskan admin)
+        $extraDisputedSession = MentoringSession::updateOrCreate(
+            [
+                'student_id' => $studentCancel->id,
+                'mentor_id' => $mainMentor->id,
+                'notes_from_student' => 'SKENARIO-33: Konsultasi Microservices (No-Show Disanggah Mentee)',
+            ],
+            [
+                'status' => 'dikonfirmasi',
+                'schedule_time' => $now->copy()->subHours(6),
+                'end_time' => $now->copy()->subHours(5),
+                'duration_hours' => 1,
+                'is_free_session' => false,
+                'price_snapshot' => 100000,
+                'payment_dp_proof' => 'payment-proofs/sample-dp.png',
+                'payment_dp_status' => 'terverifikasi',
+                'discord_link' => 'https://discord.gg/pathway-budi',
+            ]
+        );
+
+        NoShowReport::updateOrCreate(
+            ['session_id' => $extraDisputedSession->id],
+            [
+                'reporter_id' => $mainMentor->id,
+                'reported_user_id' => $studentCancel->id,
+                'status' => 'disanggah',
+                'reporter_note' => 'Student tidak hadir di room voice Discord sampai 20 menit berlalu.',
+                'evidence_path' => 'no-show-reports/sample-evidence.png',
+                'respond_deadline' => $now->copy()->addHours(18),
+                'response_note' => 'Saya hadir di room text Discord karena masalah headset, dan sudah mengirim pesan.',
+                'response_evidence_path' => 'no-show-responses/sample-response.png',
+                'responded_at' => $now->copy()->subHours(3),
+            ]
+        );
+
         $this->command->info('MentoringWorkflowSeeder berhasil dijalankan: 19 skenario alur mentoring siap ditest.');
     }
 }

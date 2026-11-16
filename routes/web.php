@@ -8,6 +8,7 @@ use App\Http\Controllers\Admin\AdminMaterialController;
 use App\Http\Controllers\Admin\AdminMentorController;
 use App\Http\Controllers\Admin\AdminMerchandiseController;
 use App\Http\Controllers\Admin\AdminMerchandiseOrderController;
+use App\Http\Controllers\Admin\AdminNoShowReportController;
 use App\Http\Controllers\Admin\AdminPaymentReminderController;
 use App\Http\Controllers\Admin\AdminRefundReportController;
 use App\Http\Controllers\Auth\GoogleController;
@@ -127,6 +128,15 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
     Route::post('/refund-reports/{session}/remind', [AdminRefundReportController::class, 'remind'])
         ->whereNumber('session')
         ->name('refund-reports.remind');
+
+    Route::get('/no-show-reports', [AdminNoShowReportController::class, 'index'])
+        ->name('no-show-reports.index');
+    Route::get('/no-show-reports/{report}', [AdminNoShowReportController::class, 'show'])
+        ->whereNumber('report')
+        ->name('no-show-reports.show');
+    Route::patch('/no-show-reports/{report}/decide', [AdminNoShowReportController::class, 'decide'])
+        ->whereNumber('report')
+        ->name('no-show-reports.decide');
 
     Route::get('/payment-reminders', [AdminPaymentReminderController::class, 'index'])
         ->name('payment-reminders.index');

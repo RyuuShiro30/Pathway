@@ -1290,6 +1290,9 @@ class MentoringSessionController extends Controller
 
         $canReportNoShow = $session->canReportNoShow();
         $noShowReport = $session->noShowReportPayloadFor((int) Auth::id());
+        if ($noShowReport && in_array($noShowReport['status'], ['ditolak', 'tidak_berlaku'], true)) {
+            $noShowReport = null;
+        }
 
         $session->unsetRelation('noShowReport');
 
