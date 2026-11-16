@@ -8,14 +8,18 @@ use App\Models\MentoringSession;
 use App\Models\MentorProfile;
 use App\Models\MentorSuspension;
 use App\Models\NoShowReport;
+use App\Models\Review;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
+use App\Services\MentorRatingService;
+use App\Services\PointService;
 use Inertia\Inertia;
 
 class AdminDashboardController extends Controller
 {
-    public function index()
-    {
+    public function index(
+        MentorRatingService $ratingService,
+        PointService $pointService
+    ) {
         // Statistik Utama
         $statistics = [
             'total_users' => User::count(),
@@ -44,6 +48,13 @@ class AdminDashboardController extends Controller
             'unresolved_sessions' => MentoringSession::unresolved()->count(),
 
             'active_suspensions' => MentorSuspension::active()->count(),
+
+            'pending_reviews' => Review::where(
+                'status',
+                Review::STATUS_MENUNGGU
+            )->count(),
+
+            'flagged_mentors' => $ratingService->flaggedMentors()->count(),
         ];
 
         // Monitoring
@@ -64,22 +75,7 @@ class AdminDashboardController extends Controller
                 2
             ),
 
-            'points_circulating' => DB::table('point_transactions')
-                ->selectRaw("
-                    COALESCE(
-                        SUM(
-                            CASE
-                                WHEN transaction_type IN ('earned_mentoring', 'admin_bonus')
-                                    THEN amount
-                                WHEN transaction_type = 'redeemed_badge'
-                                    THEN -amount
-                                ELSE 0
-                            END
-                        ),
-                        0
-                    ) as total
-                ")
-                ->value('total'),
+            'points_circulating' => $pointService->circulating(),
         ];
 
         return Inertia::render('Admin/Dashboard', [

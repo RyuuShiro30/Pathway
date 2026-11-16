@@ -8,6 +8,12 @@ function extractToast(props) {
         return { type: 'success', text: success };
     }
 
+    const error = props?.flash?.error;
+
+    if (typeof error === 'string' && error !== '') {
+        return { type: 'error', text: error };
+    }
+
     const errors = props?.errors;
 
     if (errors && typeof errors === 'object') {
