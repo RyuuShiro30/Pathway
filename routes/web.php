@@ -4,6 +4,8 @@ use App\Http\Controllers\Admin\AdminAuthController;
 use App\Http\Controllers\Admin\AdminBadgeController;
 use App\Http\Controllers\Admin\AdminCourseController;
 use App\Http\Controllers\Admin\AdminDashboardController;
+use App\Http\Controllers\Admin\AdminJourneyController;
+use App\Http\Controllers\Admin\AdminJourneyReportController;
 use App\Http\Controllers\Admin\AdminMaterialController;
 use App\Http\Controllers\Admin\AdminMentorController;
 use App\Http\Controllers\Admin\AdminMerchandiseController;
@@ -19,6 +21,7 @@ use App\Http\Controllers\CourseController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ForumController;
 use App\Http\Controllers\JourneyController;
+use App\Http\Controllers\JourneyInteractionController;
 use App\Http\Controllers\MentorDirectoryController;
 use App\Http\Controllers\MentoringSessionController;
 use App\Http\Controllers\MentorProfileController;
@@ -73,7 +76,7 @@ Route::get('/journeys', [JourneyController::class, 'index'])
     ->name('journeys.index');
 
 Route::get('/journeys/{journey:slug}', [JourneyController::class, 'show'])
-    ->where('journey', '^(?!create$)[a-zA-Z0-9-]+$')
+    ->where('journey', '^(?!create$|mine$|saved$)[a-zA-Z0-9-]+$')
     ->name('journeys.show');
 
 /*
@@ -157,6 +160,21 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
         ->whereNumber('review')
         ->name('reviews.reject');
 
+    Route::get('/journeys', [AdminJourneyController::class, 'index'])
+        ->name('journeys.index');
+    Route::patch('/journeys/{journey}/approve', [AdminJourneyController::class, 'approve'])
+        ->whereNumber('journey')
+        ->name('journeys.approve');
+    Route::patch('/journeys/{journey}/reject', [AdminJourneyController::class, 'reject'])
+        ->whereNumber('journey')
+        ->name('journeys.reject');
+
+    Route::get('/journey-reports', [AdminJourneyReportController::class, 'index'])
+        ->name('journey-reports.index');
+    Route::patch('/journey-reports/{report}/resolve', [AdminJourneyReportController::class, 'resolve'])
+        ->whereNumber('report')
+        ->name('journey-reports.resolve');
+
     Route::get('/sessions', [AdminSessionController::class, 'index'])
         ->name('sessions.index');
 
@@ -229,6 +247,12 @@ Route::middleware('auth')->group(function () {
         ->name('dashboard');
 
     // Sharing Journey - kelola artikel
+    Route::get('/journeys/mine', [JourneyController::class, 'mine'])
+        ->name('journeys.mine');
+
+    Route::get('/journeys/saved', [JourneyInteractionController::class, 'saved'])
+        ->name('journeys.saved');
+
     Route::get('/journeys/create', [JourneyController::class, 'create'])
         ->name('journeys.create');
 
@@ -243,6 +267,25 @@ Route::middleware('auth')->group(function () {
 
     Route::delete('/journeys/{journey:slug}', [JourneyController::class, 'destroy'])
         ->name('journeys.destroy');
+
+    Route::post('/journeys/{journey:slug}/like', [JourneyInteractionController::class, 'toggleLike'])
+        ->name('journeys.like');
+
+    Route::post('/journeys/{journey:slug}/bookmark', [JourneyInteractionController::class, 'toggleBookmark'])
+        ->name('journeys.bookmark');
+
+    Route::patch('/journeys/{journey:slug}/comments-setting', [JourneyInteractionController::class, 'toggleComments'])
+        ->name('journeys.comments.setting');
+
+    Route::post('/journeys/{journey:slug}/comments', [JourneyInteractionController::class, 'storeComment'])
+        ->name('journeys.comments.store');
+
+    Route::delete('/journeys/{journey:slug}/comments/{comment}', [JourneyInteractionController::class, 'destroyComment'])
+        ->whereNumber('comment')
+        ->name('journeys.comments.destroy');
+
+    Route::post('/journeys/{journey:slug}/report', [JourneyInteractionController::class, 'storeReport'])
+        ->name('journeys.reports.store');
 
     // Rating & Ulasan Mentor
     Route::get('/sessions/{session}/review', [ReviewController::class, 'create'])

@@ -1,17 +1,69 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import Navbar from '@/Components/Navbar';
+
+const draftKey = 'journey-draft-new';
 
 export default function Create() {
     const { data, setData, post, processing, errors } = useForm({
         title: '',
         content: '',
         status: 'published',
+        allow_comments: true,
     });
+
+    const [restored, setRestored] = useState(false);
+    const dataRef = useRef(data);
+
+    useEffect(() => {
+        dataRef.current = data;
+    }, [data]);
+
+    useEffect(() => {
+        const raw = window.localStorage.getItem(draftKey);
+
+        if (!raw) return;
+
+        try {
+            const saved = JSON.parse(raw);
+
+            if (saved?.title || saved?.content) {
+                setData({
+                    title: saved.title ?? '',
+                    content: saved.content ?? '',
+                    status: saved.status === 'draft' ? 'draft' : 'published',
+                    allow_comments: saved.allow_comments !== false,
+                });
+                setRestored(true);
+            }
+        } catch {
+            window.localStorage.removeItem(draftKey);
+        }
+    }, []);
+
+    useEffect(() => {
+        const interval = window.setInterval(() => {
+            if (dataRef.current.title || dataRef.current.content) {
+                window.localStorage.setItem(
+                    draftKey,
+                    JSON.stringify(dataRef.current),
+                );
+            }
+        }, 30000);
+
+        return () => window.clearInterval(interval);
+    }, []);
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        post('/journeys');
+        post('/journeys', {
+            onSuccess: () => window.localStorage.removeItem(draftKey),
+        });
+    };
+
+    const discardRestoredDraft = () => {
+        window.localStorage.removeItem(draftKey);
+        setRestored(false);
     };
 
     return (
@@ -19,7 +71,7 @@ export default function Create() {
             <Head title="Tulis Cerita" />
 
             <div className="min-h-screen w-full bg-gray-50">
-                <Navbar />
+                <Navbar active="sharing" />
 
                 <main className="w-full px-6 py-10 sm:px-10 lg:px-16 xl:px-20">
                     <div className="mb-8 flex flex-col gap-3">
@@ -45,6 +97,27 @@ export default function Create() {
                             </p>
                         </div>
                     </div>
+
+                    <div className="mb-6 rounded-xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-800">
+                        Cerita yang dipublikasikan akan ditinjau admin terlebih
+                        dahulu sebelum tampil di feed publik.
+                    </div>
+
+                    {restored && (
+                        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+                            <span>
+                                Draft tersimpan otomatis berhasil dipulihkan.
+                            </span>
+
+                            <button
+                                type="button"
+                                onClick={discardRestoredDraft}
+                                className="font-semibold text-amber-900 underline"
+                            >
+                                Hapus draft tersimpan
+                            </button>
+                        </div>
+                    )}
 
                     <form
                         onSubmit={handleSubmit}
@@ -76,12 +149,18 @@ export default function Create() {
                             </label>
 
                             <textarea
-                                rows={8}
+                                rows={12}
                                 value={data.content}
                                 onChange={(e) => setData('content', e.target.value)}
-                                placeholder="Ceritakan pengalaman belajar, perjalanan bersama mentor, atau pencapaianmu di Pathway..."
+                                placeholder="Ceritakan pengalaman belajar, perjalanan bersama mentor, atau pencapaianmu di Pathway... (mendukung Markdown)"
                                 className="w-full resize-y rounded-xl border border-gray-300 px-5 py-4 leading-7 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                             />
+
+                            <p className="mt-2 text-xs text-gray-500">
+                                Mendukung format Markdown seperti **tebal**,
+                                *miring*, daftar, dan tautan. Draft tersimpan
+                                otomatis setiap 30 detik di perangkat ini.
+                            </p>
 
                             {errors.content && (
                                 <p className="mt-2 text-sm text-red-600">
@@ -100,7 +179,9 @@ export default function Create() {
                                 onChange={(e) => setData('status', e.target.value)}
                                 className="w-full rounded-xl border border-gray-300 px-5 py-4 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
                             >
-                                <option value="published">Publikasikan</option>
+                                <option value="published">
+                                    Publikasikan (menunggu moderasi)
+                                </option>
                                 <option value="draft">Simpan sebagai Draft</option>
                             </select>
 
@@ -110,6 +191,22 @@ export default function Create() {
                                 </p>
                             )}
                         </div>
+
+                        <label className="flex items-start gap-3 rounded-xl border border-gray-200 bg-gray-50 p-4">
+                            <input
+                                type="checkbox"
+                                checked={data.allow_comments}
+                                onChange={(e) =>
+                                    setData('allow_comments', e.target.checked)
+                                }
+                                className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                            />
+
+                            <span className="text-sm text-gray-700">
+                                Izinkan pembaca menulis komentar pada cerita
+                                ini.
+                            </span>
+                        </label>
 
                         <div className="flex flex-col-reverse justify-end gap-3 border-t border-gray-100 pt-6 sm:flex-row">
                             <Link

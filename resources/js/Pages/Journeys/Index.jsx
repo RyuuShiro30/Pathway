@@ -1,9 +1,10 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import Navbar from '@/Components/Navbar';
 
 export default function Index({ journeys }) {
     const articles = journeys?.data ?? [];
+    const { auth } = usePage().props;
 
     return (
         <>
@@ -31,12 +32,32 @@ export default function Index({ journeys }) {
                             </p>
                         </div>
 
-                        <Link
-                            href="/journeys/create"
-                            className="inline-flex h-11 items-center justify-center rounded-lg bg-[#6594B1] px-6 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#56839F] hover:shadow-md"
-                        >
-                            + Tulis Cerita
-                        </Link>
+                        <div className="flex flex-wrap gap-2">
+                            {auth?.user && (
+                                <>
+                                    <Link
+                                        href="/journeys/saved"
+                                        className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100"
+                                    >
+                                        Tersimpan
+                                    </Link>
+
+                                    <Link
+                                        href="/journeys/mine"
+                                        className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-6 text-sm font-semibold text-slate-700 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-slate-100"
+                                    >
+                                        Cerita Saya
+                                    </Link>
+                                </>
+                            )}
+
+                            <Link
+                                href="/journeys/create"
+                                className="inline-flex h-11 items-center justify-center rounded-lg bg-[#6594B1] px-6 text-sm font-semibold text-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#56839F] hover:shadow-md"
+                            >
+                                + Tulis Cerita
+                            </Link>
+                        </div>
                     </header>
 
                     {/* Daftar Cerita */}
