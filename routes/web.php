@@ -152,6 +152,9 @@ Route::middleware(['admin'])->prefix('admin')->name('admin.')->group(function ()
 
     Route::get('/mentors', [AdminMentorController::class, 'index'])
         ->name('mentors.index');
+    Route::patch('/mentors/{mentorProfile}/discord', [AdminMentorController::class, 'updateDiscord'])
+        ->whereNumber('mentorProfile')
+        ->name('mentors.discord');
     Route::patch('/mentors/{mentorProfile}/verify', [AdminMentorController::class, 'verify'])
         ->whereNumber('mentorProfile')
         ->name('mentors.verify');
