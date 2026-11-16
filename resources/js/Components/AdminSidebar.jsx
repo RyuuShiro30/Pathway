@@ -2,7 +2,8 @@ import React from 'react';
 import { Link, usePage } from '@inertiajs/react';
 
 export default function AdminSidebar() {
-    const { url } = usePage();
+    const { url, props } = usePage();
+    const disputedNoShowCount = props?.disputed_no_show_count ?? props?.counts?.disanggah ?? 0;
 
     // Daftar menu sesuai struktur yang kita bahas tadi
     const menuItems = [
@@ -11,6 +12,12 @@ export default function AdminSidebar() {
         { name: 'Kelola Mahasiswa', path: '/admin/students', icon: '👥' },
         { name: 'Kelola Mentor', path: '/admin/mentors', icon: '👨‍🏫' },
         { name: 'Sesi Bimbingan', path: '/admin/sessions', icon: '🗓️' },
+        {
+            name: 'Laporan No-Show',
+            path: '/admin/no-show-reports',
+            icon: '⚠️',
+            badge: disputedNoShowCount,
+        },
         { name: 'Pengingat Pelunasan', path: '/admin/payment-reminders', icon: '🔔' },
         { name: 'Forum Diskusi', path: '/admin/forums', icon: '💬' },
     ];
@@ -34,15 +41,28 @@ export default function AdminSidebar() {
                         <Link
                             key={index}
                             href={item.path}
-                            className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition-all duration-200
+                            className={`flex items-center justify-between px-4 py-3 rounded-xl font-medium transition-all duration-200
                                 ${isActive 
                                     ? 'bg-[#6594B1] text-white shadow-md' // Warna Utama (Aktif)
                                     : 'text-slate-600 hover:bg-[#6b9bc3] hover:text-white' // Warna Hover (Lebih Terang)
                                 }
                             `}
                         >
-                            <span className="text-lg">{item.icon}</span>
-                            {item.name}
+                            <div className="flex items-center gap-3 min-w-0">
+                                <span className="text-lg shrink-0">{item.icon}</span>
+                                <span className="truncate">{item.name}</span>
+                            </div>
+                            {item.badge !== undefined && item.badge > 0 && (
+                                <span
+                                    className={`shrink-0 ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold rounded-full transition-colors ${
+                                        isActive
+                                            ? 'bg-white text-[#6594B1]'
+                                            : 'bg-rose-500 text-white'
+                                    }`}
+                                >
+                                    {item.badge}
+                                </span>
+                            )}
                         </Link>
                     );
                 })}

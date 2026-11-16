@@ -142,15 +142,20 @@ class NoShowReportController extends Controller
 
     public function evidence(int $id, string $type): StreamedResponse
     {
-        $userId = (int) Auth::id();
+        $user = Auth::user();
+        $userId = (int) $user?->id;
+        $isAdmin = $user?->role === 'admin';
 
-        $report = NoShowReport::query()
-            ->whereKey($id)
-            ->where(function ($query) use ($userId): void {
-                $query->where('reporter_id', $userId)
+        $query = NoShowReport::query()->whereKey($id);
+
+        if (! $isAdmin) {
+            $query->where(function ($q) use ($userId): void {
+                $q->where('reporter_id', $userId)
                     ->orWhere('reported_user_id', $userId);
-            })
-            ->firstOrFail();
+            });
+        }
+
+        $report = $query->firstOrFail();
 
         $path = $type === 'response'
             ? $report->response_evidence_path

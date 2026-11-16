@@ -109,12 +109,15 @@ class MentoringSession extends Model
             'response_note' => $report->response_note,
             'has_response_evidence' => $report->response_evidence_path !== null,
             'respond_deadline' => $report->respond_deadline
-                ->copy()
+                ?->copy()
                 ->setTimezone('UTC')
                 ->toISOString(),
             'can_respond' => ! $isReporter
                 && $report->status === 'menunggu_respons'
                 && now()->lt($report->respond_deadline),
+            'admin_note' => $report->admin_note,
+            'decided_at' => $report->decided_at?->copy()->setTimezone('UTC')->toISOString(),
+            'decided_by' => $report->decided_by,
         ];
     }
 }

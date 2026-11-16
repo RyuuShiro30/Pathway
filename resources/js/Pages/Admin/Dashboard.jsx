@@ -98,6 +98,7 @@ export default function Dashboard({ statistics, reviewQueue, monitoring }) {
                                 description="Sanggahan yang perlu ditinjau"
                                 value={reviewQueue.no_show_disputes}
                                 icon={<WarningIcon />}
+                                href="/admin/no-show-reports"
                             />
                         </div>
                     </section>
