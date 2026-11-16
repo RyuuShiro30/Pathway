@@ -400,6 +400,11 @@ Route::middleware('auth')->group(function () {
         ->where('type', 'report|response')
         ->name('no-show.evidence');
 
+    Route::get('/sessions/{id}/proof/{type}', [MentoringSessionController::class, 'proof'])
+        ->whereNumber('id')
+        ->where('type', 'dp|final|refund|session')
+        ->name('session.proof');
+
     // Mentor Booking Requests
     Route::middleware('mentor')->group(function () {
         Route::get('/mentor/requests', [MentoringSessionController::class, 'requests'])

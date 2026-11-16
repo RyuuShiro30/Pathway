@@ -21,6 +21,14 @@ class SuspendedMentorAccessTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        Storage::fake('public');
+        Storage::fake('local');
+    }
+
     public function test_suspended_mentor_does_not_appear_in_public_directory(): void
     {
         $activeMentor = $this->createMentor(['name' => 'Active Mentor']);

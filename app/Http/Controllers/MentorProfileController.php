@@ -26,6 +26,12 @@ class MentorProfileController extends Controller
             ->orderBy('schedule_time', 'asc')
             ->get();
 
+        $requests->each(function (MentoringSession $session) {
+            $session->payment_dp_proof = $session->payment_dp_proof
+                ? route('session.proof', ['id' => $session->id, 'type' => 'dp'])
+                : null;
+        });
+
         $refundRequests = MentoringSession::query()
             ->where('mentor_id', Auth::id())
             ->where('refund_status', 'menunggu')

@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MentoringSessionController extends Controller
 {
@@ -91,11 +92,13 @@ class MentoringSessionController extends Controller
                     'price_snapshot' => $session->price_snapshot,
                     'payment_dp_status' => $session->payment_dp_status,
                     'payment_final_status' => $session->payment_final_status,
-                    'payment_final_proof_path' => $session->payment_final_proof,
+                    'payment_final_proof_path' => $session->payment_final_proof
+                        ? route('session.proof', ['id' => $session->id, 'type' => 'final'])
+                        : null,
                     'payment_final_reminded_at' => $session->payment_final_reminded_at?->copy()->setTimezone('UTC')->toISOString(),
                     'refund_status' => $session->refund_status,
-                    'refund_proof_path' => $isAwaitingRefundConfirmation
-                        ? $session->refund_proof
+                    'refund_proof_path' => ($isAwaitingRefundConfirmation && $session->refund_proof)
+                        ? route('session.proof', ['id' => $session->id, 'type' => 'refund'])
                         : null,
                     'refund_proof_uploaded_at' => $isAwaitingRefundConfirmation
                         ? $session->refund_proof_uploaded_at?->copy()->setTimezone('UTC')->toISOString()
@@ -820,7 +823,7 @@ class MentoringSessionController extends Controller
             $dpProofPath = null;
 
             if ($request->hasFile('payment_dp_proof')) {
-                $dpProofPath = $request->file('payment_dp_proof')->store('payment-proofs', 'public');
+                $dpProofPath = $request->file('payment_dp_proof')->store('payment-proofs', 'local');
             }
 
             try {
@@ -844,7 +847,7 @@ class MentoringSessionController extends Controller
                 ]);
             } catch (\Throwable $e) {
                 if ($dpProofPath) {
-                    Storage::disk('public')->delete($dpProofPath);
+                    Storage::disk('local')->delete($dpProofPath);
                 }
 
                 throw $e;
@@ -1063,6 +1066,12 @@ class MentoringSessionController extends Controller
             ->orderBy('schedule_time', 'asc')
             ->get();
 
+        $requests->each(function (MentoringSession $session) {
+            $session->payment_dp_proof = $session->payment_dp_proof
+                ? route('session.proof', ['id' => $session->id, 'type' => 'dp'])
+                : null;
+        });
+
         return response()->json($requests);
     }
 
@@ -1077,6 +1086,10 @@ class MentoringSessionController extends Controller
         ])
             ->where('mentor_id', Auth::id())
             ->findOrFail($id);
+
+        $session->payment_dp_proof = $session->payment_dp_proof
+            ? route('session.proof', ['id' => $session->id, 'type' => 'dp'])
+            : null;
 
         return Inertia::render('Mentor/BookingRequestDetail', [
             'session' => $session,
@@ -1296,6 +1309,13 @@ class MentoringSessionController extends Controller
 
         $session->unsetRelation('noShowReport');
 
+        $session->payment_final_proof = $session->payment_final_proof
+            ? route('session.proof', ['id' => $session->id, 'type' => 'final'])
+            : null;
+        $session->proof_file = $session->proof_file
+            ? route('session.proof', ['id' => $session->id, 'type' => 'session'])
+            : null;
+
         return Inertia::render('Mentor/SessionTracking', [
             'session' => $session,
             'canReportNoShow' => $canReportNoShow,
@@ -1419,6 +1439,10 @@ class MentoringSessionController extends Controller
             ->exists();
 
         $refundAmount = (int) ceil(((float) $session->price_snapshot) * 0.5);
+
+        $session->payment_dp_proof = $session->payment_dp_proof
+            ? route('session.proof', ['id' => $session->id, 'type' => 'dp'])
+            : null;
 
         return Inertia::render('Mentor/RefundProcess', [
             'session' => $session,
@@ -1768,7 +1792,7 @@ class MentoringSessionController extends Controller
             'notes_from_mentor' => 'nullable|string',
         ]);
 
-        $proofPath = $request->file('proof_file')->store('session-proofs', 'public');
+        $proofPath = $request->file('proof_file')->store('session-proofs', 'local');
 
         DB::transaction(function () use ($request, $id, $proofPath) {
             $session = MentoringSession::where('mentor_id', Auth::id())
@@ -1870,7 +1894,7 @@ class MentoringSessionController extends Controller
             })
             ->firstOrFail();
 
-        $proofPath = $request->file('refund_proof')->store('refund-proofs', 'public');
+        $proofPath = $request->file('refund_proof')->store('refund-proofs', 'local');
 
         $session->update([
             'refund_proof' => $proofPath,
@@ -1902,7 +1926,7 @@ class MentoringSessionController extends Controller
             'payment_final_proof' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
         ]);
 
-        $proofPath = $request->file('payment_final_proof')->store('payment-proofs', 'public');
+        $proofPath = $request->file('payment_final_proof')->store('payment-proofs', 'local');
 
         $session->update([
             'payment_final_proof' => $proofPath,
@@ -1972,6 +1996,39 @@ class MentoringSessionController extends Controller
         $request->merge(['action' => 'tolak']);
 
         return $this->verifyFinalPayment($request, $id);
+    }
+
+    public function proof(int $id, string $type): StreamedResponse
+    {
+        $column = match ($type) {
+            'dp' => 'payment_dp_proof',
+            'final' => 'payment_final_proof',
+            'refund' => 'refund_proof',
+            'session' => 'proof_file',
+            default => abort(404),
+        };
+
+        $session = MentoringSession::find($id);
+        abort_if(! $session, 404);
+
+        $user = Auth::user();
+        $isAllowed = $user && (
+            $user->role === 'admin'
+            || (int) $session->student_id === (int) $user->id
+            || (int) $session->mentor_id === (int) $user->id
+        );
+
+        abort_if(! $isAllowed, 404);
+
+        $path = $session->{$column};
+        abort_if(! $path || ! Storage::disk('local')->exists($path), 404);
+
+        return Storage::disk('local')->response(
+            $path,
+            null,
+            ['Cache-Control' => 'private'],
+            'inline'
+        );
     }
 
     private function hasActiveNoShowReport(int $sessionId): bool
