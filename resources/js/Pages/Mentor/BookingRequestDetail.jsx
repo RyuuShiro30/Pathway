@@ -62,14 +62,17 @@ export default function BookingRequestDetail({ session }) {
             .toUpperCase() || "M";
     const totalPrice = Number(session.price_snapshot ?? 0);
     const dpAmount = Math.ceil(totalPrice * 0.5);
-    const proofPath = session.payment_dp_proof
-        ? String(session.payment_dp_proof).replace(/^\/+/, "")
+    const rawProof = session.payment_dp_proof
+        ? String(session.payment_dp_proof).trim()
         : null;
-    const proofUrl = proofPath
-        ? `/storage/${proofPath
-              .split("/")
-              .map((segment) => encodeURIComponent(segment))
-              .join("/")}`
+    const proofUrl = rawProof
+        ? /^https?:\/\//i.test(rawProof) || rawProof.startsWith("/")
+            ? rawProof
+            : `/storage/${rawProof
+                .replace(/^\/+/, "")
+                .split("/")
+                .map((segment) => encodeURIComponent(segment))
+                .join("/")}`
         : null;
     const backendError =
         flash?.error ??
@@ -168,10 +171,10 @@ export default function BookingRequestDetail({ session }) {
                                 session.status === "diajukan"
                                     ? "warning"
                                     : session.status === "dikonfirmasi"
-                                      ? "success"
-                                      : session.status === "dibatalkan"
-                                        ? "danger"
-                                        : "default"
+                                        ? "success"
+                                        : session.status === "dibatalkan"
+                                            ? "danger"
+                                            : "default"
                             }
                             size="md"
                         >
@@ -303,14 +306,14 @@ export default function BookingRequestDetail({ session }) {
                                             <Badge
                                                 variant={
                                                     session.payment_dp_status ===
-                                                    "terverifikasi"
+                                                        "terverifikasi"
                                                         ? "success"
                                                         : "warningBold"
                                                 }
                                                 size="xs"
                                             >
                                                 {session.payment_dp_status ===
-                                                "terverifikasi"
+                                                    "terverifikasi"
                                                     ? "Terverifikasi"
                                                     : "Perlu Verifikasi"}
                                             </Badge>
@@ -326,9 +329,9 @@ export default function BookingRequestDetail({ session }) {
                                                     <span className="font-medium text-slate-700">
                                                         {formatRupiah(
                                                             session.price_per_hour_snapshot ??
-                                                                totalPrice /
-                                                                    (session.duration_hours ||
-                                                                        1),
+                                                            totalPrice /
+                                                            (session.duration_hours ||
+                                                                1),
                                                         )}{" "}
                                                         / jam
                                                     </span>
@@ -580,25 +583,25 @@ export default function BookingRequestDetail({ session }) {
                                         <Badge
                                             variant={
                                                 latestRescheduleRequest.status ===
-                                                "menunggu_respons"
+                                                    "menunggu_respons"
                                                     ? "warning"
                                                     : latestRescheduleRequest.status ===
                                                         "diterima"
-                                                      ? "success"
-                                                      : "danger"
+                                                        ? "success"
+                                                        : "danger"
                                             }
                                             size="sm"
                                         >
                                             {latestRescheduleRequest.status ===
-                                            "menunggu_respons"
+                                                "menunggu_respons"
                                                 ? "Menunggu Respons"
                                                 : latestRescheduleRequest.status ===
                                                     "diterima"
-                                                  ? "Diterima"
-                                                  : latestRescheduleRequest.status ===
-                                                      "ditolak"
-                                                    ? "Ditolak"
-                                                    : "Kedaluwarsa"}
+                                                    ? "Diterima"
+                                                    : latestRescheduleRequest.status ===
+                                                        "ditolak"
+                                                        ? "Ditolak"
+                                                        : "Kedaluwarsa"}
                                         </Badge>
                                     </div>
 
@@ -617,58 +620,58 @@ export default function BookingRequestDetail({ session }) {
 
                                     {latestRescheduleRequest.status ===
                                         "menunggu_respons" && (
-                                        <>
-                                            {rescheduleForm.errors
-                                                .reschedule && (
-                                                <p className="text-sm font-medium text-red-600">
-                                                    {
-                                                        rescheduleForm.errors
-                                                            .reschedule
-                                                    }
-                                                </p>
-                                            )}
+                                            <>
+                                                {rescheduleForm.errors
+                                                    .reschedule && (
+                                                        <p className="text-sm font-medium text-red-600">
+                                                            {
+                                                                rescheduleForm.errors
+                                                                    .reschedule
+                                                            }
+                                                        </p>
+                                                    )}
 
-                                            <div className="grid gap-3 sm:grid-cols-2">
-                                                <Button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        respondToReschedule(
-                                                            latestRescheduleRequest.id,
-                                                            "terima",
-                                                        )
-                                                    }
-                                                    disabled={
-                                                        rescheduleForm.processing
-                                                    }
-                                                    variant="primary"
-                                                    size="md"
-                                                    className="min-h-11 rounded-xl bg-[#65B175] text-sm font-bold hover:bg-[#559C65] focus:ring-[#65B175] disabled:cursor-not-allowed disabled:opacity-60"
-                                                >
-                                                    {rescheduleForm.processing
-                                                        ? "Memproses..."
-                                                        : "Terima Reschedule"}
-                                                </Button>
+                                                <div className="grid gap-3 sm:grid-cols-2">
+                                                    <Button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            respondToReschedule(
+                                                                latestRescheduleRequest.id,
+                                                                "terima",
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            rescheduleForm.processing
+                                                        }
+                                                        variant="primary"
+                                                        size="md"
+                                                        className="min-h-11 rounded-xl bg-[#65B175] text-sm font-bold hover:bg-[#559C65] focus:ring-[#65B175] disabled:cursor-not-allowed disabled:opacity-60"
+                                                    >
+                                                        {rescheduleForm.processing
+                                                            ? "Memproses..."
+                                                            : "Terima Reschedule"}
+                                                    </Button>
 
-                                                <Button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        respondToReschedule(
-                                                            latestRescheduleRequest.id,
-                                                            "tolak",
-                                                        )
-                                                    }
-                                                    disabled={
-                                                        rescheduleForm.processing
-                                                    }
-                                                    variant="danger"
-                                                    size="md"
-                                                    className="min-h-11 rounded-xl border-0 bg-[#FBECEE] text-sm font-bold text-[#C23B46] shadow-none hover:bg-[#F6DDE1] focus:ring-[#C23B46] disabled:cursor-not-allowed disabled:opacity-60"
-                                                >
-                                                    Tolak Reschedule
-                                                </Button>
-                                            </div>
-                                        </>
-                                    )}
+                                                    <Button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            respondToReschedule(
+                                                                latestRescheduleRequest.id,
+                                                                "tolak",
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            rescheduleForm.processing
+                                                        }
+                                                        variant="danger"
+                                                        size="md"
+                                                        className="min-h-11 rounded-xl border-0 bg-[#FBECEE] text-sm font-bold text-[#C23B46] shadow-none hover:bg-[#F6DDE1] focus:ring-[#C23B46] disabled:cursor-not-allowed disabled:opacity-60"
+                                                    >
+                                                        Tolak Reschedule
+                                                    </Button>
+                                                </div>
+                                            </>
+                                        )}
                                 </div>
                             </Card>
                         )}
