@@ -41,6 +41,9 @@ class HandleInertiaRequests extends Middleware
                     'email_verified_at' => $user->email_verified_at,
                     'photo_path' => $user->photo_path,
                     'role' => $user->role,
+                    'bank_name' => $user->bank_name,
+                    'bank_account_number' => $user->bank_account_number,
+                    'bank_account_holder' => $user->bank_account_holder,
                 ] : null,
             ],
             'flash' => [
