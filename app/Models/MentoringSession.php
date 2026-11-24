@@ -87,6 +87,11 @@ class MentoringSession extends Model
         return $this->hasMany(RescheduleRequest::class, 'session_id');
     }
 
+    public function unresolvedSessionCase(): HasOne
+    {
+        return $this->hasOne(UnresolvedSessionCase::class, 'mentoring_session_id');
+    }
+
     public function canReportNoShow(): bool
     {
         if ($this->status !== 'dikonfirmasi' || $this->noShowReport !== null) {
